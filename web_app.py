@@ -1399,7 +1399,77 @@ def api_get_influencer(influencer_id):
         })
         
     except Exception as e:
-        return jsonify({'success': False, 'error': f'获取博主信息失败: {str(e)}'}), 500
+        return jsonify({'success': False, 'error': f'获取博主失败: {str(e)}'}), 500
+
+@app.route('/api/influencers/batch-scrape', methods=['POST'])
+def api_batch_scrape_influencers():
+    """批量抓取博主推文API"""
+    try:
+        data = request.get_json()
+        influencer_ids = data.get('influencer_ids', [])
+        
+        if not influencer_ids:
+            return jsonify({'success': False, 'error': '请选择要抓取的博主'}), 400
+        
+        # 验证博主是否存在
+        influencers = TwitterInfluencer.query.filter(TwitterInfluencer.id.in_(influencer_ids)).all()
+        if len(influencers) != len(influencer_ids):
+            return jsonify({'success': False, 'error': '部分博主不存在'}), 400
+        
+        # 创建批量抓取任务
+        task_name = f"批量抓取博主推文 - {len(influencers)}个博主"
+        target_accounts = [inf.username for inf in influencers if inf.username]
+        
+        if not target_accounts:
+            return jsonify({'success': False, 'error': '选中的博主没有有效的用户名'}), 400
+        
+        # 创建抓取任务
+        task = ScrapingTask(
+            name=task_name,
+            target_accounts=json.dumps(target_accounts),
+            target_keywords=json.dumps([]),
+            max_tweets=data.get('max_tweets', 50),
+            min_likes=data.get('min_likes', 0),
+            min_retweets=data.get('min_retweets', 0),
+            min_comments=data.get('min_comments', 0),
+            status='pending'
+        )
+        
+        db.session.add(task)
+        db.session.commit()
+        
+        # 启动异步抓取任务
+        def run_batch_scraping():
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(task_executor.execute_task(task.id))
+                
+                # 更新博主的最后抓取时间
+                for influencer in influencers:
+                    influencer.last_scraped = datetime.utcnow()
+                db.session.commit()
+                
+            except Exception as e:
+                print(f"批量抓取失败: {e}")
+            finally:
+                loop.close()
+        
+        # 启动抓取线程
+        import threading
+        scraping_thread = threading.Thread(target=run_batch_scraping)
+        scraping_thread.start()
+        
+        return jsonify({
+            'success': True,
+            'task_id': task.id,
+            'message': f'已启动批量抓取任务，将抓取 {len(influencers)} 个博主的推文'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': f'启动批量抓取失败: {str(e)}'}), 500
 
 @app.route('/api/influencers/<int:influencer_id>', methods=['DELETE'])
 def api_delete_influencer(influencer_id):

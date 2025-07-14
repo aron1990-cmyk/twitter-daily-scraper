@@ -1,0 +1,362 @@
+[
+  {
+    "timestamp": "2025-07-14T21:35:51.349338",
+    "username": "openai",
+    "event_type": "failure",
+    "details": {
+      "error_message": "ScrapingResult.__init__() got an unexpected keyword argument 'username'",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:35:57.526611",
+    "username": "elonmusk",
+    "event_type": "failure",
+    "details": {
+      "error_message": "ScrapingResult.__init__() got an unexpected keyword argument 'username'",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:36:34.180104",
+    "username": "satyanadella",
+    "event_type": "failure",
+    "details": {
+      "error_message": "ScrapingResult.__init__() got an unexpected keyword argument 'username'",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:36:35.203842",
+    "username": "sundarpichai",
+    "event_type": "failure",
+    "details": {
+      "error_message": "ScrapingResult.__init__() got an unexpected keyword argument 'username'",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:36:40.376418",
+    "username": "elonmusk",
+    "event_type": "failure",
+    "details": {
+      "error_message": "ScrapingResult.__init__() got an unexpected keyword argument 'username'",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:39:11.354461",
+    "username": "satyanadella",
+    "event_type": "failure",
+    "details": {
+      "error_message": "ScrapingResult.add_error() missing 1 required positional argument: 'error_message'",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:39:17.391961",
+    "username": "sundarpichai",
+    "event_type": "failure",
+    "details": {
+      "error_message": "ScrapingResult.add_error() missing 1 required positional argument: 'error_message'",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:39:18.712017",
+    "username": "elonmusk",
+    "event_type": "failure",
+    "details": {
+      "error_message": "ScrapingResult.add_error() missing 1 required positional argument: 'error_message'",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:39:46.019610",
+    "username": "openai",
+    "event_type": "failure",
+    "details": {
+      "error_message": "ScrapingResult.add_error() missing 1 required positional argument: 'error_message'",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:39:46.596282",
+    "username": "tim_cook",
+    "event_type": "failure",
+    "details": {
+      "error_message": "ScrapingResult.add_error() missing 1 required positional argument: 'error_message'",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:39:52.031018",
+    "username": "jeffbezos",
+    "event_type": "failure",
+    "details": {
+      "error_message": "ScrapingResult.add_error() missing 1 required positional argument: 'error_message'",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:40:38.956997",
+    "username": "satyanadella",
+    "event_type": "failure",
+    "details": {
+      "error_message": "'ScrapingResult' object has no attribute 'success'",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:40:43.272083",
+    "username": "sundarpichai",
+    "event_type": "failure",
+    "details": {
+      "error_message": "'ScrapingResult' object has no attribute 'success'",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:40:50.366463",
+    "username": "elonmusk",
+    "event_type": "failure",
+    "details": {
+      "error_message": "'ScrapingResult' object has no attribute 'success'",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:41:13.964636",
+    "username": "tim_cook",
+    "event_type": "failure",
+    "details": {
+      "error_message": "'ScrapingResult' object has no attribute 'success'",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:41:14.464024",
+    "username": "jeffbezos",
+    "event_type": "failure",
+    "details": {
+      "error_message": "'ScrapingResult' object has no attribute 'success'",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:41:21.913278",
+    "username": "openai",
+    "event_type": "failure",
+    "details": {
+      "error_message": "'ScrapingResult' object has no attribute 'success'",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:41:48.974943",
+    "username": "AndrewYNg",
+    "event_type": "failure",
+    "details": {
+      "error_message": "'ScrapingResult' object has no attribute 'success'",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:41:49.482136",
+    "username": "ylecun",
+    "event_type": "failure",
+    "details": {
+      "error_message": "'ScrapingResult' object has no attribute 'success'",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:42:36.898315",
+    "username": "elonmusk",
+    "event_type": "success",
+    "details": {
+      "tweets_count": 0,
+      "fetched_id": null
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:42:44.880127",
+    "username": "sundarpichai",
+    "event_type": "success",
+    "details": {
+      "tweets_count": 0,
+      "fetched_id": null
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:42:47.819183",
+    "username": "satyanadella",
+    "event_type": "failure",
+    "details": {
+      "error_message": "navigation_error: 无法导航到用户页面",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:43:11.903628",
+    "username": "tim_cook",
+    "event_type": "failure",
+    "details": {
+      "error_message": "navigation_error: 无法导航到用户页面",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:43:19.885648",
+    "username": "jeffbezos",
+    "event_type": "failure",
+    "details": {
+      "error_message": "navigation_error: 无法导航到用户页面",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:43:23.031963",
+    "username": "openai",
+    "event_type": "failure",
+    "details": {
+      "error_message": "navigation_error: 无法导航到用户页面",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:43:46.913664",
+    "username": "AndrewYNg",
+    "event_type": "failure",
+    "details": {
+      "error_message": "navigation_error: 无法导航到用户页面",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:43:54.892600",
+    "username": "ylecun",
+    "event_type": "failure",
+    "details": {
+      "error_message": "navigation_error: 无法导航到用户页面",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:43:58.045662",
+    "username": "karpathy",
+    "event_type": "failure",
+    "details": {
+      "error_message": "navigation_error: 无法导航到用户页面",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:44:11.924760",
+    "username": "goodfellow_ian",
+    "event_type": "success",
+    "details": {
+      "tweets_count": 0,
+      "fetched_id": null
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:44:19.811140",
+    "username": "github",
+    "event_type": "success",
+    "details": {
+      "tweets_count": 0,
+      "fetched_id": null
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:44:28.013871",
+    "username": "vercel",
+    "event_type": "success",
+    "details": {
+      "tweets_count": 0,
+      "fetched_id": null
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:44:39.711065",
+    "username": "reactjs",
+    "event_type": "success",
+    "details": {
+      "tweets_count": 0,
+      "fetched_id": null
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:44:54.816328",
+    "username": "vuejs",
+    "event_type": "failure",
+    "details": {
+      "error_message": "navigation_error: 无法导航到用户页面",
+      "retry_count": 1
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:44:58.373082",
+    "username": "nodejs",
+    "event_type": "success",
+    "details": {
+      "tweets_count": 0,
+      "fetched_id": null
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:45:02.978920",
+    "username": "paulg",
+    "event_type": "success",
+    "details": {
+      "tweets_count": 0,
+      "fetched_id": null
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:45:15.626308",
+    "username": "naval",
+    "event_type": "success",
+    "details": {
+      "tweets_count": 0,
+      "fetched_id": null
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:45:19.971675",
+    "username": "balajis",
+    "event_type": "success",
+    "details": {
+      "tweets_count": 0,
+      "fetched_id": null
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:45:36.083210",
+    "username": "pmarca",
+    "event_type": "success",
+    "details": {
+      "tweets_count": 0,
+      "fetched_id": null
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:45:48.512829",
+    "username": "sama",
+    "event_type": "success",
+    "details": {
+      "tweets_count": 0,
+      "fetched_id": null
+    }
+  },
+  {
+    "timestamp": "2025-07-14T21:54:44.677146",
+    "username": "openai",
+    "event_type": "success",
+    "details": {
+      "tweets_count": 6,
+      "fetched_id": "1942997166060114166"
+    }
+  }
+]

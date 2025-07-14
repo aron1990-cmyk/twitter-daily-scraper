@@ -1,0 +1,14 @@
+{
+  "batch_id": "batch_1752500537",
+  "status": "running",
+  "overall_progress": 60.0,
+  "completed_accounts": 12,
+  "total_accounts": 20,
+  "failed_accounts": 8,
+  "total_tweets": 0,
+  "success_rate": 60.0,
+  "elapsed_time": "0:03:31.303581",
+  "estimated_remaining": "0:02:20.869058",
+  "current_account": "sama",
+  "updated_at": "2025-07-14T21:45:48.513905"
+}

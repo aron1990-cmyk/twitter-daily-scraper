@@ -30,10 +30,8 @@ function initializePage() {
  * 绑定事件
  */
 function bindEvents() {
-    // 添加博主按钮
-    $('#addInfluencerBtn').click(function() {
-        showAddInfluencerModal();
-    });
+    // 添加博主按钮 - 使用Bootstrap 5的data-bs-toggle自动处理
+    // 不需要手动绑定点击事件
     
     // 搜索框
     $('#searchInput').on('input', debounce(function() {
@@ -50,16 +48,13 @@ function bindEvents() {
     });
     
     // 全选/取消全选
-    $('#selectAllCheckbox').change(function() {
+    $('#selectAll').change(function() {
         const isChecked = $(this).is(':checked');
         $('.influencer-checkbox').prop('checked', isChecked);
         updateSelectedInfluencers();
     });
     
-    // 批量操作按钮
-    $('#batchScrapeBtn').click(batchScrapeInfluencers);
-    $('#batchToggleStatusBtn').click(batchToggleStatus);
-    $('#batchDeleteBtn').click(batchDeleteInfluencers);
+    // 批量操作按钮通过onclick属性处理
     
     // 添加博主表单提交
     $('#addInfluencerForm').submit(function(e) {
@@ -129,7 +124,7 @@ function loadInfluencers() {
  * 显示博主列表
  */
 function displayInfluencers(influencers) {
-    const container = $('#influencersContainer');
+    const container = $('#influencerListContainer');
     
     if (influencers.length === 0) {
         container.html(`
@@ -145,8 +140,8 @@ function displayInfluencers(influencers) {
     let html = '';
     influencers.forEach(influencer => {
         const statusBadge = influencer.is_active ? 
-            '<span class="badge badge-success">启用</span>' : 
-            '<span class="badge badge-secondary">禁用</span>';
+            '<span class="badge bg-success">启用</span>' : 
+            '<span class="badge bg-secondary">禁用</span>';
         
         const lastScraped = influencer.last_scraped ? 
             new Date(influencer.last_scraped).toLocaleString() : '从未抓取';
@@ -155,17 +150,17 @@ function displayInfluencers(influencers) {
             <div class="col-md-6 col-lg-4 mb-4">
                 <div class="card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input influencer-checkbox" 
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input influencer-checkbox" 
                                    id="influencer_${influencer.id}" value="${influencer.id}">
-                            <label class="custom-control-label" for="influencer_${influencer.id}"></label>
+                            <label class="form-check-label" for="influencer_${influencer.id}"></label>
                         </div>
                         <div class="dropdown">
                             <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
-                                    type="button" data-toggle="dropdown">
+                                    type="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-ellipsis-v"></i>
                             </button>
-                            <div class="dropdown-menu dropdown-menu-right">
+                            <div class="dropdown-menu dropdown-menu-end">
                                 <a class="dropdown-item" href="#" onclick="editInfluencer(${influencer.id})">
                                     <i class="fas fa-edit"></i> 编辑
                                 </a>
@@ -187,7 +182,7 @@ function displayInfluencers(influencers) {
                         <p class="card-text text-muted small">@${influencer.username}</p>
                         <p class="card-text">${influencer.description || '暂无描述'}</p>
                         <div class="d-flex justify-content-between align-items-center">
-                            <span class="badge badge-primary">${influencer.category}</span>
+                            <span class="badge bg-primary">${influencer.category}</span>
                             ${statusBadge}
                         </div>
                     </div>
@@ -206,6 +201,9 @@ function displayInfluencers(influencers) {
     
     // 绑定复选框事件
     $('.influencer-checkbox').change(updateSelectedInfluencers);
+    
+    // 初始化选中状态
+    updateSelectedInfluencers();
 }
 
 /**
@@ -215,14 +213,15 @@ function updatePagination(data) {
     totalPages = data.pages;
     currentPage = data.current_page;
     
-    const pagination = $('#pagination');
+    const pagination = $('#paginationList');
+    const paginationContainer = $('#influencerPagination');
     
     if (totalPages <= 1) {
-        pagination.hide();
+        paginationContainer.hide();
         return;
     }
     
-    pagination.show();
+    paginationContainer.show();
     
     let html = '';
     
@@ -313,7 +312,9 @@ function updateSelectedInfluencers() {
  */
 function showAddInfluencerModal() {
     $('#addInfluencerForm')[0].reset();
-    $('#addInfluencerModal').modal('show');
+    // Bootstrap 5 模态框API
+    const modal = new bootstrap.Modal(document.getElementById('addInfluencerModal'));
+    modal.show();
 }
 
 /**
@@ -321,11 +322,11 @@ function showAddInfluencerModal() {
  */
 function submitAddInfluencer() {
     const formData = {
-        name: $('#addName').val().trim(),
-        profile_url: $('#addProfileUrl').val().trim(),
-        description: $('#addDescription').val().trim(),
-        category: $('#addCategory').val(),
-        followers_count: parseInt($('#addFollowersCount').val()) || 0
+        name: $('#addInfluencerName').val().trim(),
+        profile_url: $('#addInfluencerUrl').val().trim(),
+        description: $('#addInfluencerDescription').val().trim(),
+        category: $('#addInfluencerCategory').val(),
+        is_active: $('#addInfluencerActive').is(':checked')
     };
     
     if (!formData.name || !formData.profile_url) {
@@ -341,7 +342,9 @@ function submitAddInfluencer() {
     })
     .done(function(response) {
         if (response.success) {
-            $('#addInfluencerModal').modal('hide');
+            // Bootstrap 5 模态框API
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addInfluencerModal'));
+            modal.hide();
             showAlert('博主添加成功', 'success');
             loadInfluencers();
             loadStats();
@@ -366,13 +369,14 @@ function editInfluencer(id) {
                 
                 // 填充编辑表单
                 $('#editInfluencerId').val(influencer.id);
-                $('#editName').val(influencer.name);
-                $('#editDescription').val(influencer.description);
-                $('#editCategory').val(influencer.category);
-                $('#editFollowersCount').val(influencer.followers_count);
-                $('#editIsActive').prop('checked', influencer.is_active);
+                $('#editInfluencerName').val(influencer.name);
+                $('#editInfluencerDescription').val(influencer.description);
+                $('#editInfluencerCategory').val(influencer.category);
+                $('#editInfluencerActive').prop('checked', influencer.is_active);
                 
-                $('#editInfluencerModal').modal('show');
+                // Bootstrap 5 模态框API
+                const modal = new bootstrap.Modal(document.getElementById('editInfluencerModal'));
+                modal.show();
             } else {
                 showAlert('获取博主信息失败: ' + response.error, 'danger');
             }
@@ -388,11 +392,10 @@ function editInfluencer(id) {
 function submitEditInfluencer() {
     const id = $('#editInfluencerId').val();
     const formData = {
-        name: $('#editName').val().trim(),
-        description: $('#editDescription').val().trim(),
-        category: $('#editCategory').val(),
-        followers_count: parseInt($('#editFollowersCount').val()) || 0,
-        is_active: $('#editIsActive').is(':checked')
+        name: $('#editInfluencerName').val().trim(),
+        description: $('#editInfluencerDescription').val().trim(),
+        category: $('#editInfluencerCategory').val(),
+        is_active: $('#editInfluencerActive').is(':checked')
     };
     
     $.ajax({
@@ -403,7 +406,9 @@ function submitEditInfluencer() {
     })
     .done(function(response) {
         if (response.success) {
-            $('#editInfluencerModal').modal('hide');
+            // Bootstrap 5 模态框API
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editInfluencerModal'));
+            modal.hide();
             showAlert('博主信息更新成功', 'success');
             loadInfluencers();
         } else {
@@ -452,12 +457,69 @@ function scrapeInfluencer(id) {
  * 批量抓取博主
  */
 function batchScrapeInfluencers() {
-    if (selectedInfluencers.size === 0) {
+    console.log('batchScrapeInfluencers 函数被调用');
+    
+    const $selectedCheckboxes = $('.influencer-checkbox:checked');
+    console.log('选中的复选框数量:', $selectedCheckboxes.length);
+    
+    if ($selectedCheckboxes.length === 0) {
         showAlert('请先选择要抓取的博主', 'warning');
         return;
     }
     
-    showAlert('批量抓取功能开发中...', 'info');
+    const influencerIds = $selectedCheckboxes.map(function() {
+        return parseInt($(this).val());
+    }).get();
+    console.log('博主IDs:', influencerIds);
+    
+    // 显示确认对话框
+    if (!confirm(`确定要批量抓取选中的 ${influencerIds.length} 个博主的推文吗？`)) {
+        return;
+    }
+    
+    // 显示加载状态
+    const $batchScrapeBtn = $('#batchScrapeBtn');
+    if ($batchScrapeBtn.length === 0) {
+        showAlert('找不到批量抓取按钮', 'danger');
+        console.error('批量抓取按钮元素未找到');
+        return;
+    }
+    const originalText = $batchScrapeBtn.html();
+    $batchScrapeBtn.html('<i class="fas fa-spinner fa-spin"></i> 启动中...');
+    $batchScrapeBtn.prop('disabled', true);
+    
+    // 发送批量抓取请求
+    $.ajax({
+        url: '/api/influencers/batch-scrape',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            influencer_ids: influencerIds,
+            max_tweets: 50,
+            min_likes: 0,
+            min_retweets: 0,
+            min_comments: 0
+        })
+    })
+    .done(function(response) {
+        if (response.success) {
+            showAlert(response.message, 'success');
+            // 清除选择
+            $('#selectAll').prop('checked', false);
+            $('.influencer-checkbox').prop('checked', false);
+            updateSelectedInfluencers();
+        } else {
+            showAlert(response.error || '批量抓取启动失败', 'danger');
+        }
+    })
+    .fail(function() {
+        showAlert('批量抓取启动失败，请重试', 'danger');
+    })
+    .always(function() {
+        // 恢复按钮状态
+        $batchScrapeBtn.html(originalText);
+        $batchScrapeBtn.prop('disabled', false);
+    });
 }
 
 /**
@@ -489,16 +551,45 @@ function batchDeleteInfluencers() {
 }
 
 /**
+ * HTML模板中调用的函数
+ */
+function addInfluencer() {
+    submitAddInfluencer();
+}
+
+function updateInfluencer() {
+    submitEditInfluencer();
+}
+
+function searchInfluencers() {
+    currentSearch = $('#searchInput').val().trim();
+    currentPage = 1;
+    loadInfluencers();
+}
+
+function batchScrape() {
+    console.log('batchScrape 函数被调用');
+    batchScrapeInfluencers();
+}
+
+function batchDelete() {
+    batchDeleteInfluencers();
+}
+
+/**
  * 显示加载状态
  */
 function showLoading(show) {
+    const container = $('#influencerListContainer');
     if (show) {
-        $('#loadingSpinner').show();
-        $('#influencersContainer').hide();
-    } else {
-        $('#loadingSpinner').hide();
-        $('#influencersContainer').show();
+        container.html(`
+            <div class="text-center py-4">
+                <div class="loading"></div>
+                <p class="mt-2 text-muted">加载中...</p>
+            </div>
+        `);
     }
+    // 加载完成后会调用displayInfluencers来替换内容
 }
 
 /**
@@ -508,9 +599,7 @@ function showAlert(message, type = 'info') {
     const alertHtml = `
         <div class="alert alert-${type} alert-dismissible fade show" role="alert">
             ${message}
-            <button type="button" class="close" data-dismiss="alert">
-                <span>&times;</span>
-            </button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     `;
     
@@ -518,6 +607,10 @@ function showAlert(message, type = 'info') {
     
     // 自动隐藏
     setTimeout(() => {
-        $('.alert').alert('close');
+        const alertElement = document.querySelector('.alert');
+        if (alertElement) {
+            const alert = new bootstrap.Alert(alertElement);
+            alert.close();
+        }
     }, 5000);
 }

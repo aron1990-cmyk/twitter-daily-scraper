@@ -1,0 +1,14 @@
+{
+  "batch_id": "batch_1752500328",
+  "status": "running",
+  "overall_progress": 0.0,
+  "completed_accounts": 0,
+  "total_accounts": 20,
+  "failed_accounts": 6,
+  "total_tweets": 0,
+  "success_rate": 0.0,
+  "elapsed_time": "0:01:04.027215",
+  "estimated_remaining": null,
+  "current_account": "ylecun",
+  "updated_at": "2025-07-14T21:39:52.031663"
+}

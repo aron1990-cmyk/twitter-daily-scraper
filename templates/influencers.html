@@ -118,16 +118,17 @@
                         全选/取消全选
                     </label>
                 </div>
+                <small class="text-muted">已选择 <span id="selectedCount">0</span> 个博主</small>
             </div>
             <div class="col-md-6 text-end">
                 <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-success" onclick="batchScrape()">
+                    <button type="button" class="btn btn-success" id="batchScrapeBtn" onclick="batchScrape()">
                         <i class="fas fa-download me-1"></i>批量抓取
                     </button>
-                    <button type="button" class="btn btn-warning" onclick="batchToggleStatus()">
+                    <button type="button" class="btn btn-warning" id="batchToggleStatusBtn" onclick="batchToggleStatus()">
                         <i class="fas fa-toggle-on me-1"></i>切换状态
                     </button>
-                    <button type="button" class="btn btn-danger" onclick="batchDelete()">
+                    <button type="button" class="btn btn-danger" id="batchDeleteBtn" onclick="batchDelete()">
                         <i class="fas fa-trash me-1"></i>批量删除
                     </button>
                 </div>

@@ -1,0 +1,231 @@
+# 推特博主推文批量抓取系统配置文件
+# 支持YAML和JSON格式，推荐使用YAML格式便于阅读和维护
+
+# 目标账号列表 - 要抓取的Twitter用户名（不包含@符号）
+target_accounts:
+  # 科技领域KOL
+  - "elonmusk"          # 埃隆·马斯克
+  - "sundarpichai"      # 谷歌CEO
+  - "satyanadella"      # 微软CEO
+  - "tim_cook"          # 苹果CEO
+  - "jeffbezos"         # 亚马逊创始人
+  
+  # AI/机器学习领域
+  - "openai"            # OpenAI官方
+  - "AndrewYNg"         # 吴恩达
+  - "ylecun"            # Yann LeCun
+  - "karpathy"          # Andrej Karpathy
+  - "goodfellow_ian"    # Ian Goodfellow
+  
+  # 开发者/技术社区
+  - "github"            # GitHub官方
+  - "vercel"            # Vercel官方
+  - "reactjs"           # React官方
+  - "vuejs"             # Vue.js官方
+  - "nodejs"            # Node.js官方
+  
+  # 创业/商业领域
+  - "paulg"             # Paul Graham (Y Combinator)
+  - "naval"             # Naval Ravikant
+  - "balajis"           # Balaji Srinivasan
+  - "pmarca"            # Marc Andreessen
+  - "sama"              # Sam Altman
+
+# 抓取参数配置
+max_tweets_per_account: 50        # 每个账号最大抓取推文数
+max_concurrent_accounts: 3        # 最大并发抓取账号数
+delay_between_accounts: 5.0       # 账号间延迟时间（秒）
+
+# 推文过滤条件
+filters:
+  # 互动数过滤
+  min_likes: 10                   # 最小点赞数
+  min_retweets: 5                 # 最小转发数
+  min_replies: 0                  # 最小回复数
+  
+  # 内容过滤
+  exclude_retweets: true          # 排除转发推文
+  exclude_replies: true           # 排除回复推文
+  exclude_quotes: false           # 排除引用推文
+  
+  # 时间过滤
+  max_age_days: 7                 # 最大推文年龄（天）
+  
+  # 内容长度过滤
+  min_content_length: 10          # 最小内容长度
+  max_content_length: 2000        # 最大内容长度
+  
+  # 关键词过滤（包含任一关键词的推文会被保留）
+  keywords:
+    - "AI"
+    - "人工智能"
+    - "机器学习"
+    - "深度学习"
+    - "技术"
+    - "开发"
+    - "编程"
+    - "创业"
+    - "投资"
+    - "区块链"
+    - "Web3"
+    - "元宇宙"
+  
+  # 排除关键词（包含任一关键词的推文会被排除）
+  exclude_keywords:
+    - "广告"
+    - "推广"
+    - "spam"
+    - "垃圾"
+
+# 输出配置
+output_formats:                   # 支持的输出格式
+  - "json"                        # JSON格式
+  - "csv"                         # CSV格式
+  - "excel"                       # Excel格式
+
+output_directory: "./data/batch_results"  # 输出目录
+
+# 浏览器配置
+headless: true                    # 无头模式（true=后台运行，false=显示浏览器）
+max_browser_instances: 3          # 最大浏览器实例数
+
+# 重试和错误处理配置
+max_retries_per_account: 3        # 每个账号最大重试次数
+retry_delay_minutes: 30           # 重试延迟时间（分钟）
+
+# 监控和调试配置
+enable_progress_callback: true    # 启用进度回调
+save_intermediate_results: true   # 保存中间结果
+
+# 高级配置
+advanced:
+  # 浏览器选项
+  browser_options:
+    user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    viewport_width: 1920
+    viewport_height: 1080
+    
+  # 网络配置
+  network:
+    timeout: 30                   # 页面加载超时（秒）
+    wait_for_network_idle: true   # 等待网络空闲
+    
+  # 性能配置
+  performance:
+    enable_images: false          # 加载图片（false可提高速度）
+    enable_javascript: true       # 启用JavaScript
+    enable_css: true              # 启用CSS
+    
+  # 反检测配置
+  stealth:
+    random_delays: true           # 随机延迟
+    human_like_scrolling: true    # 人类化滚动
+    random_mouse_movements: true  # 随机鼠标移动
+    
+  # 存储配置
+  storage:
+    compress_json: true           # 压缩JSON文件
+    backup_results: true          # 备份结果
+    cleanup_old_files: true       # 清理旧文件
+    max_file_age_days: 30         # 文件最大保存天数
+
+# 日志配置
+logging:
+  level: "INFO"                   # 日志级别: DEBUG, INFO, WARNING, ERROR
+  file: "logs/batch_scraper.log"  # 日志文件路径
+  max_file_size: "10MB"           # 最大日志文件大小
+  backup_count: 5                 # 日志文件备份数量
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# 通知配置（可选）
+notifications:
+  enabled: false                  # 启用通知
+  
+  # 邮件通知
+  email:
+    enabled: false
+    smtp_server: "smtp.gmail.com"
+    smtp_port: 587
+    username: "your_email@gmail.com"
+    password: "your_app_password"
+    to_addresses:
+      - "admin@example.com"
+  
+  # Webhook通知
+  webhook:
+    enabled: false
+    url: "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+    
+  # 企业微信通知
+  wechat_work:
+    enabled: false
+    webhook_url: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=YOUR_KEY"
+
+# 数据库配置（可选，用于存储抓取历史）
+database:
+  enabled: false                  # 启用数据库存储
+  type: "sqlite"                  # 数据库类型: sqlite, mysql, postgresql
+  
+  # SQLite配置
+  sqlite:
+    file: "data/scraping_history.db"
+  
+  # MySQL配置
+  mysql:
+    host: "localhost"
+    port: 3306
+    database: "twitter_scraper"
+    username: "scraper_user"
+    password: "your_password"
+  
+  # PostgreSQL配置
+  postgresql:
+    host: "localhost"
+    port: 5432
+    database: "twitter_scraper"
+    username: "scraper_user"
+    password: "your_password"
+
+# API配置（可选，用于提供Web API接口）
+api:
+  enabled: false                  # 启用API服务
+  host: "0.0.0.0"                 # API服务地址
+  port: 8000                      # API服务端口
+  cors_origins:                   # 允许的跨域来源
+    - "http://localhost:3000"
+    - "https://your-frontend.com"
+  
+  # API认证
+  auth:
+    enabled: false                # 启用API认证
+    secret_key: "your-secret-key-here"
+    algorithm: "HS256"
+    access_token_expire_minutes: 30
+
+# 云存储配置（可选）
+cloud_storage:
+  enabled: false                  # 启用云存储
+  
+  # AWS S3配置
+  s3:
+    enabled: false
+    bucket_name: "twitter-scraper-results"
+    region: "us-east-1"
+    access_key_id: "YOUR_ACCESS_KEY"
+    secret_access_key: "YOUR_SECRET_KEY"
+  
+  # 阿里云OSS配置
+  oss:
+    enabled: false
+    bucket_name: "twitter-scraper"
+    endpoint: "oss-cn-hangzhou.aliyuncs.com"
+    access_key_id: "YOUR_ACCESS_KEY"
+    access_key_secret: "YOUR_SECRET_KEY"
+  
+  # 腾讯云COS配置
+  cos:
+    enabled: false
+    bucket_name: "twitter-scraper"
+    region: "ap-beijing"
+    secret_id: "YOUR_SECRET_ID"
+    secret_key: "YOUR_SECRET_KEY"

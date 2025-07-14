@@ -1,0 +1,14 @@
+{
+  "batch_id": "batch_1752501256",
+  "status": "running",
+  "overall_progress": 33.33333333333333,
+  "completed_accounts": 1,
+  "total_accounts": 3,
+  "failed_accounts": 0,
+  "total_tweets": 6,
+  "success_rate": 100.0,
+  "elapsed_time": "0:00:27.724194",
+  "estimated_remaining": "0:00:55.448400",
+  "current_account": "openai",
+  "updated_at": "2025-07-14T21:54:44.680191"
+}
