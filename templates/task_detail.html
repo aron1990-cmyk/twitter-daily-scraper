@@ -1,0 +1,160 @@
+<div class="row">
+    <div class="col-md-6">
+        <h6 class="text-muted mb-3">基本信息</h6>
+        <table class="table table-borderless">
+            <tr>
+                <td class="text-muted" style="width: 30%;">任务名称:</td>
+                <td><strong>{{ task.name }}</strong></td>
+            </tr>
+            <tr>
+                <td class="text-muted">任务状态:</td>
+                <td>
+                    {% if task.status == 'pending' %}
+                        <span class="badge bg-secondary">等待中</span>
+                    {% elif task.status == 'running' %}
+                        <span class="badge bg-primary">运行中</span>
+                    {% elif task.status == 'completed' %}
+                        <span class="badge bg-success">已完成</span>
+                    {% elif task.status == 'failed' %}
+                        <span class="badge bg-danger">失败</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ task.status }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td class="text-muted">创建时间:</td>
+                <td>{{ task.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+            </tr>
+            <tr>
+                <td class="text-muted">最大抓取数:</td>
+                <td>{{ task.max_tweets }}</td>
+            </tr>
+            <tr>
+                <td class="text-muted">已收集推文:</td>
+                <td><strong class="text-primary">{{ tweets_count }}</strong> 条</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="col-md-6">
+        <h6 class="text-muted mb-3">抓取配置</h6>
+        <table class="table table-borderless">
+            <tr>
+                <td class="text-muted" style="width: 30%;">关键词:</td>
+                <td>
+                    {% if task.keywords %}
+                        {% for keyword in task.keywords.split(',') %}
+                            <span class="badge bg-info me-1">{{ keyword.strip() }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <span class="text-muted">无</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td class="text-muted">目标账号:</td>
+                <td>
+                    {% if task.accounts %}
+                        {% for account in task.accounts.split(',') %}
+                            <span class="badge bg-warning me-1">@{{ account.strip() }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <span class="text-muted">全网搜索</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td class="text-muted">最小点赞数:</td>
+                <td>{{ task.min_likes or 0 }}</td>
+            </tr>
+            <tr>
+                <td class="text-muted">最小转发数:</td>
+                <td>{{ task.min_retweets or 0 }}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+{% if task.description %}
+<div class="row mt-3">
+    <div class="col-12">
+        <h6 class="text-muted mb-2">任务描述</h6>
+        <div class="alert alert-light">{{ task.description }}</div>
+    </div>
+</div>
+{% endif %}
+
+{% if recent_tweets %}
+<div class="row mt-4">
+    <div class="col-12">
+        <h6 class="text-muted mb-3">最近收集的推文 ({{ tweets_count }} 条中的前 5 条)</h6>
+        <div class="list-group">
+            {% for tweet in recent_tweets %}
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">@{{ tweet.username }}</h6>
+                        <p class="mb-1">{{ tweet.content[:100] }}{% if tweet.content|length > 100 %}...{% endif %}</p>
+                        <small class="text-muted">
+                            <i class="fas fa-heart text-danger"></i> {{ tweet.likes or 0 }}
+                            <i class="fas fa-retweet text-success ms-2"></i> {{ tweet.retweets or 0 }}
+                            <i class="fas fa-clock ms-2"></i> {{ tweet.scraped_at.strftime('%m-%d %H:%M') }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if tweets_count > 5 %}
+        <div class="text-center mt-3">
+            <a href="{{ url_for('data') }}?task_id={{ task.id }}" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-eye me-1"></i>
+                查看全部 {{ tweets_count }} 条推文
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% else %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="text-center py-4">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <h6 class="text-muted">暂无收集到的推文</h6>
+            <p class="text-muted">任务启动后将开始收集推文数据</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-end gap-2">
+            {% if task.status == 'pending' or task.status == 'failed' %}
+                <button type="button" class="btn btn-success btn-sm" onclick="startTask('{{ task.id }}'); $('#taskDetailModal').modal('hide');">
+                    <i class="fas fa-play me-1"></i>
+                    启动任务
+                </button>
+            {% elif task.status == 'running' %}
+                <button type="button" class="btn btn-warning btn-sm" onclick="stopTask('{{ task.id }}'); $('#taskDetailModal').modal('hide');">
+                    <i class="fas fa-stop me-1"></i>
+                    停止任务
+                </button>
+            {% endif %}
+            
+            {% if tweets_count > 0 %}
+                <a href="{{ url_for('data') }}?task_id={{ task.id }}" class="btn btn-info btn-sm">
+                    <i class="fas fa-database me-1"></i>
+                    查看数据
+                </a>
+            {% endif %}
+            
+            <button type="button" class="btn btn-danger btn-sm" onclick="deleteTask('{{ task.id }}'); $('#taskDetailModal').modal('hide');">
+                <i class="fas fa-trash me-1"></i>
+                删除任务
+            </button>
+        </div>
+    </div>
+</div>

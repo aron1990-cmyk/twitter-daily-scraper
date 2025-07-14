@@ -1,0 +1,338 @@
+2025-07-14 14:10:37,284 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-14 14:10:37,284 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:10:37,284 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-14 14:10:37,284 - TwitterScraper - INFO - 开始时间: 2025-07-14 14:10:37
+2025-07-14 14:10:37,284 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:10:37,284 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-14 14:10:44,467 - TwitterScraper - INFO - 浏览器调试端口: ws://127.0.0.1:57799/devtools/browser/ac3b9828-1c26-4922-b96b-c0530343d3f4
+2025-07-14 14:11:19,704 - TwitterScraper - ERROR - 浏览器初始化失败: Timeout 30000ms exceeded.
+2025-07-14 14:11:19,705 - TwitterScraper - ERROR - 抓取任务执行失败: 浏览器初始化失败
+2025-07-14 14:11:37,289 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:11:37,289 - TwitterScraper - ERROR - 资源清理失败: 'AccountManager' object has no attribute 'save_accounts'
+2025-07-14 14:11:37,289 - TwitterScraper - ERROR - 任务执行失败: 浏览器初始化失败
+2025-07-14 14:11:39,376 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:11:39,377 - TwitterScraper - ERROR - 资源清理失败: 'AccountManager' object has no attribute 'save_accounts'
+2025-07-14 14:17:43,820 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-14 14:17:43,820 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:17:43,820 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-14 14:17:43,820 - TwitterScraper - INFO - 开始时间: 2025-07-14 14:17:43
+2025-07-14 14:17:43,820 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:17:43,820 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-14 14:17:50,854 - TwitterScraper - INFO - 浏览器调试端口: ws://127.0.0.1:59925/devtools/browser/72219078-e997-4fc6-b99b-25c1bf435c24
+2025-07-14 14:18:25,077 - TwitterScraper - ERROR - 浏览器初始化失败: Timeout 30000ms exceeded.
+2025-07-14 14:18:25,078 - TwitterScraper - ERROR - 抓取任务执行失败: 浏览器初始化失败
+2025-07-14 14:18:43,142 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:18:43,142 - TwitterScraper - ERROR - 资源清理失败: 'AccountManager' object has no attribute 'save_accounts'
+2025-07-14 14:18:43,142 - TwitterScraper - ERROR - 任务执行失败: 浏览器初始化失败
+2025-07-14 14:18:45,891 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:18:45,891 - TwitterScraper - ERROR - 资源清理失败: 'AccountManager' object has no attribute 'save_accounts'
+2025-07-14 14:21:05,643 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-14 14:21:05,643 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:21:05,643 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-14 14:21:05,643 - TwitterScraper - INFO - 开始时间: 2025-07-14 14:21:05
+2025-07-14 14:21:05,643 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:21:05,643 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-14 14:21:12,559 - TwitterScraper - INFO - 浏览器调试端口: ws://127.0.0.1:61096/devtools/browser/81249c03-ee9a-4545-9fc0-bd63d637c62e
+2025-07-14 14:21:46,445 - TwitterScraper - ERROR - 浏览器初始化失败: Timeout 30000ms exceeded.
+2025-07-14 14:21:46,445 - TwitterScraper - ERROR - 抓取任务执行失败: 浏览器初始化失败
+2025-07-14 14:22:04,517 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:22:04,517 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:22:04,517 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:22:04,517 - TwitterScraper - ERROR - 任务执行失败: 浏览器初始化失败
+2025-07-14 14:22:07,738 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:22:07,738 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:22:07,739 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:23:50,502 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-14 14:23:50,503 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:23:50,503 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-14 14:23:50,503 - TwitterScraper - INFO - 开始时间: 2025-07-14 14:23:50
+2025-07-14 14:23:50,503 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:23:50,503 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-14 14:23:50,526 - TwitterScraper - INFO - 浏览器调试端口: ws://127.0.0.1:61551/devtools/browser/0796090a-21f7-4510-b5e2-7d4fdc1ce548
+2025-07-14 14:24:23,578 - TwitterScraper - ERROR - 浏览器初始化失败: Timeout 30000ms exceeded.
+2025-07-14 14:24:23,578 - TwitterScraper - ERROR - 抓取任务执行失败: 浏览器初始化失败
+2025-07-14 14:24:41,615 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:24:41,615 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:24:41,615 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:24:41,615 - TwitterScraper - ERROR - 任务执行失败: 浏览器初始化失败
+2025-07-14 14:24:50,504 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:24:50,505 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:24:50,505 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:25:46,980 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-14 14:25:46,980 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:25:46,980 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-14 14:25:46,980 - TwitterScraper - INFO - 开始时间: 2025-07-14 14:25:46
+2025-07-14 14:25:46,980 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:25:46,980 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-14 14:25:51,231 - TwitterScraper - INFO - 浏览器调试端口: ws://127.0.0.1:62742/devtools/browser/5f04cac8-af85-4992-ad76-1d7ad04a81f5
+2025-07-14 14:26:27,538 - TwitterScraper - ERROR - 浏览器初始化失败: Timeout 30000ms exceeded.
+2025-07-14 14:26:27,538 - TwitterScraper - ERROR - 抓取任务执行失败: 浏览器初始化失败
+2025-07-14 14:26:45,609 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:26:45,610 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:26:45,610 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:26:45,610 - TwitterScraper - ERROR - 任务执行失败: 浏览器初始化失败
+2025-07-14 14:26:49,037 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:26:49,037 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:26:49,037 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:28:35,071 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-14 14:28:35,071 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:28:35,071 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-14 14:28:35,071 - TwitterScraper - INFO - 开始时间: 2025-07-14 14:28:35
+2025-07-14 14:28:35,071 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:28:35,071 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-14 14:28:38,842 - TwitterScraper - INFO - 浏览器调试端口: ws://127.0.0.1:63731/devtools/browser/1ac31632-d51c-4ea7-ada5-84d93ba359ab
+2025-07-14 14:29:42,163 - TwitterScraper - ERROR - 浏览器初始化失败: Timeout 60000ms exceeded.
+2025-07-14 14:29:42,164 - TwitterScraper - ERROR - 抓取任务执行失败: 浏览器初始化失败
+2025-07-14 14:30:00,259 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:30:00,259 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:30:00,259 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:30:00,259 - TwitterScraper - ERROR - 任务执行失败: 浏览器初始化失败
+2025-07-14 14:30:10,276 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:30:10,276 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:30:10,276 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:30:40,947 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-14 14:30:40,947 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:30:40,947 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-14 14:30:40,947 - TwitterScraper - INFO - 开始时间: 2025-07-14 14:30:40
+2025-07-14 14:30:40,948 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:30:40,948 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-14 14:30:45,062 - TwitterScraper - INFO - 浏览器调试端口: ws://127.0.0.1:64532/devtools/browser/c836d7f9-7541-45b5-92c7-4446012a48df
+2025-07-14 14:31:49,984 - TwitterScraper - ERROR - 浏览器初始化失败: Timeout 60000ms exceeded.
+2025-07-14 14:31:49,985 - TwitterScraper - ERROR - 抓取任务执行失败: 浏览器初始化失败
+2025-07-14 14:32:08,093 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:32:08,094 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:32:08,094 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:32:08,094 - TwitterScraper - ERROR - 任务执行失败: 浏览器初始化失败
+2025-07-14 14:32:18,114 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:32:18,114 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:32:18,114 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:32:43,508 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-14 14:32:43,508 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:32:43,508 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-14 14:32:43,508 - TwitterScraper - INFO - 开始时间: 2025-07-14 14:32:43
+2025-07-14 14:32:43,508 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:32:43,508 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-14 14:32:47,492 - TwitterScraper - INFO - 浏览器调试端口: ws://127.0.0.1:65444/devtools/browser/0e830295-890c-425b-8f11-7bba5fdccf0b
+2025-07-14 14:33:49,183 - TwitterScraper - ERROR - 浏览器初始化失败: Timeout 60000ms exceeded.
+2025-07-14 14:33:49,184 - TwitterScraper - ERROR - 抓取任务执行失败: 浏览器初始化失败
+2025-07-14 14:34:07,382 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:34:07,383 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:34:07,383 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:34:07,383 - TwitterScraper - ERROR - 任务执行失败: 浏览器初始化失败
+2025-07-14 14:34:17,401 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:34:17,401 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:34:17,401 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:35:33,375 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-14 14:35:33,376 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:35:33,376 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-14 14:35:33,376 - TwitterScraper - INFO - 开始时间: 2025-07-14 14:35:33
+2025-07-14 14:35:33,376 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:35:33,376 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-14 14:35:37,276 - TwitterScraper - INFO - 浏览器调试端口: ws://127.0.0.1:50198/devtools/browser/1cea825d-0d5d-4603-891a-2033d6ef030e
+2025-07-14 14:36:39,360 - TwitterScraper - ERROR - 浏览器初始化失败: Timeout 60000ms exceeded.
+2025-07-14 14:36:39,361 - TwitterScraper - ERROR - 抓取任务执行失败: 浏览器初始化失败
+2025-07-14 14:36:57,395 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:36:57,395 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:36:57,395 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:36:57,396 - TwitterScraper - ERROR - 任务执行失败: 浏览器初始化失败
+2025-07-14 14:37:07,418 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:37:07,418 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:37:07,418 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:39:01,002 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-14 14:39:01,002 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:39:01,002 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-14 14:39:01,002 - TwitterScraper - INFO - 开始时间: 2025-07-14 14:39:01
+2025-07-14 14:39:01,002 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:39:01,002 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-14 14:39:04,915 - TwitterScraper - INFO - 浏览器调试端口: ws://127.0.0.1:51818/devtools/browser/e9e2c03c-23e2-4007-9ff9-da4edd3af893
+2025-07-14 14:40:06,249 - TwitterScraper - ERROR - 浏览器初始化失败: Timeout 60000ms exceeded.
+2025-07-14 14:40:06,250 - TwitterScraper - ERROR - 抓取任务执行失败: 浏览器初始化失败
+2025-07-14 14:40:24,290 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:40:24,290 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:40:24,290 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:40:24,290 - TwitterScraper - ERROR - 任务执行失败: 浏览器初始化失败
+2025-07-14 14:40:34,310 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:40:34,310 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:40:34,311 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:41:54,185 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-14 14:41:54,185 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:41:54,185 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-14 14:41:54,185 - TwitterScraper - INFO - 开始时间: 2025-07-14 14:41:54
+2025-07-14 14:41:54,185 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:41:54,185 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-14 14:41:58,209 - TwitterScraper - INFO - 浏览器调试端口: ws://127.0.0.1:53211/devtools/browser/c76daac5-056b-4298-865a-d5924e048f69
+2025-07-14 14:42:59,897 - TwitterScraper - ERROR - 浏览器初始化失败: Timeout 60000ms exceeded.
+2025-07-14 14:42:59,898 - TwitterScraper - ERROR - 抓取任务执行失败: 浏览器初始化失败
+2025-07-14 14:43:17,932 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:43:17,932 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:43:17,932 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:43:17,932 - TwitterScraper - ERROR - 任务执行失败: 浏览器初始化失败
+2025-07-14 14:43:27,956 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:43:27,956 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:43:27,956 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:44:09,806 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-14 14:44:09,807 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:44:09,807 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-14 14:44:09,807 - TwitterScraper - INFO - 开始时间: 2025-07-14 14:44:09
+2025-07-14 14:44:09,807 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:44:09,807 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-14 14:44:13,420 - TwitterScraper - INFO - 浏览器调试端口: ws://127.0.0.1:54224/devtools/browser/0b77b92a-22ed-4278-982a-47ed3c277cc5
+2025-07-14 14:45:15,203 - TwitterScraper - ERROR - 浏览器初始化失败: Timeout 60000ms exceeded.
+2025-07-14 14:45:15,204 - TwitterScraper - ERROR - 抓取任务执行失败: 浏览器初始化失败
+2025-07-14 14:45:33,239 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:45:33,239 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:45:33,239 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:45:33,239 - TwitterScraper - ERROR - 任务执行失败: 浏览器初始化失败
+2025-07-14 14:45:43,258 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 14:45:43,259 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 14:45:43,259 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 14:49:13,495 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-14 14:49:13,495 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:49:13,495 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-14 14:49:13,495 - TwitterScraper - INFO - 开始时间: 2025-07-14 14:49:13
+2025-07-14 14:49:13,495 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:49:13,495 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-14 14:49:17,482 - TwitterScraper - INFO - 浏览器调试端口: ws://127.0.0.1:56174/devtools/browser/6242d827-bf39-485b-8631-c380a3beaca4
+2025-07-14 14:49:23,284 - TwitterScraper - INFO - 浏览器初始化完成
+2025-07-14 14:49:23,284 - TwitterScraper - INFO - 开始抓取 16 个用户的推文...
+2025-07-14 14:49:23,285 - TwitterScraper - INFO - 开始抓取用户 @elonmusk 的推文...
+2025-07-14 14:50:23,789 - TwitterScraper - INFO - 用户 @elonmusk 抓取完成，获得 0 条推文
+2025-07-14 14:50:26,791 - TwitterScraper - INFO - 开始抓取用户 @OpenAI 的推文...
+2025-07-14 14:51:27,225 - TwitterScraper - INFO - 用户 @OpenAI 抓取完成，获得 0 条推文
+2025-07-14 14:51:30,228 - TwitterScraper - INFO - 开始抓取用户 @sama 的推文...
+2025-07-14 14:52:30,621 - TwitterScraper - INFO - 用户 @sama 抓取完成，获得 0 条推文
+2025-07-14 14:52:33,624 - TwitterScraper - INFO - 开始抓取用户 @naval 的推文...
+2025-07-14 14:56:39,872 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-14 14:56:39,872 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:56:39,872 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-14 14:56:39,872 - TwitterScraper - INFO - 开始时间: 2025-07-14 14:56:39
+2025-07-14 14:56:39,872 - TwitterScraper - INFO - ==================================================
+2025-07-14 14:56:39,872 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-14 14:56:39,897 - TwitterScraper - INFO - 浏览器调试端口: ws://127.0.0.1:56174/devtools/browser/6242d827-bf39-485b-8631-c380a3beaca4
+2025-07-14 14:56:44,466 - TwitterScraper - INFO - 浏览器初始化完成
+2025-07-14 14:56:44,467 - TwitterScraper - INFO - 开始抓取 16 个用户的推文...
+2025-07-14 14:56:44,467 - TwitterScraper - INFO - 开始抓取用户 @elonmusk 的推文...
+2025-07-14 14:57:44,909 - TwitterScraper - INFO - 用户 @elonmusk 抓取完成，获得 0 条推文
+2025-07-14 14:57:47,911 - TwitterScraper - INFO - 开始抓取用户 @OpenAI 的推文...
+2025-07-14 14:58:48,230 - TwitterScraper - INFO - 用户 @OpenAI 抓取完成，获得 0 条推文
+2025-07-14 14:58:51,232 - TwitterScraper - INFO - 开始抓取用户 @sama 的推文...
+2025-07-14 15:00:07,747 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 15:00:07,748 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 15:00:07,748 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 15:00:17,773 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 15:00:17,773 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 15:00:17,773 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 15:05:38,041 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-14 15:05:38,042 - TwitterScraper - INFO - ==================================================
+2025-07-14 15:05:38,042 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-14 15:05:38,042 - TwitterScraper - INFO - 开始时间: 2025-07-14 15:05:38
+2025-07-14 15:05:38,042 - TwitterScraper - INFO - ==================================================
+2025-07-14 15:05:38,042 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-14 15:05:42,489 - TwitterScraper - INFO - 浏览器调试端口: ws://127.0.0.1:61836/devtools/browser/a18b58ba-2d57-4130-b963-169f449c1221
+2025-07-14 15:05:48,551 - TwitterScraper - INFO - 浏览器初始化完成
+2025-07-14 15:05:48,553 - TwitterScraper - INFO - 开始抓取 16 个用户的推文...
+2025-07-14 15:05:48,554 - TwitterScraper - INFO - 开始抓取用户 @elonmusk 的推文...
+2025-07-14 15:06:23,535 - TwitterScraper - INFO - 任务被用户中断
+2025-07-14 15:06:25,109 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-14 15:06:25,109 - TwitterScraper - INFO - ==================================================
+2025-07-14 15:06:25,109 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-14 15:06:25,109 - TwitterScraper - INFO - 开始时间: 2025-07-14 15:06:25
+2025-07-14 15:06:25,109 - TwitterScraper - INFO - ==================================================
+2025-07-14 15:06:25,109 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-14 15:06:28,638 - TwitterScraper - INFO - 浏览器调试端口: ws://127.0.0.1:62314/devtools/browser/e70d22b2-e32c-4d69-a961-92d9381dc4d3
+2025-07-14 15:06:34,078 - TwitterScraper - INFO - 浏览器初始化完成
+2025-07-14 15:06:34,079 - TwitterScraper - INFO - 开始抓取 16 个用户的推文...
+2025-07-14 15:06:34,079 - TwitterScraper - INFO - 开始抓取用户 @elonmusk 的推文...
+2025-07-14 15:07:34,736 - TwitterScraper - INFO - 用户 @elonmusk 抓取完成，获得 0 条推文
+2025-07-14 15:07:37,739 - TwitterScraper - INFO - 开始抓取用户 @OpenAI 的推文...
+2025-07-14 15:08:38,361 - TwitterScraper - INFO - 用户 @OpenAI 抓取完成，获得 0 条推文
+2025-07-14 15:08:41,364 - TwitterScraper - INFO - 开始抓取用户 @sama 的推文...
+2025-07-14 15:20:19,130 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-14 15:20:19,130 - TwitterScraper - INFO - ==================================================
+2025-07-14 15:20:19,131 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-14 15:20:19,131 - TwitterScraper - INFO - 开始时间: 2025-07-14 15:20:19
+2025-07-14 15:20:19,131 - TwitterScraper - INFO - ==================================================
+2025-07-14 15:20:19,131 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-14 15:20:22,715 - TwitterScraper - INFO - 浏览器调试端口: ws://127.0.0.1:50932/devtools/browser/fb9dd603-66fc-4530-a70a-512a40afd337
+2025-07-14 15:20:28,585 - TwitterScraper - INFO - 浏览器初始化完成
+2025-07-14 15:20:28,669 - TwitterScraper - INFO - 开始抓取 16 个用户的推文...
+2025-07-14 15:20:28,694 - TwitterScraper - INFO - 开始抓取用户 @elonmusk 的推文...
+2025-07-14 15:22:00,988 - TwitterScraper - INFO - 用户 @elonmusk 抓取完成，获得 0 条推文
+2025-07-14 15:22:05,990 - TwitterScraper - INFO - 开始抓取用户 @OpenAI 的推文...
+2025-07-14 15:25:33,890 - TwitterScraper - INFO - 用户 @OpenAI 抓取完成，获得 0 条推文
+2025-07-14 15:25:38,892 - TwitterScraper - INFO - 开始抓取用户 @sama 的推文...
+2025-07-14 15:29:23,391 - TwitterScraper - INFO - 用户 @sama 抓取完成，获得 0 条推文
+2025-07-14 15:29:28,393 - TwitterScraper - INFO - 开始抓取用户 @naval 的推文...
+2025-07-14 15:32:37,761 - TwitterScraper - INFO - 用户 @naval 抓取完成，获得 0 条推文
+2025-07-14 15:32:42,764 - TwitterScraper - INFO - 开始抓取用户 @paulg 的推文...
+2025-07-14 15:35:21,459 - TwitterScraper - INFO - 用户 @paulg 抓取完成，获得 0 条推文
+2025-07-14 15:35:26,462 - TwitterScraper - INFO - 开始抓取用户 @AndrewYNg 的推文...
+2025-07-14 15:37:52,571 - TwitterScraper - INFO - 用户 @AndrewYNg 抓取完成，获得 0 条推文
+2025-07-14 15:37:57,573 - TwitterScraper - INFO - 开始抓取用户 @ylecun 的推文...
+2025-07-14 15:38:12,581 - TwitterScraper - INFO - 用户 @ylecun 抓取完成，获得 0 条推文
+2025-07-14 15:38:17,582 - TwitterScraper - INFO - 开始抓取用户 @karpathy 的推文...
+2025-07-14 15:38:32,589 - TwitterScraper - INFO - 用户 @karpathy 抓取完成，获得 0 条推文
+2025-07-14 15:38:37,592 - TwitterScraper - INFO - 开始抓取用户 @fchollet 的推文...
+2025-07-14 15:38:52,602 - TwitterScraper - INFO - 用户 @fchollet 抓取完成，获得 0 条推文
+2025-07-14 15:38:57,604 - TwitterScraper - INFO - 开始抓取用户 @reidhoffman 的推文...
+2025-07-14 15:39:12,612 - TwitterScraper - INFO - 用户 @reidhoffman 抓取完成，获得 0 条推文
+2025-07-14 15:39:17,614 - TwitterScraper - INFO - 开始抓取用户 @pmarca 的推文...
+2025-07-14 15:39:32,628 - TwitterScraper - INFO - 用户 @pmarca 抓取完成，获得 0 条推文
+2025-07-14 15:39:37,631 - TwitterScraper - INFO - 开始抓取用户 @balajis 的推文...
+2025-07-14 15:39:52,639 - TwitterScraper - INFO - 用户 @balajis 抓取完成，获得 0 条推文
+2025-07-14 15:39:57,641 - TwitterScraper - INFO - 开始抓取用户 @jason 的推文...
+2025-07-14 15:40:12,648 - TwitterScraper - INFO - 用户 @jason 抓取完成，获得 0 条推文
+2025-07-14 15:40:17,649 - TwitterScraper - INFO - 开始抓取用户 @dotey 的推文...
+2025-07-14 15:40:32,657 - TwitterScraper - INFO - 用户 @dotey 抓取完成，获得 0 条推文
+2025-07-14 15:40:37,658 - TwitterScraper - INFO - 开始抓取用户 @op7418 的推文...
+2025-07-14 15:40:52,667 - TwitterScraper - INFO - 用户 @op7418 抓取完成，获得 0 条推文
+2025-07-14 15:40:57,668 - TwitterScraper - INFO - 开始抓取用户 @nishuang 的推文...
+2025-07-14 15:41:12,674 - TwitterScraper - INFO - 用户 @nishuang 抓取完成，获得 0 条推文
+2025-07-14 15:41:17,675 - TwitterScraper - INFO - 用户推文抓取完成，共获得 0 条推文
+2025-07-14 15:41:17,676 - TwitterScraper - INFO - 开始搜索 19 个关键词的推文...
+2025-07-14 15:41:17,676 - TwitterScraper - INFO - 开始搜索关键词 'ChatGPT应用' 的推文...
+2025-07-14 15:41:17,677 - TwitterScraper - INFO - 关键词 'ChatGPT应用' 搜索完成，获得 0 条推文
+2025-07-14 15:41:22,679 - TwitterScraper - INFO - 开始搜索关键词 'AI工具' 的推文...
+2025-07-14 15:41:22,682 - TwitterScraper - INFO - 关键词 'AI工具' 搜索完成，获得 0 条推文
+2025-07-14 15:41:27,683 - TwitterScraper - INFO - 开始搜索关键词 '人工智能趋势' 的推文...
+2025-07-14 15:41:27,688 - TwitterScraper - INFO - 关键词 '人工智能趋势' 搜索完成，获得 0 条推文
+2025-07-14 15:41:32,690 - TwitterScraper - INFO - 开始搜索关键词 'GPT-4' 的推文...
+2025-07-14 15:41:32,691 - TwitterScraper - INFO - 关键词 'GPT-4' 搜索完成，获得 0 条推文
+2025-07-14 15:41:37,692 - TwitterScraper - INFO - 开始搜索关键词 'Claude' 的推文...
+2025-07-14 15:41:37,693 - TwitterScraper - INFO - 关键词 'Claude' 搜索完成，获得 0 条推文
+2025-07-14 15:41:42,694 - TwitterScraper - INFO - 开始搜索关键词 'Midjourney' 的推文...
+2025-07-14 15:41:42,695 - TwitterScraper - INFO - 关键词 'Midjourney' 搜索完成，获得 0 条推文
+2025-07-14 15:41:47,696 - TwitterScraper - INFO - 开始搜索关键词 '副业赚钱' 的推文...
+2025-07-14 15:41:47,697 - TwitterScraper - INFO - 关键词 '副业赚钱' 搜索完成，获得 0 条推文
+2025-07-14 15:41:52,698 - TwitterScraper - INFO - 开始搜索关键词 '创业思维' 的推文...
+2025-07-14 15:41:52,700 - TwitterScraper - INFO - 关键词 '创业思维' 搜索完成，获得 0 条推文
+2025-07-14 15:41:57,701 - TwitterScraper - INFO - 开始搜索关键词 '商业模式' 的推文...
+2025-07-14 15:41:57,703 - TwitterScraper - INFO - 关键词 '商业模式' 搜索完成，获得 0 条推文
+2025-07-14 15:42:02,704 - TwitterScraper - INFO - 开始搜索关键词 '产品思维' 的推文...
+2025-07-14 15:42:02,705 - TwitterScraper - INFO - 关键词 '产品思维' 搜索完成，获得 0 条推文
+2025-07-14 15:42:07,706 - TwitterScraper - INFO - 开始搜索关键词 '增长黑客' 的推文...
+2025-07-14 15:42:07,707 - TwitterScraper - INFO - 关键词 '增长黑客' 搜索完成，获得 0 条推文
+2025-07-14 15:42:12,709 - TwitterScraper - INFO - 开始搜索关键词 '技术趋势' 的推文...
+2025-07-14 15:42:12,711 - TwitterScraper - INFO - 关键词 '技术趋势' 搜索完成，获得 0 条推文
+2025-07-14 15:42:17,712 - TwitterScraper - INFO - 开始搜索关键词 '编程技巧' 的推文...
+2025-07-14 15:42:17,714 - TwitterScraper - INFO - 关键词 '编程技巧' 搜索完成，获得 0 条推文
+2025-07-14 15:42:22,715 - TwitterScraper - INFO - 开始搜索关键词 '开发工具' 的推文...
+2025-07-14 15:42:22,716 - TwitterScraper - INFO - 关键词 '开发工具' 搜索完成，获得 0 条推文
+2025-07-14 15:42:27,717 - TwitterScraper - INFO - 开始搜索关键词 '自动化' 的推文...
+2025-07-14 15:42:27,719 - TwitterScraper - INFO - 关键词 '自动化' 搜索完成，获得 0 条推文
+2025-07-14 15:42:32,720 - TwitterScraper - INFO - 开始搜索关键词 '学习方法' 的推文...
+2025-07-14 15:42:32,722 - TwitterScraper - INFO - 关键词 '学习方法' 搜索完成，获得 0 条推文
+2025-07-14 15:42:37,723 - TwitterScraper - INFO - 开始搜索关键词 '时间管理' 的推文...
+2025-07-14 15:42:37,725 - TwitterScraper - INFO - 关键词 '时间管理' 搜索完成，获得 0 条推文
+2025-07-14 15:42:42,726 - TwitterScraper - INFO - 开始搜索关键词 '认知升级' 的推文...
+2025-07-14 15:42:42,728 - TwitterScraper - INFO - 关键词 '认知升级' 搜索完成，获得 0 条推文
+2025-07-14 15:42:47,729 - TwitterScraper - INFO - 开始搜索关键词 '思维模型' 的推文...
+2025-07-14 15:42:47,730 - TwitterScraper - INFO - 关键词 '思维模型' 搜索完成，获得 0 条推文
+2025-07-14 15:42:52,731 - TwitterScraper - INFO - 关键词推文搜索完成，共获得 0 条推文
+2025-07-14 15:42:52,731 - TwitterScraper - WARNING - 没有抓取到任何推文数据
+2025-07-14 15:43:02,755 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 15:43:02,756 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 15:43:02,756 - TwitterScraper - INFO - 资源清理完成
+2025-07-14 15:43:09,633 - TwitterScraper - INFO - 系统监控已停止
+2025-07-14 15:43:09,633 - TwitterScraper - INFO - 账户状态已保存
+2025-07-14 15:43:09,633 - TwitterScraper - INFO - 资源清理完成

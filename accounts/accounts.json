@@ -1,0 +1,44 @@
+[
+  {
+    "user_id": "k11p9ypc",
+    "name": "JoGoessen",
+    "priority": 1,
+    "daily_limit": 100,
+    "hourly_limit": 10,
+    "status": "available",
+    "tags": ["main", "high-priority"],
+    "last_used": null,
+    "usage_count": 0,
+    "error_count": 0,
+    "created_at": "2024-01-01T00:00:00",
+    "notes": "主要采集账户"
+  },
+  {
+    "user_id": "44",
+    "name": "k11p9y6f",
+    "priority": 2,
+    "daily_limit": 80,
+    "hourly_limit": 8,
+    "status": "available",
+    "tags": ["backup", "secondary"],
+    "last_used": null,
+    "usage_count": 0,
+    "error_count": 0,
+    "created_at": "2024-01-01T00:00:00",
+    "notes": "备用采集账户"
+  },
+  {
+    "user_id": "your_adspower_profile_id_3",
+    "name": "Twitter_Special",
+    "priority": 3,
+    "daily_limit": 60,
+    "hourly_limit": 6,
+    "status": "available",
+    "tags": ["special", "mobile"],
+    "last_used": null,
+    "usage_count": 0,
+    "error_count": 0,
+    "created_at": "2024-01-01T00:00:00",
+    "notes": "特殊任务账户（移动端模拟）"
+  }
+]

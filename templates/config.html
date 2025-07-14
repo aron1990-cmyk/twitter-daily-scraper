@@ -1,0 +1,621 @@
+{% extends "base.html" %}
+
+{% block title %}系统配置 - Twitter抓取管理系统{% endblock %}
+
+{% block content %}
+<!-- 页面标题 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h2>
+            <i class="fas fa-cog me-2"></i>
+            系统配置
+        </h2>
+        <p class="text-muted">管理系统设置、数据导出和云端同步配置</p>
+    </div>
+</div>
+
+<!-- 配置选项卡 -->
+<div class="row">
+    <div class="col-12">
+        <ul class="nav nav-tabs" id="configTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="general-tab" data-bs-toggle="tab" 
+                        data-bs-target="#general" type="button" role="tab">
+                    <i class="fas fa-sliders-h me-2"></i>基础设置
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="scraping-tab" data-bs-toggle="tab" 
+                        data-bs-target="#scraping" type="button" role="tab">
+                    <i class="fas fa-spider me-2"></i>抓取配置
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="feishu-tab" data-bs-toggle="tab" 
+                        data-bs-target="#feishu" type="button" role="tab">
+                    <i class="fas fa-cloud me-2"></i>飞书配置
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="export-tab" data-bs-toggle="tab" 
+                        data-bs-target="#export" type="button" role="tab">
+                    <i class="fas fa-download me-2"></i>导出设置
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="system-tab" data-bs-toggle="tab" 
+                        data-bs-target="#system" type="button" role="tab">
+                    <i class="fas fa-server me-2"></i>系统信息
+                </button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="configTabsContent">
+            <!-- 基础设置 -->
+            <div class="tab-pane fade show active" id="general" role="tabpanel">
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-sliders-h me-2"></i>
+                            基础设置
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('update_config') }}" method="POST">
+                            <input type="hidden" name="config_type" value="general">
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="system_name" class="form-label">系统名称</label>
+                                        <input type="text" class="form-control" id="system_name" name="system_name" 
+                                               value="{{ config.system_name or 'Twitter抓取管理系统' }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="admin_email" class="form-label">管理员邮箱</label>
+                                        <input type="email" class="form-control" id="admin_email" name="admin_email" 
+                                               value="{{ config.admin_email or '' }}">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="max_concurrent_tasks" class="form-label">最大并发任务数</label>
+                                        <input type="number" class="form-control" id="max_concurrent_tasks" 
+                                               name="max_concurrent_tasks" value="{{ config.max_concurrent_tasks or 3 }}" 
+                                               min="1" max="10">
+                                        <div class="form-text">同时运行的最大任务数量</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="data_retention_days" class="form-label">数据保留天数</label>
+                                        <input type="number" class="form-control" id="data_retention_days" 
+                                               name="data_retention_days" value="{{ config.data_retention_days or 30 }}" 
+                                               min="1" max="365">
+                                        <div class="form-text">超过此天数的数据将被自动清理</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="auto_backup" name="auto_backup" 
+                                           {{ 'checked' if config.auto_backup }}>
+                                    <label class="form-check-label" for="auto_backup">
+                                        启用自动备份
+                                    </label>
+                                </div>
+                                <div class="form-text">每日自动备份数据库</div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>
+                                保存设置
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 抓取配置 -->
+            <div class="tab-pane fade" id="scraping" role="tabpanel">
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-spider me-2"></i>
+                            抓取配置
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('update_config') }}" method="POST">
+                            <input type="hidden" name="config_type" value="scraping">
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="default_max_tweets" class="form-label">默认最大抓取数量</label>
+                                        <input type="number" class="form-control" id="default_max_tweets" 
+                                               name="default_max_tweets" value="{{ config.default_max_tweets or 100 }}" 
+                                               min="1" max="1000">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="request_delay" class="form-label">请求延迟(秒)</label>
+                                        <input type="number" class="form-control" id="request_delay" 
+                                               name="request_delay" value="{{ config.request_delay or 2 }}" 
+                                               min="1" max="10" step="0.1">
+                                        <div class="form-text">请求之间的延迟时间，避免被限制</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="browser_timeout" class="form-label">浏览器超时(秒)</label>
+                                        <input type="number" class="form-control" id="browser_timeout" 
+                                               name="browser_timeout" value="{{ config.browser_timeout or 30 }}" 
+                                               min="10" max="120">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="retry_attempts" class="form-label">重试次数</label>
+                                        <input type="number" class="form-control" id="retry_attempts" 
+                                               name="retry_attempts" value="{{ config.retry_attempts or 3 }}" 
+                                               min="1" max="10">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="user_agents" class="form-label">User-Agent列表</label>
+                                <textarea class="form-control" id="user_agents" name="user_agents" rows="3" 
+                                          placeholder="每行一个User-Agent">{{ config.user_agents or '' }}</textarea>
+                                <div class="form-text">随机使用不同的User-Agent，每行一个</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="enable_proxy" name="enable_proxy" 
+                                           {{ 'checked' if config.enable_proxy }}>
+                                    <label class="form-check-label" for="enable_proxy">
+                                        启用代理
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>
+                                保存设置
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 飞书配置 -->
+            <div class="tab-pane fade" id="feishu" role="tabpanel">
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cloud me-2"></i>
+                            飞书配置
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            配置飞书应用信息后，可以将抓取的数据同步到飞书文档中。
+                            <a href="https://open.feishu.cn/" target="_blank" class="alert-link">获取飞书应用凭证</a>
+                        </div>
+                        
+                        <form action="{{ url_for('update_config') }}" method="POST">
+                            <input type="hidden" name="config_type" value="feishu">
+                            
+                            <div class="mb-3">
+                                <label for="feishu_app_id" class="form-label">App ID</label>
+                                <input type="text" class="form-control" id="feishu_app_id" name="feishu_app_id" 
+                                       value="{{ config.feishu_app_id or 'cli_a8f94354c178900b' }}" placeholder="cli_xxxxxxxxxx">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="feishu_app_secret" class="form-label">App Secret</label>
+                                <input type="password" class="form-control" id="feishu_app_secret" name="feishu_app_secret" 
+                                       value="{{ config.feishu_app_secret or 'HGQGTQyvr2QsWVmPMdY8Oe7A67J3ihVV' }}" placeholder="应用密钥">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="feishu_spreadsheet_token" class="form-label">文档 Token</label>
+                                <input type="text" class="form-control" id="feishu_spreadsheet_token" name="feishu_spreadsheet_token" 
+                                       value="{{ config.feishu_spreadsheet_token or 'V862biEswatwnRsGalochUI6n6d' }}" 
+                                       placeholder="输入飞书文档 Token">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="feishu_table_id" class="form-label">表格 ID</label>
+                                <input type="text" class="form-control" id="feishu_table_id" name="feishu_table_id" 
+                                       value="{{ config.feishu_table_id or 'tblicDZl35dn2vZ9' }}" 
+                                       placeholder="输入飞书表格 ID">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="feishu_enabled" name="feishu_enabled" 
+                                           {{ 'checked' if config.feishu_enabled }}>
+                                    <label class="form-check-label" for="feishu_enabled">
+                                        启用飞书同步
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <h6><i class="fas fa-info-circle"></i> 飞书多维表格字段说明</h6>
+                                <p class="mb-1">系统将自动映射以下字段到飞书多维表格：</p>
+                                <ul class="mb-0">
+                                    <li><strong>推文原文内容</strong> - 推文的完整文本内容</li>
+                                    <li><strong>发布时间</strong> - 推文的原始发布时间</li>
+                                    <li><strong>作者（账号）</strong> - 推文作者的用户名</li>
+                                    <li><strong>推文链接</strong> - 推文的直接链接</li>
+                                    <li><strong>话题标签</strong> - 推文中的所有hashtag</li>
+                                    <li><strong>类型标签</strong> - 自动分类：搞钱、投放、副业干货、情绪类</li>
+                                    <li><strong>收藏数、点赞数、转发数</strong> - 推文的互动数据</li>
+                                    <li><strong>创建时间</strong> - 数据抓取时间</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="feishu_auto_sync" 
+                                                   name="feishu_auto_sync" {{ 'checked' if config.feishu_auto_sync }}>
+                                            <label class="form-check-label" for="feishu_auto_sync">
+                                                启用自动同步
+                                            </label>
+                                        </div>
+                                        <div class="form-text">任务完成后自动同步到飞书</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="sync_interval" class="form-label">同步间隔(小时)</label>
+                                        <input type="number" class="form-control" id="sync_interval" 
+                                               name="sync_interval" value="{{ config.sync_interval or 24 }}" 
+                                               min="1" max="168">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>
+                                    保存配置
+                                </button>
+                                <button type="button" class="btn btn-outline-info" onclick="testFeishuConnection()">
+                                    <i class="fas fa-plug me-2"></i>
+                                    测试连接
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 导出设置 -->
+            <div class="tab-pane fade" id="export" role="tabpanel">
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-download me-2"></i>
+                            导出设置
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('update_config') }}" method="POST">
+                            <input type="hidden" name="config_type" value="export">
+                            
+                            <div class="mb-3">
+                                <label class="form-label">导出格式</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="export_excel" name="export_excel" 
+                                           {{ 'checked' if config.export_excel }}>
+                                    <label class="form-check-label" for="export_excel">
+                                        Excel (.xlsx)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="export_csv" name="export_csv" 
+                                           {{ 'checked' if config.export_csv }}>
+                                    <label class="form-check-label" for="export_csv">
+                                        CSV (.csv)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="export_json" name="export_json" 
+                                           {{ 'checked' if config.export_json }}>
+                                    <label class="form-check-label" for="export_json">
+                                        JSON (.json)
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">导出字段</label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="field_content" 
+                                                   name="export_fields" value="content" 
+                                                   {{ 'checked' if 'content' in (config.export_fields or []) }}>
+                                            <label class="form-check-label" for="field_content">推文内容</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="field_username" 
+                                                   name="export_fields" value="username" 
+                                                   {{ 'checked' if 'username' in (config.export_fields or []) }}>
+                                            <label class="form-check-label" for="field_username">用户名</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="field_created_at" 
+                                                   name="export_fields" value="created_at" 
+                                                   {{ 'checked' if 'created_at' in (config.export_fields or []) }}>
+                                            <label class="form-check-label" for="field_created_at">发布时间</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="field_likes" 
+                                                   name="export_fields" value="likes_count" 
+                                                   {{ 'checked' if 'likes_count' in (config.export_fields or []) }}>
+                                            <label class="form-check-label" for="field_likes">点赞数</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="field_retweets" 
+                                                   name="export_fields" value="retweets_count" 
+                                                   {{ 'checked' if 'retweets_count' in (config.export_fields or []) }}>
+                                            <label class="form-check-label" for="field_retweets">转发数</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="field_hashtags" 
+                                                   name="export_fields" value="hashtags" 
+                                                   {{ 'checked' if 'hashtags' in (config.export_fields or []) }}>
+                                            <label class="form-check-label" for="field_hashtags">话题标签</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="export_filename_template" class="form-label">文件名模板</label>
+                                <input type="text" class="form-control" id="export_filename_template" 
+                                       name="export_filename_template" 
+                                       value="{{ config.export_filename_template or 'twitter_data_{date}' }}" 
+                                       placeholder="twitter_data_{date}">
+                                <div class="form-text">支持变量：{date}, {time}, {task_name}</div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>
+                                保存设置
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 系统信息 -->
+            <div class="tab-pane fade" id="system" role="tabpanel">
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-server me-2"></i>
+                            系统信息
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>系统状态</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td>系统版本</td>
+                                        <td><span class="badge bg-primary">v1.0.0</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Python版本</td>
+                                        <td>{{ system_info.python_version if system_info else '未知' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>运行时间</td>
+                                        <td>{{ system_info.uptime if system_info else '未知' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>内存使用</td>
+                                        <td>{{ system_info.memory_usage if system_info else '未知' }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>数据统计</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td>数据库大小</td>
+                                        <td>{{ system_info.db_size if system_info else '未知' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>总任务数</td>
+                                        <td>{{ system_info.total_tasks if system_info else '0' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>总推文数</td>
+                                        <td>{{ system_info.total_tweets if system_info else '0' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>最后备份</td>
+                                        <td>{{ system_info.last_backup if system_info else '从未' }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <h6>系统操作</h6>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button onclick="backupDatabase()" class="btn btn-outline-primary">
+                                <i class="fas fa-database me-2"></i>
+                                备份数据库
+                            </button>
+                            <button onclick="cleanupData()" class="btn btn-outline-warning">
+                                <i class="fas fa-broom me-2"></i>
+                                清理过期数据
+                            </button>
+                            <button onclick="exportLogs()" class="btn btn-outline-info">
+                                <i class="fas fa-file-alt me-2"></i>
+                                导出日志
+                            </button>
+                            <button onclick="restartSystem()" class="btn btn-outline-danger">
+                                <i class="fas fa-redo me-2"></i>
+                                重启系统
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function testFeishuConnection() {
+    const button = event.target;
+    const originalText = showLoading(button);
+    
+    const appId = $('#feishu_app_id').val();
+    const appSecret = $('#feishu_app_secret').val();
+    
+    if (!appId || !appSecret) {
+        showAlert('请先填写App ID和App Secret', 'warning');
+        hideLoading(button, originalText);
+        return;
+    }
+    
+    $.post('/test_feishu', {
+        app_id: appId,
+        app_secret: appSecret
+    })
+    .done(function(response) {
+        showAlert('飞书连接测试成功！', 'success');
+    })
+    .fail(function(xhr) {
+        const error = xhr.responseJSON ? xhr.responseJSON.error : '连接测试失败';
+        showAlert('连接测试失败: ' + error, 'danger');
+    })
+    .always(function() {
+        hideLoading(button, originalText);
+    });
+}
+
+function backupDatabase() {
+    if (confirm('确定要备份数据库吗？')) {
+        const button = event.target;
+        const originalText = showLoading(button);
+        
+        $.post('/backup_database')
+            .done(function(response) {
+                showAlert('数据库备份成功！', 'success');
+            })
+            .fail(function(xhr) {
+                const error = xhr.responseJSON ? xhr.responseJSON.error : '备份失败';
+                showAlert('备份失败: ' + error, 'danger');
+            })
+            .always(function() {
+                hideLoading(button, originalText);
+            });
+    }
+}
+
+function cleanupData() {
+    if (confirm('确定要清理过期数据吗？此操作不可恢复！')) {
+        const button = event.target;
+        const originalText = showLoading(button);
+        
+        $.post('/cleanup_data')
+            .done(function(response) {
+                showAlert(`清理完成！删除了 ${response.deleted_count} 条过期数据`, 'success');
+            })
+            .fail(function(xhr) {
+                const error = xhr.responseJSON ? xhr.responseJSON.error : '清理失败';
+                showAlert('清理失败: ' + error, 'danger');
+            })
+            .always(function() {
+                hideLoading(button, originalText);
+            });
+    }
+}
+
+function exportLogs() {
+    window.open('/export_logs', '_blank');
+}
+
+function restartSystem() {
+    if (confirm('确定要重启系统吗？这将中断所有正在运行的任务！')) {
+        $.post('/restart_system')
+            .done(function(response) {
+                showAlert('系统正在重启...', 'info');
+                setTimeout(() => location.reload(), 3000);
+            })
+            .fail(function(xhr) {
+                const error = xhr.responseJSON ? xhr.responseJSON.error : '重启失败';
+                showAlert('重启失败: ' + error, 'danger');
+            });
+    }
+}
+
+function saveFeishuConfig() {
+    // 获取表单数据
+    const formData = {
+        app_id: document.getElementById('feishu_app_id').value,
+        app_secret: document.getElementById('feishu_app_secret').value,
+        spreadsheet_token: document.getElementById('feishu_spreadsheet_token').value,
+        table_id: document.getElementById('feishu_table_id').value,
+        enabled: document.getElementById('feishu_enabled').checked
+    };
+    
+    // 发送保存请求
+    fetch('/api/config/feishu', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('飞书配置保存成功', 'success');
+        } else {
+            showAlert('保存失败: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('保存失败: ' + error.message, 'danger');
+    });
+}
+
+// 表单提交处理
+$('form').on('submit', function(e) {
+    const submitBtn = $(this).find('button[type="submit"]');
+    showLoading(submitBtn[0]);
+});
+</script>
+{% endblock %}

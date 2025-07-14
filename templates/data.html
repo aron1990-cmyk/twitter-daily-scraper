@@ -1,0 +1,472 @@
+{% extends "base.html" %}
+
+{% block title %}数据查看 - Twitter抓取管理系统{% endblock %}
+
+{% block content %}
+<!-- 页面标题 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2>
+                <i class="fas fa-database me-2"></i>
+                数据查看
+            </h2>
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('api_export_data') }}" class="btn btn-success">
+                    <i class="fas fa-file-excel me-2"></i>
+                    导出Excel
+                </a>
+                <button onclick="syncToFeishu()" class="btn btn-info">
+                    <i class="fas fa-cloud-upload-alt me-2"></i>
+                    同步飞书
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 数据统计 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="stats-icon text-primary mb-2">
+                    <i class="fab fa-twitter"></i>
+                </div>
+                <h4 class="text-primary">{{ data_stats.total_tweets }}</h4>
+                <p class="text-muted mb-0">总推文数</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="stats-icon text-success mb-2">
+                    <i class="fas fa-calendar-day"></i>
+                </div>
+                <h4 class="text-success">{{ data_stats.today_tweets }}</h4>
+                <p class="text-muted mb-0">今日新增</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="stats-icon text-warning mb-2">
+                    <i class="fas fa-heart"></i>
+                </div>
+                <h4 class="text-warning">{{ data_stats.avg_likes }}</h4>
+                <p class="text-muted mb-0">平均点赞数</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="stats-icon text-info mb-2">
+                    <i class="fas fa-retweet"></i>
+                </div>
+                <h4 class="text-info">{{ data_stats.avg_retweets }}</h4>
+                <p class="text-muted mb-0">平均转发数</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 筛选和搜索 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="search" class="form-label">搜索内容</label>
+                        <input type="text" class="form-control" id="search" name="search" 
+                               value="{{ request.args.get('search', '') }}" placeholder="推文内容或用户名">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="task_id" class="form-label">任务筛选</label>
+                        <select class="form-select" id="task_id" name="task_id">
+                            <option value="">全部任务</option>
+                            {% for task in tasks %}
+                                <option value="{{ task.id }}" {{ 'selected' if request.args.get('task_id')|int == task.id }}>{{ task.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="min_likes" class="form-label">最小点赞数</label>
+                        <input type="number" class="form-control" id="min_likes" name="min_likes" 
+                               value="{{ request.args.get('min_likes', '') }}" min="0">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="min_retweets" class="form-label">最小转发数</label>
+                        <input type="number" class="form-control" id="min_retweets" name="min_retweets" 
+                               value="{{ request.args.get('min_retweets', '') }}" min="0">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="sort" class="form-label">排序方式</label>
+                        <select class="form-select" id="sort" name="sort">
+                            <option value="created_desc" {{ 'selected' if request.args.get('sort') == 'created_desc' }}>时间(新到旧)</option>
+                            <option value="created_asc" {{ 'selected' if request.args.get('sort') == 'created_asc' }}>时间(旧到新)</option>
+                            <option value="likes_desc" {{ 'selected' if request.args.get('sort') == 'likes_desc' }}>点赞数(高到低)</option>
+                            <option value="retweets_desc" {{ 'selected' if request.args.get('sort') == 'retweets_desc' }}>转发数(高到低)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 推文列表 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">推文数据 ({{ pagination.total }} 条)</h5>
+            </div>
+            <div class="card-body">
+                {% if tweets %}
+                    <div class="row">
+                        {% for tweet in tweets %}
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-start mb-3">
+                                        <div class="flex-shrink-0">
+                                            {% if tweet.user_avatar %}
+                                                <img src="{{ tweet.user_avatar }}" alt="{{ tweet.username }}" 
+                                                     class="rounded-circle" width="40" height="40">
+                                            {% else %}
+                                                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center" 
+                                                     style="width: 40px; height: 40px; color: white;">
+                                                    <i class="fas fa-user"></i>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <h6 class="mb-1">
+                                                <strong>{{ tweet.user_display_name or tweet.username }}</strong>
+                                                <small class="text-muted">@{{ tweet.username }}</small>
+                                            </h6>
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>
+                                                {{ tweet.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                            </small>
+                                        </div>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                                    type="button" data-bs-toggle="dropdown">
+                                                <i class="fas fa-ellipsis-h"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                {% if tweet.url %}
+                                                    <li><a class="dropdown-item" href="{{ tweet.url }}" target="_blank">
+                                                        <i class="fas fa-external-link-alt me-2"></i>查看原推文
+                                                    </a></li>
+                                                {% endif %}
+                                                <li><a class="dropdown-item" href="#" onclick="copyTweet('{{ tweet.id }}')">
+                                                    <i class="fas fa-copy me-2"></i>复制内容
+                                                </a></li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteTweet('{{ tweet.id }}')">
+                                                    <i class="fas fa-trash me-2"></i>删除
+                                                </a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="tweet-content mb-3">
+                                        <p class="mb-2">{{ tweet.content }}</p>
+                                        {% if tweet.hashtags %}
+                                            <div class="mb-2">
+                                                {% for hashtag in tweet.hashtags.split(',') %}
+                                                    <span class="badge bg-light text-primary me-1">#{{ hashtag.strip() }}</span>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex gap-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-heart text-danger me-1"></i>
+                                                {{ tweet.likes_count or 0 }}
+                                            </small>
+                                            <small class="text-muted">
+                                                <i class="fas fa-retweet text-success me-1"></i>
+                                                {{ tweet.retweets_count or 0 }}
+                                            </small>
+                                            <small class="text-muted">
+                                                <i class="fas fa-comment text-info me-1"></i>
+                                                {{ tweet.replies_count or 0 }}
+                                            </small>
+                                        </div>
+                                        <small class="text-muted">
+                                            {% if tweet.task %}
+                                                <span class="badge bg-secondary">{{ tweet.task.name }}</span>
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- 分页 -->
+                    {% if pagination.pages > 1 %}
+                        <nav aria-label="推文分页">
+                            <ul class="pagination">
+                                {% if pagination.has_prev %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('data', page=pagination.prev_num, **request.args) }}">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% for page_num in pagination.iter_pages() %}
+                                    {% if page_num %}
+                                        {% if page_num != pagination.page %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('data', page=page_num, **request.args) }}">{{ page_num }}</a>
+                                            </li>
+                                        {% else %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ page_num }}</span>
+                                            </li>
+                                        {% endif %}
+                                    {% else %}
+                                        <li class="page-item disabled">
+                                            <span class="page-link">...</span>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if pagination.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('data', page=pagination.next_num, **request.args) }}">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fab fa-twitter fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">暂无数据</h4>
+                        <p class="text-muted">还没有抓取到任何推文数据</p>
+                        <a href="{{ url_for('tasks') }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>
+                            创建抓取任务
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 数据分析图表 -->
+{% if tweets %}
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    每日推文数量
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="dailyTweetsChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    热门话题标签
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="hashtagsChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    互动数据趋势
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="engagementChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+function syncToFeishu() {
+    const button = event.target;
+    const originalText = showLoading(button);
+    
+    $.post('/sync_feishu')
+        .done(function(response) {
+            showAlert('数据已成功同步到飞书文档！', 'success');
+        })
+        .fail(function(xhr) {
+            const error = xhr.responseJSON ? xhr.responseJSON.error : '同步失败';
+            showAlert('同步失败: ' + error, 'danger');
+        })
+        .always(function() {
+            hideLoading(button, originalText);
+        });
+}
+
+function copyTweet(tweetId) {
+    const tweetCard = $(`[onclick="copyTweet('${tweetId}')"]`).closest('.card');
+    const content = tweetCard.find('.tweet-content p').text();
+    
+    navigator.clipboard.writeText(content).then(function() {
+        showAlert('推文内容已复制到剪贴板', 'success');
+    }).catch(function() {
+        showAlert('复制失败', 'danger');
+    });
+}
+
+function deleteTweet(tweetId) {
+    if (confirm('确定要删除这条推文吗？此操作不可恢复！')) {
+        $.ajax({
+            url: `/data/${tweetId}`,
+            type: 'DELETE'
+        })
+        .done(function(response) {
+            showAlert('推文已删除！', 'success');
+            setTimeout(() => location.reload(), 1000);
+        })
+        .fail(function(xhr) {
+            const error = xhr.responseJSON ? xhr.responseJSON.error : '删除失败';
+            showAlert('删除失败: ' + error, 'danger');
+        });
+    }
+}
+
+// 图表初始化
+$(document).ready(function() {
+    // 检查是否有图表元素存在
+    if (document.getElementById('dailyTweetsChart')) {
+        // 获取图表数据
+        $.get('/api/chart_data')
+            .done(function(data) {
+                // 每日推文数量图表
+                const dailyCtx = document.getElementById('dailyTweetsChart').getContext('2d');
+                new Chart(dailyCtx, {
+                    type: 'line',
+                    data: {
+                        labels: data.daily_tweets.labels,
+                        datasets: [{
+                            label: '推文数量',
+                            data: data.daily_tweets.data,
+                            borderColor: '#1da1f2',
+                            backgroundColor: 'rgba(29, 161, 242, 0.1)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+                
+                // 热门话题标签图表
+                const hashtagsCtx = document.getElementById('hashtagsChart').getContext('2d');
+                new Chart(hashtagsCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.hashtags.labels,
+                        datasets: [{
+                            data: data.hashtags.data,
+                            backgroundColor: [
+                                '#1da1f2', '#14171a', '#657786', '#aab8c2', 
+                                '#e1e8ed', '#f7f9fa', '#ffad1f', '#f91880'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+                
+                // 互动数据趋势图表
+                const engagementCtx = document.getElementById('engagementChart').getContext('2d');
+                new Chart(engagementCtx, {
+                    type: 'line',
+                    data: {
+                        labels: data.engagement.labels,
+                        datasets: [
+                            {
+                                label: '平均点赞数',
+                                data: data.engagement.likes,
+                                borderColor: '#f91880',
+                                backgroundColor: 'rgba(249, 24, 128, 0.1)',
+                                tension: 0.4
+                            },
+                            {
+                                label: '平均转发数',
+                                data: data.engagement.retweets,
+                                borderColor: '#17bf63',
+                                backgroundColor: 'rgba(23, 191, 99, 0.1)',
+                                tension: 0.4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            })
+            .fail(function() {
+                console.log('图表数据加载失败');
+            });
+    }
+});
+</script>
+{% endblock %}

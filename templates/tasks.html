@@ -1,0 +1,417 @@
+{% extends "base.html" %}
+
+{% block title %}任务管理 - Twitter抓取管理系统{% endblock %}
+
+{% block content %}
+<!-- 页面标题 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2>
+                <i class="fas fa-tasks me-2"></i>
+                任务管理
+            </h2>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTaskModal">
+                <i class="fas fa-plus me-2"></i>
+                创建新任务
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 任务统计 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-primary">{{ task_stats.total }}</h4>
+                <p class="text-muted mb-0">总任务数</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-warning">{{ task_stats.pending }}</h4>
+                <p class="text-muted mb-0">等待中</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-info">{{ task_stats.running }}</h4>
+                <p class="text-muted mb-0">运行中</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-success">{{ task_stats.completed }}</h4>
+                <p class="text-muted mb-0">已完成</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 筛选和搜索 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="search" class="form-label">搜索任务</label>
+                        <input type="text" class="form-control" id="search" name="search" 
+                               value="{{ request.args.get('search', '') }}" placeholder="任务名称或关键词">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status" class="form-label">状态筛选</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">全部状态</option>
+                            <option value="pending" {{ 'selected' if request.args.get('status') == 'pending' }}>等待中</option>
+                            <option value="running" {{ 'selected' if request.args.get('status') == 'running' }}>运行中</option>
+                            <option value="completed" {{ 'selected' if request.args.get('status') == 'completed' }}>已完成</option>
+                            <option value="failed" {{ 'selected' if request.args.get('status') == 'failed' }}>失败</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="sort" class="form-label">排序方式</label>
+                        <select class="form-select" id="sort" name="sort">
+                            <option value="created_desc" {{ 'selected' if request.args.get('sort') == 'created_desc' }}>创建时间(新到旧)</option>
+                            <option value="created_asc" {{ 'selected' if request.args.get('sort') == 'created_asc' }}>创建时间(旧到新)</option>
+                            <option value="name_asc" {{ 'selected' if request.args.get('sort') == 'name_asc' }}>名称(A-Z)</option>
+                            <option value="name_desc" {{ 'selected' if request.args.get('sort') == 'name_desc' }}>名称(Z-A)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="fas fa-search me-1"></i>筛选
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 任务列表 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">任务列表</h5>
+            </div>
+            <div class="card-body">
+                {% if tasks %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>任务名称</th>
+                                    <th>关键词</th>
+                                    <th>目标账号</th>
+                                    <th>状态</th>
+                                    <th>进度</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in tasks %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ task.name }}</strong>
+                                        {% if task.description %}
+                                            <br><small class="text-muted">{{ task.description }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if task.keywords %}
+                                            {% for keyword in task.keywords.split(',') %}
+                                                <span class="badge bg-light text-dark me-1">{{ keyword.strip() }}</span>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="text-muted">无关键词</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if task.accounts %}
+                                            {% for account in task.accounts.split(',') %}
+                                                <span class="badge bg-info me-1">@{{ account.strip() }}</span>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="text-muted">全网搜索</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if task.status == 'pending' %}
+                                            <span class="status-badge status-pending">等待中</span>
+                                        {% elif task.status == 'running' %}
+                                            <span class="status-badge status-running">运行中</span>
+                                        {% elif task.status == 'completed' %}
+                                            <span class="status-badge status-completed">已完成</span>
+                                        {% elif task.status == 'failed' %}
+                                            <span class="status-badge status-failed">失败</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            {% set progress = (task.tweets_collected / task.max_tweets * 100) if task.max_tweets > 0 else 0 %}
+                                            <div class="progress-bar" role="progressbar" 
+                                                 data-progress="{{ progress }}" 
+                                                 aria-valuenow="{{ progress }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                                {{ task.tweets_collected }}/{{ task.max_tweets }}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <small>{{ task.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            {% if task.status == 'pending' %}
+                                                <button onclick="startTask('{{ task.id }}')" class="btn btn-success" title="启动任务">
+                                                    <i class="fas fa-play"></i>
+                                                </button>
+                                            {% elif task.status == 'running' %}
+                                                <button onclick="stopTask('{{ task.id }}')" class="btn btn-warning" title="停止任务">
+                                                    <i class="fas fa-stop"></i>
+                                                </button>
+                                            {% endif %}
+                                            
+                                            <button onclick="viewTask('{{ task.id }}')" class="btn btn-info" title="查看详情">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            
+                                            {% if task.status in ['completed', 'failed'] %}
+                                                <button onclick="deleteTask('{{ task.id }}')" class="btn btn-danger" title="删除任务">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 分页功能暂未实现 -->
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">暂无任务</h4>
+                        <p class="text-muted">点击上方按钮创建第一个抓取任务</p>
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTaskModal">
+                            <i class="fas fa-plus me-2"></i>
+                            创建新任务
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 创建任务模态框 -->
+<div class="modal fade" id="createTaskModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>
+                    创建新任务
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('create_task') }}" method="POST">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modal_task_name" class="form-label">任务名称 *</label>
+                                <input type="text" class="form-control" id="modal_task_name" name="task_name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modal_max_tweets" class="form-label">最大抓取数量</label>
+                                <input type="number" class="form-control" id="modal_max_tweets" name="max_tweets" 
+                                       value="100" min="1" max="1000">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="modal_description" class="form-label">任务描述</label>
+                        <textarea class="form-control" id="modal_description" name="description" rows="2" 
+                                  placeholder="可选：描述此任务的目的和用途"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="modal_keywords" class="form-label">关键词 *</label>
+                        <input type="text" class="form-control" id="modal_keywords" name="keywords" 
+                               placeholder="输入关键词，用逗号分隔，例如：人工智能,机器学习,深度学习" required>
+                        <div class="form-text">支持多个关键词，用逗号分隔</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="modal_target_accounts" class="form-label">目标账号（可选）</label>
+                        <input type="text" class="form-control" id="modal_target_accounts" name="target_accounts" 
+                               placeholder="输入Twitter用户名，用逗号分隔，例如：elonmusk,openai">
+                        <div class="form-text">留空则搜索全网，指定账号则只搜索这些账号的推文</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modal_min_likes" class="form-label">最小点赞数</label>
+                                <input type="number" class="form-control" id="modal_min_likes" name="min_likes" 
+                                       value="0" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modal_min_retweets" class="form-label">最小转发数</label>
+                                <input type="number" class="form-control" id="modal_min_retweets" name="min_retweets" 
+                                       value="0" min="0">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="modal_auto_start" name="auto_start" checked>
+                            <label class="form-check-label" for="modal_auto_start">
+                                创建后立即启动任务
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>
+                        创建任务
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 任务详情模态框 -->
+<div class="modal fade" id="taskDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-info-circle me-2"></i>
+                    任务详情
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="taskDetailContent">
+                <!-- 动态加载内容 -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function startTask(taskId) {
+    console.log('startTask called with taskId:', taskId);
+    if (confirm('确定要启动这个任务吗？')) {
+        console.log('User confirmed, sending POST request to:', `/api/tasks/${taskId}/start`);
+        $.post(`/api/tasks/${taskId}/start`)
+            .done(function(response) {
+                console.log('POST request successful:', response);
+                showAlert('任务已启动！AdsPower浏览器将自动打开并开始执行抓取任务。', 'success');
+                setTimeout(() => location.reload(), 1000);
+            })
+            .fail(function(xhr) {
+                console.log('POST request failed:', xhr);
+                const error = xhr.responseJSON ? xhr.responseJSON.error : '启动失败';
+                showAlert('启动失败: ' + error, 'danger');
+            });
+    } else {
+        console.log('User cancelled the action');
+    }
+}
+
+function stopTask(taskId) {
+    if (confirm('确定要停止这个任务吗？')) {
+        $.post(`/api/tasks/${taskId}/stop`)
+            .done(function(response) {
+                showAlert('任务已停止！', 'warning');
+                setTimeout(() => location.reload(), 1000);
+            })
+            .fail(function(xhr) {
+                const error = xhr.responseJSON ? xhr.responseJSON.error : '停止失败';
+                showAlert('停止失败: ' + error, 'danger');
+            });
+    }
+}
+
+function deleteTask(taskId) {
+    if (confirm('确定要删除这个任务吗？此操作不可恢复！')) {
+        $.ajax({
+            url: `/api/tasks/${taskId}`,
+            type: 'DELETE'
+        })
+        .done(function(response) {
+            showAlert('任务已删除！', 'success');
+            setTimeout(() => location.reload(), 1000);
+        })
+        .fail(function(xhr) {
+            const error = xhr.responseJSON ? xhr.responseJSON.error : '删除失败';
+            showAlert('删除失败: ' + error, 'danger');
+        });
+    }
+}
+
+function viewTask(taskId) {
+    $.get(`/api/tasks/${taskId}`)
+        .done(function(response) {
+            $('#taskDetailContent').html(response);
+            $('#taskDetailModal').modal('show');
+        })
+        .fail(function(xhr) {
+            showAlert('加载任务详情失败', 'danger');
+        });
+}
+
+// 页面加载完成后执行
+$(document).ready(function() {
+    updateStatus();
+    
+    // 设置进度条宽度
+    $('.progress-bar').each(function() {
+        const progress = $(this).data('progress');
+        $(this).css('width', progress + '%');
+    });
+});
+
+// 自动刷新运行中的任务状态
+setInterval(function() {
+    if ($('.status-running').length > 0) {
+        location.reload();
+    }
+}, 10000); // 每10秒刷新一次
+
+// 表单提交处理
+$('#createTaskModal form').on('submit', function(e) {
+    const submitBtn = $(this).find('button[type="submit"]');
+    showLoading(submitBtn[0]);
+});
+</script>
+{% endblock %}

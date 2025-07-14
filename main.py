@@ -17,12 +17,17 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from config import (
     ADS_POWER_CONFIG, TWITTER_TARGETS, FILTER_CONFIG, 
-    OUTPUT_CONFIG, BROWSER_CONFIG, LOG_CONFIG
+    OUTPUT_CONFIG, BROWSER_CONFIG, LOG_CONFIG, CLOUD_SYNC_CONFIG
 )
 from ads_browser_launcher import AdsPowerLauncher
 from twitter_parser import TwitterParser
 from tweet_filter import TweetFilter
 from excel_writer import ExcelWriter
+from cloud_sync import CloudSyncManager
+from ai_analyzer import AIContentAnalyzer as AIAnalyzer
+from account_manager import AccountManager
+from system_monitor import SystemMonitor
+import json
 
 class TwitterDailyScraper:
     def __init__(self):
@@ -30,7 +35,42 @@ class TwitterDailyScraper:
         self.parser = None
         self.filter_engine = TweetFilter()
         self.excel_writer = ExcelWriter()
+        self.cloud_sync = CloudSyncManager(CLOUD_SYNC_CONFIG)
+        self.ai_analyzer = AIAnalyzer()
+        
+        # 加载账号配置
+        accounts_config = self._load_accounts_config()
+        self.account_manager = AccountManager(accounts_config)
+        
+        self.system_monitor = SystemMonitor()
         self.logger = self.setup_logging()
+        
+        # 启动系统监控
+        self.system_monitor.start_monitoring()
+        
+        self.logger.info("TwitterDailyScraper 初始化完成")
+    
+    def _load_accounts_config(self) -> List[Dict[str, Any]]:
+        """
+        加载账号配置文件
+        
+        Returns:
+            账号配置列表
+        """
+        try:
+            accounts_file = os.path.join(os.path.dirname(__file__), 'accounts', 'accounts.json')
+            with open(accounts_file, 'r', encoding='utf-8') as f:
+                accounts_config = json.load(f)
+            return accounts_config
+        except Exception as e:
+            print(f"加载账号配置失败: {e}")
+            # 返回默认配置
+            return [{
+                "user_id": "k11p9ypc",
+                "name": "Default_Account",
+                "priority": 1,
+                "daily_limit": 50
+            }]
         
     def setup_logging(self) -> logging.Logger:
         """
@@ -265,9 +305,57 @@ class TwitterDailyScraper:
             # 生成统计信息
             statistics = self.filter_engine.get_filter_statistics(filtered_tweets)
             
+            # AI分析
+            try:
+                self.logger.info("开始AI分析...")
+                ai_insights = await self.ai_analyzer.analyze_tweets_batch(passed_tweets)
+                
+                # 添加AI分析结果到推文数据
+                for i, tweet in enumerate(passed_tweets):
+                    if i < len(ai_insights):
+                        tweet.update({
+                            'ai_quality_score': ai_insights[i].get('quality_score', 0),
+                            'ai_sentiment': ai_insights[i].get('sentiment', 'neutral'),
+                            'ai_engagement_prediction': ai_insights[i].get('engagement_score', 0),
+                            'ai_trend_relevance': ai_insights[i].get('trend_relevance', 0)
+                        })
+                
+                self.logger.info(f"AI分析完成，处理了 {len(ai_insights)} 条推文")
+            
+            except Exception as e:
+                self.logger.error(f"AI分析过程中发生错误: {e}")
+            
             # 导出到 Excel
             self.logger.info("开始导出数据到 Excel...")
             output_file = self.excel_writer.write_tweets_with_summary(passed_tweets, statistics)
+            
+            # 云端同步
+            sync_results = {}
+            if any(config.get('enabled', False) for config in CLOUD_SYNC_CONFIG.values()):
+                self.logger.info("开始同步数据到云端平台...")
+                try:
+                    sync_results = await self.cloud_sync.sync_all_platforms(passed_tweets, CLOUD_SYNC_CONFIG)
+                    for platform, success in sync_results.items():
+                        if success:
+                            self.logger.info(f"✅ {platform} 同步成功")
+                        else:
+                            self.logger.warning(f"❌ {platform} 同步失败")
+                except Exception as e:
+                    self.logger.error(f"云端同步过程中出现异常: {e}")
+            
+            # 生成AI洞察报告
+            try:
+                ai_report = await self.ai_analyzer.generate_insights_report(passed_tweets)
+                report_file = f"ai_insights_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                
+                import json
+                with open(report_file, 'w', encoding='utf-8') as f:
+                    json.dump(ai_report, f, ensure_ascii=False, indent=2)
+                
+                self.logger.info(f"AI洞察报告已生成: {report_file}")
+            
+            except Exception as e:
+                self.logger.error(f"生成AI洞察报告时发生错误: {e}")
             
             self.logger.info("="*50)
             self.logger.info("Twitter 日报采集任务完成")
@@ -276,6 +364,8 @@ class TwitterDailyScraper:
             self.logger.info(f"总推文数: {statistics['total_tweets']}")
             self.logger.info(f"通过筛选: {statistics['passed_tweets']}")
             self.logger.info(f"通过率: {statistics['pass_rate']:.2%}")
+            if sync_results:
+                self.logger.info(f"云端同步结果: {sync_results}")
             self.logger.info("="*50)
             
             return output_file
@@ -297,6 +387,16 @@ class TwitterDailyScraper:
             
             # 停止 AdsPower 浏览器
             self.launcher.stop_browser()
+            
+            # 停止系统监控
+            if self.system_monitor:
+                self.system_monitor.stop_monitoring()
+                self.logger.info("系统监控已停止")
+            
+            # 保存账户管理器状态
+            if self.account_manager:
+                self.account_manager.save_accounts()
+                self.logger.info("账户状态已保存")
             
             self.logger.info("资源清理完成")
             

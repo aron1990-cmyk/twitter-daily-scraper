@@ -1,0 +1,1223 @@
+{% extends "base.html" %}
+
+{% block title %}页面结构分析器 - Twitter抓取管理系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h1 class="h3 mb-3">
+                        <i class="fas fa-search-plus me-2"></i>
+                        智能页面结构分析器
+                    </h1>
+                    <p class="text-muted mb-0">自动识别页面结构，配置采集规则，类似八爪鱼采集器的功能</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 左侧控制面板 -->
+        <div class="col-md-4">
+            <!-- URL输入 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-link me-2"></i>
+                        目标页面
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="targetUrl" class="form-label">页面URL</label>
+                        <input type="url" class="form-control" id="targetUrl" 
+                               placeholder="https://x.com/search?q=关键词" 
+                               value="https://x.com">
+                    </div>
+                    <div class="mb-3">
+                        <label for="pageType" class="form-label">页面类型</label>
+                        <select class="form-select" id="pageType">
+                            <option value="auto">自动检测</option>
+                            <option value="twitter_search">Twitter搜索页</option>
+                            <option value="twitter_profile">Twitter个人主页</option>
+                            <option value="twitter_home">Twitter首页</option>
+                            <option value="custom">自定义页面</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary w-100" onclick="analyzePageStructure()">
+                        <i class="fas fa-play me-2"></i>
+                        开始分析页面结构
+                    </button>
+                </div>
+            </div>
+
+            <!-- 分析结果 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        分析结果
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="analysisResults">
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-info-circle fa-2x mb-2"></i>
+                            <p>点击"开始分析"来识别页面结构</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 博主管理 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>
+                        博主管理
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="influencerUrl" class="form-label">博主主页URL</label>
+                        <input type="url" class="form-control" id="influencerUrl" 
+                               placeholder="https://x.com/username">
+                    </div>
+                    <div class="mb-3">
+                        <label for="influencerName" class="form-label">博主名称</label>
+                        <input type="text" class="form-control" id="influencerName" 
+                               placeholder="输入博主名称">
+                    </div>
+                    <div class="mb-3">
+                        <label for="influencerCategory" class="form-label">分类</label>
+                        <select class="form-select" id="influencerCategory">
+                            <option value="搞钱">搞钱</option>
+                            <option value="投放">投放</option>
+                            <option value="副业干货">副业干货</option>
+                            <option value="情绪类">情绪类</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="influencerDescription" class="form-label">描述</label>
+                        <textarea class="form-control" id="influencerDescription" rows="2" 
+                                  placeholder="博主描述信息"></textarea>
+                    </div>
+                    <button class="btn btn-primary w-100 mb-2" onclick="addInfluencer()">
+                        <i class="fas fa-plus me-2"></i>
+                        添加博主
+                    </button>
+                    <button class="btn btn-outline-secondary w-100" onclick="showInfluencerList()">
+                        <i class="fas fa-list me-2"></i>
+                        管理博主列表
+                    </button>
+                </div>
+            </div>
+
+            <!-- 采集配置 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cogs me-2"></i>
+                        采集配置
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="maxItems" class="form-label">最大采集数量</label>
+                        <input type="number" class="form-control" id="maxItems" value="50" min="1" max="1000">
+                    </div>
+                    <div class="mb-3">
+                        <label for="scrollDelay" class="form-label">滚动延迟(秒)</label>
+                        <input type="number" class="form-control" id="scrollDelay" value="2" min="0.5" max="10" step="0.5">
+                    </div>
+                    <div class="mb-3">
+                        <label for="maxScrolls" class="form-label">最大滚动次数</label>
+                        <input type="number" class="form-control" id="maxScrolls" value="50" min="1" max="200">
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="enableSmartScroll" checked>
+                        <label class="form-check-label" for="enableSmartScroll">
+                            启用智能滚动
+                        </label>
+                    </div>
+                    <div class="mb-3">
+                        <label for="selectedInfluencers" class="form-label">选择博主</label>
+                        <select class="form-select" id="selectedInfluencers" multiple size="3">
+                            <!-- 动态加载博主列表 -->
+                        </select>
+                        <div class="form-text">按住Ctrl/Cmd可多选博主</div>
+                    </div>
+                    <button class="btn btn-success w-100" onclick="startInfluencerScraping()" id="startInfluencerScrapingBtn">
+                        <i class="fas fa-robot me-2"></i>
+                        抓取选中博主
+                    </button>
+                    <button class="btn btn-info w-100 mt-2" onclick="startIntelligentScraping()" disabled id="startScrapingBtn">
+                        <i class="fas fa-search me-2"></i>
+                        智能页面分析
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧主要内容 -->
+        <div class="col-md-8">
+            <!-- 页面结构可视化 -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-sitemap me-2"></i>
+                        页面结构可视化
+                    </h5>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="showStructureView()">
+                            <i class="fas fa-tree"></i> 结构视图
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="showSelectorView()">
+                            <i class="fas fa-code"></i> 选择器视图
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="showPreviewView()">
+                            <i class="fas fa-eye"></i> 预览视图
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="structureVisualization">
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-sitemap fa-3x mb-3"></i>
+                            <h5>页面结构将在这里显示</h5>
+                            <p>分析页面后，您将看到识别出的元素结构</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 字段映射配置 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-map me-2"></i>
+                        字段映射配置
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="fieldMapping">
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-map-marked-alt fa-2x mb-2"></i>
+                            <p>分析页面后配置字段映射</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 实时采集结果 -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        实时采集结果
+                    </h5>
+                    <div>
+                        <span class="badge bg-primary" id="collectedCount">0</span>
+                        <button class="btn btn-outline-secondary btn-sm ms-2" onclick="exportResults()">
+                            <i class="fas fa-download"></i> 导出
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="scrapingResults">
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-database fa-2x mb-2"></i>
+                            <p>采集结果将在这里实时显示</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 进度模态框 -->
+<div class="modal fade" id="progressModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-cog fa-spin me-2"></i>
+                    正在处理...
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="progress mb-3">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 0%" id="progressBar"></div>
+                </div>
+                <p class="mb-0" id="progressText">正在初始化...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 博主列表管理模态框 -->
+<div class="modal fade" id="influencerListModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-users me-2"></i>
+                    博主管理
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- 搜索和筛选 -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <input type="text" class="form-control" id="influencerSearch" 
+                               placeholder="搜索博主名称或用户名">
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select" id="influencerCategoryFilter">
+                            <option value="">全部分类</option>
+                            <option value="搞钱">搞钱</option>
+                            <option value="投放">投放</option>
+                            <option value="副业干货">副业干货</option>
+                            <option value="情绪类">情绪类</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary" onclick="searchInfluencers()">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 博主列表 -->
+                <div id="influencerListContainer">
+                    <div class="text-center py-4">
+                        <div class="loading-spinner"></div>
+                        <p class="mt-2">加载中...</p>
+                    </div>
+                </div>
+                
+                <!-- 分页 -->
+                <nav id="influencerPagination" class="mt-3" style="display: none;">
+                    <ul class="pagination justify-content-center" id="paginationList">
+                        <!-- 动态生成分页 -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑博主模态框 -->
+<div class="modal fade" id="editInfluencerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>
+                    编辑博主信息
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editInfluencerForm">
+                    <input type="hidden" id="editInfluencerId">
+                    <div class="mb-3">
+                        <label for="editInfluencerName" class="form-label">博主名称</label>
+                        <input type="text" class="form-control" id="editInfluencerName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editInfluencerCategory" class="form-label">分类</label>
+                        <select class="form-select" id="editInfluencerCategory">
+                            <option value="搞钱">搞钱</option>
+                            <option value="投放">投放</option>
+                            <option value="副业干货">副业干货</option>
+                            <option value="情绪类">情绪类</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editInfluencerDescription" class="form-label">描述</label>
+                        <textarea class="form-control" id="editInfluencerDescription" rows="3"></textarea>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="editInfluencerActive">
+                        <label class="form-check-label" for="editInfluencerActive">
+                            启用状态
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="updateInfluencer()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.structure-node {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    margin: 0.5rem 0;
+    background: #f8f9fa;
+    position: relative;
+}
+
+.structure-node.selected {
+    border-color: #0d6efd;
+    background: #e7f3ff;
+}
+
+.structure-node .node-info {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.structure-node .node-selector {
+    font-family: 'Courier New', monospace;
+    background: #e9ecef;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+}
+
+.field-mapping-item {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: #ffffff;
+}
+
+.field-mapping-item .field-name {
+    font-weight: 600;
+    color: #495057;
+}
+
+.selector-input {
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+}
+
+.result-item {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    background: #ffffff;
+    transition: all 0.2s;
+}
+
+.result-item:hover {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.result-item .item-index {
+    background: #6c757d;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.result-item .item-content {
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+.result-item .item-meta {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+
+<script>
+let currentAnalysis = null;
+let scrapingInProgress = false;
+let collectedData = [];
+let influencerList = [];
+let currentInfluencerPage = 1;
+let totalInfluencerPages = 1;
+
+// 页面加载时初始化
+document.addEventListener('DOMContentLoaded', function() {
+    loadInfluencerOptions();
+});
+
+// 分析页面结构
+async function analyzePageStructure() {
+    const url = document.getElementById('targetUrl').value;
+    const pageType = document.getElementById('pageType').value;
+    
+    if (!url) {
+        alert('请输入目标URL');
+        return;
+    }
+    
+    showProgress('正在分析页面结构...', 20);
+    
+    try {
+        const response = await fetch('/api/analyze-page-structure', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                url: url,
+                page_type: pageType
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            currentAnalysis = result.data;
+            displayAnalysisResults(result.data);
+            displayStructureVisualization(result.data);
+            displayFieldMapping(result.data);
+            document.getElementById('startScrapingBtn').disabled = false;
+            showProgress('页面结构分析完成', 100);
+            setTimeout(hideProgress, 1000);
+        } else {
+            throw new Error(result.message || '分析失败');
+        }
+    } catch (error) {
+        console.error('分析页面结构失败:', error);
+        alert('分析页面结构失败: ' + error.message);
+        hideProgress();
+    }
+}
+
+// 显示分析结果
+function displayAnalysisResults(data) {
+    const container = document.getElementById('analysisResults');
+    
+    const pageInfo = data.page_info || {};
+    const listItems = data.list_items || [];
+    const dataFields = data.data_fields || {};
+    
+    container.innerHTML = `
+        <div class="mb-3">
+            <h6 class="text-primary">页面信息</h6>
+            <div class="small">
+                <div><strong>类型:</strong> ${pageInfo.page_type || 'unknown'}</div>
+                <div><strong>域名:</strong> ${pageInfo.domain || 'unknown'}</div>
+                <div><strong>标题:</strong> ${pageInfo.title || 'unknown'}</div>
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <h6 class="text-success">识别结果</h6>
+            <div class="small">
+                <div><i class="fas fa-list text-info"></i> 列表项: <strong>${listItems.length}</strong> 个</div>
+                <div><i class="fas fa-tags text-warning"></i> 数据字段: <strong>${Object.keys(dataFields).length}</strong> 类</div>
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <h6 class="text-info">字段类型</h6>
+            <div class="small">
+                ${Object.entries(dataFields).map(([type, selectors]) => 
+                    `<div><span class="badge bg-secondary me-1">${type}</span> ${selectors.length} 个选择器</div>`
+                ).join('')}
+            </div>
+        </div>
+    `;
+}
+
+// 显示结构可视化
+function displayStructureVisualization(data) {
+    const container = document.getElementById('structureVisualization');
+    
+    const listItems = data.list_items || [];
+    const dataFields = data.data_fields || {};
+    
+    let html = '<div class="structure-tree">';
+    
+    if (listItems.length > 0) {
+        html += `
+            <div class="structure-node" onclick="selectNode(this)">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-list text-primary me-2"></i>
+                        <strong>列表容器</strong>
+                    </div>
+                    <span class="badge bg-primary">${listItems.length} 项</span>
+                </div>
+                <div class="node-info mt-2">
+                    <div class="node-selector">${listItems[0].selector}</div>
+                </div>
+            </div>
+        `;
+        
+        // 显示字段结构
+        Object.entries(dataFields).forEach(([fieldType, selectors]) => {
+            if (selectors.length > 0) {
+                html += `
+                    <div class="structure-node ms-4" onclick="selectNode(this)">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-tag text-success me-2"></i>
+                                <strong>${getFieldDisplayName(fieldType)}</strong>
+                            </div>
+                            <span class="badge bg-success">${selectors.length} 选择器</span>
+                        </div>
+                        <div class="node-info mt-2">
+                            ${selectors.map(selector => 
+                                `<div class="node-selector mb-1">${selector}</div>`
+                            ).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        });
+    } else {
+        html += `
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                <p>未识别到有效的页面结构</p>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// 显示字段映射配置
+function displayFieldMapping(data) {
+    const container = document.getElementById('fieldMapping');
+    const dataFields = data.data_fields || {};
+    
+    let html = '';
+    
+    Object.entries(dataFields).forEach(([fieldType, selectors]) => {
+        if (selectors.length > 0) {
+            html += `
+                <div class="field-mapping-item">
+                    <div class="field-name mb-2">
+                        <i class="fas fa-tag text-primary me-2"></i>
+                        ${getFieldDisplayName(fieldType)}
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">主选择器</label>
+                        <input type="text" class="form-control selector-input" 
+                               value="${selectors[0]}" 
+                               data-field="${fieldType}" 
+                               data-type="primary">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">备用选择器</label>
+                        <textarea class="form-control selector-input" rows="2" 
+                                  data-field="${fieldType}" 
+                                  data-type="fallback">${selectors.slice(1).join('\n')}</textarea>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" 
+                               id="enable_${fieldType}" checked>
+                        <label class="form-check-label small" for="enable_${fieldType}">
+                            启用此字段
+                        </label>
+                    </div>
+                </div>
+            `;
+        }
+    });
+    
+    if (html) {
+        container.innerHTML = html;
+    } else {
+        container.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-info-circle fa-2x mb-2"></i>
+                <p>没有可配置的字段</p>
+            </div>
+        `;
+    }
+}
+
+// 开始智能采集
+async function startIntelligentScraping() {
+    if (scrapingInProgress) {
+        alert('采集正在进行中...');
+        return;
+    }
+    
+    if (!currentAnalysis) {
+        alert('请先分析页面结构');
+        return;
+    }
+    
+    scrapingInProgress = true;
+    collectedData = [];
+    
+    const maxItems = parseInt(document.getElementById('maxItems').value);
+    const scrollDelay = parseFloat(document.getElementById('scrollDelay').value);
+    const maxScrolls = parseInt(document.getElementById('maxScrolls').value);
+    const enableSmartScroll = document.getElementById('enableSmartScroll').checked;
+    
+    // 收集字段配置
+    const fieldConfig = {};
+    document.querySelectorAll('.field-mapping-item').forEach(item => {
+        const fieldType = item.querySelector('[data-field]').dataset.field;
+        const enabled = item.querySelector(`#enable_${fieldType}`).checked;
+        
+        if (enabled) {
+            const primarySelector = item.querySelector('[data-type="primary"]').value;
+            const fallbackSelectors = item.querySelector('[data-type="fallback"]').value
+                .split('\n').filter(s => s.trim());
+            
+            fieldConfig[fieldType] = {
+                primary: primarySelector,
+                fallback: fallbackSelectors
+            };
+        }
+    });
+    
+    showProgress('正在启动智能采集...', 10);
+    
+    try {
+        const response = await fetch('/api/start-intelligent-scraping', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                analysis: currentAnalysis,
+                config: {
+                    max_items: maxItems,
+                    scroll_delay: scrollDelay,
+                    max_scrolls: maxScrolls,
+                    enable_smart_scroll: enableSmartScroll,
+                    field_config: fieldConfig
+                }
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // 开始轮询采集进度
+            pollScrapingProgress(result.task_id);
+        } else {
+            throw new Error(result.message || '启动采集失败');
+        }
+    } catch (error) {
+        console.error('启动智能采集失败:', error);
+        alert('启动智能采集失败: ' + error.message);
+        scrapingInProgress = false;
+        hideProgress();
+    }
+}
+
+// 轮询采集进度
+async function pollScrapingProgress(taskId) {
+    try {
+        const response = await fetch(`/api/scraping-progress/${taskId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const progress = result.data;
+            
+            // 更新进度
+            const percentage = Math.min((progress.collected_count / progress.target_count) * 100, 100);
+            showProgress(`已采集 ${progress.collected_count}/${progress.target_count} 条数据`, percentage);
+            
+            // 更新结果显示
+            if (progress.latest_data && progress.latest_data.length > 0) {
+                updateScrapingResults(progress.latest_data);
+            }
+            
+            // 检查是否完成
+            if (progress.status === 'completed' || progress.status === 'failed') {
+                scrapingInProgress = false;
+                hideProgress();
+                
+                if (progress.status === 'completed') {
+                    alert(`采集完成！共采集到 ${progress.collected_count} 条数据`);
+                } else {
+                    alert('采集失败: ' + (progress.error || '未知错误'));
+                }
+            } else {
+                // 继续轮询
+                setTimeout(() => pollScrapingProgress(taskId), 2000);
+            }
+        } else {
+            throw new Error(result.message || '获取进度失败');
+        }
+    } catch (error) {
+        console.error('获取采集进度失败:', error);
+        scrapingInProgress = false;
+        hideProgress();
+    }
+}
+
+// 更新采集结果显示
+function updateScrapingResults(newData) {
+    const container = document.getElementById('scrapingResults');
+    
+    newData.forEach(item => {
+        if (!collectedData.find(existing => existing.index === item.index)) {
+            collectedData.push(item);
+            
+            const resultHtml = `
+                <div class="result-item" data-index="${item.index}">
+                    <div class="d-flex align-items-start">
+                        <div class="item-index me-3">${item.index + 1}</div>
+                        <div class="flex-grow-1">
+                            <div class="item-content mb-2">
+                                ${item.content ? item.content.substring(0, 200) + (item.content.length > 200 ? '...' : '') : '无内容'}
+                            </div>
+                            <div class="item-meta d-flex flex-wrap gap-2">
+                                ${item.metadata && item.metadata.username ? 
+                                    `<span class="badge bg-info">@${item.metadata.username}</span>` : ''}
+                                ${item.metadata && item.metadata.publish_time ? 
+                                    `<span class="badge bg-secondary">${new Date(item.metadata.publish_time).toLocaleString()}</span>` : ''}
+                                ${item.interactions ? 
+                                    `<span class="badge bg-success">❤️ ${item.interactions.likes || 0}</span>` : ''}
+                                ${item.interactions ? 
+                                    `<span class="badge bg-warning">💬 ${item.interactions.comments || 0}</span>` : ''}
+                                ${item.interactions ? 
+                                    `<span class="badge bg-primary">🔄 ${item.interactions.retweets || 0}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            if (container.innerHTML.includes('采集结果将在这里实时显示')) {
+                container.innerHTML = resultHtml;
+            } else {
+                container.insertAdjacentHTML('afterbegin', resultHtml);
+            }
+        }
+    });
+    
+    // 更新计数
+    document.getElementById('collectedCount').textContent = collectedData.length;
+}
+
+// 导出结果
+function exportResults() {
+    if (collectedData.length === 0) {
+        alert('没有可导出的数据');
+        return;
+    }
+    
+    const dataStr = JSON.stringify(collectedData, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(dataBlob);
+    link.download = `scraping_results_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+    link.click();
+}
+
+// 工具函数
+function getFieldDisplayName(fieldType) {
+    const displayNames = {
+        'text_content': '文本内容',
+        'links': '链接',
+        'images': '图片',
+        'metadata': '元数据',
+        'interactions': '交互数据'
+    };
+    return displayNames[fieldType] || fieldType;
+}
+
+function selectNode(node) {
+    document.querySelectorAll('.structure-node').forEach(n => n.classList.remove('selected'));
+    node.classList.add('selected');
+}
+
+function showStructureView() {
+    // 实现结构视图切换
+    console.log('切换到结构视图');
+}
+
+function showSelectorView() {
+    // 实现选择器视图切换
+    console.log('切换到选择器视图');
+}
+
+function showPreviewView() {
+    // 实现预览视图切换
+    console.log('切换到预览视图');
+}
+
+function showProgress(text, percentage) {
+    document.getElementById('progressText').textContent = text;
+    document.getElementById('progressBar').style.width = percentage + '%';
+    new bootstrap.Modal(document.getElementById('progressModal')).show();
+}
+
+function hideProgress() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('progressModal'));
+    if (modal) {
+        modal.hide();
+    }
+}
+
+// 博主管理相关函数
+
+// 添加博主
+async function addInfluencer() {
+    const url = document.getElementById('influencerUrl').value.trim();
+    const name = document.getElementById('influencerName').value.trim();
+    const category = document.getElementById('influencerCategory').value;
+    const description = document.getElementById('influencerDescription').value.trim();
+    
+    if (!url || !name) {
+        alert('请填写博主URL和名称');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/influencers', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: name,
+                profile_url: url,
+                category: category,
+                description: description
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('博主添加成功！');
+            // 清空表单
+            document.getElementById('influencerUrl').value = '';
+            document.getElementById('influencerName').value = '';
+            document.getElementById('influencerDescription').value = '';
+            // 重新加载博主选项
+            loadInfluencerOptions();
+        } else {
+            alert('添加失败: ' + result.error);
+        }
+    } catch (error) {
+        console.error('添加博主失败:', error);
+        alert('添加博主失败: ' + error.message);
+    }
+}
+
+// 加载博主选项到下拉框
+async function loadInfluencerOptions() {
+    try {
+        const response = await fetch('/api/influencers?per_page=100');
+        const result = await response.json();
+        
+        if (result.success) {
+            const select = document.getElementById('selectedInfluencers');
+            select.innerHTML = '';
+            
+            result.data.influencers.forEach(influencer => {
+                if (influencer.is_active) {
+                    const option = document.createElement('option');
+                    option.value = influencer.id;
+                    option.textContent = `${influencer.name} (@${influencer.username}) - ${influencer.category}`;
+                    select.appendChild(option);
+                }
+            });
+        }
+    } catch (error) {
+        console.error('加载博主选项失败:', error);
+    }
+}
+
+// 显示博主列表管理
+function showInfluencerList() {
+    const modal = new bootstrap.Modal(document.getElementById('influencerListModal'));
+    modal.show();
+    loadInfluencerList();
+}
+
+// 加载博主列表
+async function loadInfluencerList(page = 1, search = '', category = '') {
+    try {
+        const params = new URLSearchParams({
+            page: page,
+            per_page: 10
+        });
+        
+        if (search) params.append('search', search);
+        if (category) params.append('category', category);
+        
+        const response = await fetch(`/api/influencers?${params}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            displayInfluencerList(result.data);
+            updateInfluencerPagination(result.data);
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error) {
+        console.error('加载博主列表失败:', error);
+        document.getElementById('influencerListContainer').innerHTML = `
+            <div class="text-center py-4 text-danger">
+                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                <p>加载失败: ${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+// 显示博主列表
+function displayInfluencerList(data) {
+    const container = document.getElementById('influencerListContainer');
+    
+    if (data.influencers.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-4 text-muted">
+                <i class="fas fa-users fa-2x mb-2"></i>
+                <p>暂无博主数据</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '<div class="list-group">';
+    
+    data.influencers.forEach(influencer => {
+        const statusBadge = influencer.is_active ? 
+            '<span class="badge bg-success">启用</span>' : 
+            '<span class="badge bg-secondary">禁用</span>';
+        
+        const lastScraped = influencer.last_scraped ? 
+            new Date(influencer.last_scraped).toLocaleString() : '从未抓取';
+        
+        html += `
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">
+                            ${influencer.name}
+                            <span class="badge bg-primary ms-2">${influencer.category}</span>
+                            ${statusBadge}
+                        </h6>
+                        <p class="mb-1 text-muted">@${influencer.username}</p>
+                        <p class="mb-1 small">${influencer.description || '无描述'}</p>
+                        <small class="text-muted">最后抓取: ${lastScraped}</small>
+                    </div>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-outline-primary" onclick="editInfluencer(${influencer.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" onclick="scrapeInfluencer(${influencer.id})">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteInfluencer(${influencer.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// 更新分页
+function updateInfluencerPagination(data) {
+    const pagination = document.getElementById('influencerPagination');
+    const paginationList = document.getElementById('paginationList');
+    
+    if (data.pages <= 1) {
+        pagination.style.display = 'none';
+        return;
+    }
+    
+    pagination.style.display = 'block';
+    currentInfluencerPage = data.current_page;
+    totalInfluencerPages = data.pages;
+    
+    let html = '';
+    
+    // 上一页
+    if (currentInfluencerPage > 1) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="loadInfluencerList(${currentInfluencerPage - 1})">上一页</a></li>`;
+    }
+    
+    // 页码
+    for (let i = Math.max(1, currentInfluencerPage - 2); i <= Math.min(totalInfluencerPages, currentInfluencerPage + 2); i++) {
+        const active = i === currentInfluencerPage ? 'active' : '';
+        html += `<li class="page-item ${active}"><a class="page-link" href="#" onclick="loadInfluencerList(${i})">${i}</a></li>`;
+    }
+    
+    // 下一页
+    if (currentInfluencerPage < totalInfluencerPages) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="loadInfluencerList(${currentInfluencerPage + 1})">下一页</a></li>`;
+    }
+    
+    paginationList.innerHTML = html;
+}
+
+// 搜索博主
+function searchInfluencers() {
+    const search = document.getElementById('influencerSearch').value;
+    const category = document.getElementById('influencerCategoryFilter').value;
+    loadInfluencerList(1, search, category);
+}
+
+// 编辑博主
+async function editInfluencer(influencerId) {
+    try {
+        // 获取博主信息
+        const response = await fetch(`/api/influencers?per_page=100`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const influencer = result.data.influencers.find(inf => inf.id === influencerId);
+            if (influencer) {
+                // 填充编辑表单
+                document.getElementById('editInfluencerId').value = influencer.id;
+                document.getElementById('editInfluencerName').value = influencer.name;
+                document.getElementById('editInfluencerCategory').value = influencer.category;
+                document.getElementById('editInfluencerDescription').value = influencer.description || '';
+                document.getElementById('editInfluencerActive').checked = influencer.is_active;
+                
+                // 显示编辑模态框
+                const modal = new bootstrap.Modal(document.getElementById('editInfluencerModal'));
+                modal.show();
+            }
+        }
+    } catch (error) {
+        console.error('获取博主信息失败:', error);
+        alert('获取博主信息失败');
+    }
+}
+
+// 更新博主信息
+async function updateInfluencer() {
+    const influencerId = document.getElementById('editInfluencerId').value;
+    const name = document.getElementById('editInfluencerName').value.trim();
+    const category = document.getElementById('editInfluencerCategory').value;
+    const description = document.getElementById('editInfluencerDescription').value.trim();
+    const isActive = document.getElementById('editInfluencerActive').checked;
+    
+    if (!name) {
+        alert('请填写博主名称');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/influencers/${influencerId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: name,
+                category: category,
+                description: description,
+                is_active: isActive
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('博主信息更新成功！');
+            // 关闭编辑模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editInfluencerModal'));
+            modal.hide();
+            // 重新加载列表
+            loadInfluencerList(currentInfluencerPage);
+            loadInfluencerOptions();
+        } else {
+            alert('更新失败: ' + result.error);
+        }
+    } catch (error) {
+        console.error('更新博主失败:', error);
+        alert('更新博主失败: ' + error.message);
+    }
+}
+
+// 删除博主
+async function deleteInfluencer(influencerId) {
+    if (!confirm('确定要删除这个博主吗？')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/influencers/${influencerId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('博主删除成功！');
+            loadInfluencerList(currentInfluencerPage);
+            loadInfluencerOptions();
+        } else {
+            alert('删除失败: ' + result.error);
+        }
+    } catch (error) {
+        console.error('删除博主失败:', error);
+        alert('删除博主失败: ' + error.message);
+    }
+}
+
+// 抓取单个博主
+async function scrapeInfluencer(influencerId) {
+    alert('单个博主抓取功能开发中...');
+}
+
+// 抓取选中的博主
+async function startInfluencerScraping() {
+    const selectedOptions = document.getElementById('selectedInfluencers').selectedOptions;
+    
+    if (selectedOptions.length === 0) {
+        alert('请选择要抓取的博主');
+        return;
+    }
+    
+    const selectedIds = Array.from(selectedOptions).map(option => parseInt(option.value));
+    
+    // 这里可以实现批量抓取博主的功能
+    alert(`将抓取 ${selectedIds.length} 个博主的内容，功能开发中...`);
+    
+    // TODO: 实现批量抓取逻辑
+    console.log('选中的博主ID:', selectedIds);
+}
+
+</script>
+{% endblock %}

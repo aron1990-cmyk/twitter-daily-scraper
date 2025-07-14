@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>增强推文抓取 - Twitter 日报采集系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .feature-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+        }
+        .progress-container {
+            display: none;
+            margin-top: 20px;
+        }
+        .tweet-preview {
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .media-item {
+            display: inline-block;
+            margin: 5px;
+            padding: 5px 10px;
+            background: #e3f2fd;
+            border-radius: 15px;
+            font-size: 12px;
+        }
+        .thread-indicator {
+            background: #fff3e0;
+            border-left: 3px solid #ff9800;
+            padding: 5px 10px;
+            margin: 5px 0;
+            font-size: 12px;
+        }
+        .quoted-tweet {
+            background: #f5f5f5;
+            border-left: 3px solid #1976d2;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .enhancement-badge {
+            background: #4caf50;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            margin-left: 10px;
+        }
+        
+        .account-type {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            color: #1976d2;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border: 1px solid #2196f3;
+        }
+        
+        .account-type.技术博主 {
+            background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+            color: #2e7d32;
+            border-color: #4caf50;
+        }
+        
+        .account-type.营销博主 {
+            background: linear-gradient(135deg, #fff3e0, #ffcc02);
+            color: #f57c00;
+            border-color: #ff9800;
+        }
+        
+        .account-type.投资博主 {
+            background: linear-gradient(135deg, #fce4ec, #f8bbd9);
+            color: #c2185b;
+            border-color: #e91e63;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fab fa-twitter"></i> Twitter 日报采集系统
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">首页</a>
+                <a class="nav-link" href="/tasks">任务管理</a>
+                <a class="nav-link" href="/influencers">博主管理</a>
+                <a class="nav-link" href="/page-analyzer">页面分析</a>
+                <a class="nav-link active" href="/enhanced-scraping">增强抓取</a>
+                <a class="nav-link" href="/config">系统配置</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-rocket"></i> 增强推文抓取
+                            <span class="badge bg-success ms-2">NEW</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>增强功能说明：</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>自动识别需要详情页抓取的推文（长内容、多媒体、线程等）</li>
+                                <li>提取完整推文内容、图片、视频、GIF等多媒体资源</li>
+                                <li>抓取推文线程和引用推文的完整信息</li>
+                                <li>智能内容分类和数据结构化存储</li>
+                            </ul>
+                        </div>
+
+                        <form id="enhancedScrapingForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="targetAccounts" class="form-label">
+                                            <i class="fas fa-user"></i> 目标账号
+                                        </label>
+                                        <textarea class="form-control" id="targetAccounts" rows="3" 
+                                                placeholder="请输入Twitter用户名，每行一个\n例如：\nelonmusk\nbillgates\nopenai"></textarea>
+                                        <div class="form-text">输入Twitter用户名（不含@符号），每行一个</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="targetKeywords" class="form-label">
+                                            <i class="fas fa-hashtag"></i> 关键词
+                                        </label>
+                                        <textarea class="form-control" id="targetKeywords" rows="3" 
+                                                placeholder="请输入关键词，每行一个\n例如：\nAI\n人工智能\n机器学习"></textarea>
+                                        <div class="form-text">输入搜索关键词，每行一个</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="maxTweets" class="form-label">
+                                            <i class="fas fa-list-ol"></i> 最大推文数
+                                        </label>
+                                        <input type="number" class="form-control" id="maxTweets" value="20" min="1" max="100">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">
+                                            <i class="fas fa-cogs"></i> 抓取选项
+                                        </label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="enableDetails" checked>
+                                            <label class="form-check-label" for="enableDetails">
+                                                启用详情页抓取
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label d-block">&nbsp;</label>
+                                        <button type="submit" class="btn btn-primary" id="startButton">
+                                            <i class="fas fa-play"></i> 开始抓取
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+
+                        <!-- 进度显示 -->
+                        <div id="progressContainer" class="progress-container">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-chart-line"></i> 抓取进度
+                                        <span id="statusBadge" class="badge bg-primary ms-2">运行中</span>
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row text-center mb-3">
+                                        <div class="col-md-3">
+                                            <div class="h4 text-primary" id="collectedCount">0</div>
+                                            <div class="text-muted">已收集推文</div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="h4 text-success" id="detailsScraped">0</div>
+                                            <div class="text-muted">详情抓取</div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="h4 text-info" id="targetCount">0</div>
+                                            <div class="text-muted">目标数量</div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="h4 text-warning" id="progressPercent">0%</div>
+                                            <div class="text-muted">完成进度</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="progress mb-3">
+                                        <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                    
+                                    <div id="errorMessage" class="alert alert-danger" style="display: none;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 最新数据预览 -->
+                        <div id="dataPreview" style="display: none;">
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-eye"></i> 最新抓取数据预览
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="latestTweets"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <!-- 功能特性 -->
+                <div class="feature-card">
+                    <h6><i class="fas fa-star text-warning"></i> 增强功能特性</h6>
+                    <ul class="list-unstyled mt-3">
+                        <li><i class="fas fa-check text-success"></i> 智能识别多内容推文</li>
+                        <li><i class="fas fa-check text-success"></i> 完整多媒体内容提取</li>
+                        <li><i class="fas fa-check text-success"></i> 推文线程自动抓取</li>
+                        <li><i class="fas fa-check text-success"></i> 引用推文完整获取</li>
+                        <li><i class="fas fa-check text-success"></i> 智能内容分类标记</li>
+                        <li><i class="fas fa-check text-success"></i> 结构化数据存储</li>
+                    </ul>
+                </div>
+
+                <!-- 使用提示 -->
+                <div class="feature-card">
+                    <h6><i class="fas fa-lightbulb text-info"></i> 使用提示</h6>
+                    <ul class="list-unstyled mt-3">
+                        <li><i class="fas fa-info-circle text-info"></i> 建议单次抓取不超过50条推文</li>
+                        <li><i class="fas fa-info-circle text-info"></i> 详情页抓取会增加时间成本</li>
+                        <li><i class="fas fa-info-circle text-info"></i> 系统会自动判断哪些推文需要详情抓取</li>
+                        <li><i class="fas fa-info-circle text-info"></i> 抓取完成后数据会自动保存到数据库</li>
+                    </ul>
+                </div>
+
+                <!-- 数据统计 -->
+                <div class="feature-card">
+                    <h6><i class="fas fa-chart-bar text-primary"></i> 抓取统计</h6>
+                    <div class="row text-center mt-3">
+                        <div class="col-6">
+                            <div class="h5 text-primary" id="totalTasks">0</div>
+                            <div class="text-muted small">总任务数</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="h5 text-success" id="totalTweets">0</div>
+                            <div class="text-muted small">总推文数</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/enhanced_scraping.js"></script>
+</body>
+</html>

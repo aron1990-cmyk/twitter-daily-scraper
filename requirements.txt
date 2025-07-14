@@ -1,5 +1,10 @@
 # Twitter 日报采集系统依赖包
 
+# Web框架
+Flask>=2.3.0
+Flask-SQLAlchemy>=3.0.0
+Werkzeug>=2.3.0
+
 # 网络请求
 requests>=2.28.0
 
@@ -23,3 +28,36 @@ pandas>=2.0.0
 
 # 日志增强（可选）
 coloredlogs>=15.0.0
+
+# 云端同步依赖
+# Google Sheets API
+gspread>=5.12.0
+google-auth>=2.23.0
+google-auth-oauthlib>=1.1.0
+google-auth-httplib2>=0.1.1
+
+# Task scheduling dependencies
+schedule>=1.2.0
+apscheduler>=3.10.0
+
+# System monitoring dependencies
+psutil>=5.9.0
+
+# Management console dependencies
+tabulate>=0.9.0
+
+# 飞书API（使用requests，已包含在上面）
+# requests>=2.28.0  # 已包含
+
+# 数据验证
+pydantic>=2.0.0
+validators>=0.20.0
+
+# 文件处理
+chardet>=5.0.0
+
+# HTTP客户端增强
+httpx>=0.25.0
+
+# 配置文件处理
+PyYAML>=6.0.0
