@@ -275,34 +275,21 @@ class CloudSyncManager:
                         from datetime import datetime
                         publish_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 
-                # 处理创建时间
-                if create_time_type == 5:  # 时间戳类型
-                    if isinstance(create_time, str) and create_time:
-                        try:
-                            from datetime import datetime
-                            dt = datetime.fromisoformat(create_time.replace('Z', '+00:00'))
-                            create_time = int(dt.timestamp() * 1000)
-                        except:
-                            create_time = int(time.time() * 1000)
-                    elif isinstance(create_time, (int, float)):
-                        if create_time < 10000000000:  # 如果是秒时间戳，转换为毫秒
-                            create_time = int(create_time * 1000)
-                        else:
-                            create_time = int(create_time)
-                    else:
-                        create_time = int(time.time() * 1000)
-                else:  # 文本类型
-                    if isinstance(create_time, str):
-                        create_time = create_time
-                    elif isinstance(create_time, (int, float)):
-                        from datetime import datetime
-                        if create_time > 10000000000:  # 毫秒时间戳
-                            create_time = datetime.fromtimestamp(create_time / 1000).strftime('%Y-%m-%d %H:%M:%S')
-                        else:  # 秒时间戳
-                            create_time = datetime.fromtimestamp(create_time).strftime('%Y-%m-%d %H:%M:%S')
-                    else:
-                        from datetime import datetime
-                        create_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                # 处理创建时间 - 统一转换为字符串格式
+                if isinstance(create_time, str) and create_time:
+                    # 如果已经是字符串，保持原样
+                    create_time = create_time
+                elif isinstance(create_time, (int, float)):
+                    # 如果是数字时间戳，转换为字符串格式
+                    from datetime import datetime
+                    if create_time > 10000000000:  # 毫秒时间戳
+                        create_time = datetime.fromtimestamp(create_time / 1000).strftime('%Y-%m-%d %H:%M:%S')
+                    else:  # 秒时间戳
+                        create_time = datetime.fromtimestamp(create_time).strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    # 默认使用当前时间的字符串格式
+                    from datetime import datetime
+                    create_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 
                 # 处理数值字段 - 确保数值字段为有效数字
                 def safe_int(value, default=0):
@@ -314,21 +301,24 @@ class CloudSyncManager:
                     except (ValueError, TypeError):
                         return default
                 
-                record = {
-                    'fields': {
-                        '推文原文内容': str(tweet.get('推文原文内容', '')),
-                        '作者（账号）': str(tweet.get('作者（账号）', '')),
-                        '推文链接': str(tweet.get('推文链接', '')),
-                        '话题标签（Hashtag）': str(tweet.get('话题标签（Hashtag）', '')),
-                        '类型标签': str(tweet.get('类型标签', '')),
-                        '评论数': safe_int(tweet.get('评论数')),
-                        '转发数': safe_int(tweet.get('转发数')),
-                        '点赞数': safe_int(tweet.get('点赞数')),
-                        # 时间字段：已根据字段类型处理
-                        '发布时间': publish_time
-                        # 注意：创建时间不再传递给飞书
-                    }
+                # 构建记录数据，只包含飞书表格中存在的字段
+                record_fields = {
+                    '推文原文内容': str(tweet.get('推文原文内容', '')),
+                    '作者（账号）': str(tweet.get('作者（账号）', '')),
+                    '推文链接': str(tweet.get('推文链接', '')),
+                    '话题标签（Hashtag）': str(tweet.get('话题标签（Hashtag）', '')),
+                    '类型标签': str(tweet.get('类型标签', '')),
+                    '评论数': safe_int(tweet.get('评论数')),
+                    '转发数': safe_int(tweet.get('转发数')),
+                    '点赞数': safe_int(tweet.get('点赞数')),
+                    '发布时间': publish_time
                 }
+                
+                # 只有当创建时间字段在飞书表格中存在时才添加
+                if '创建时间' in field_types:
+                    record_fields['创建时间'] = create_time
+                
+                record = {'fields': record_fields}
                     
                 records.append(record)
             

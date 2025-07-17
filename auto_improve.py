@@ -1201,7 +1201,7 @@ if __name__ == "__main__":
                 'skipped_improvements': len([log for log in self.improvements_log if '⚠️' in log])
             },
             'next_steps': [
-                '运行 python quality_check.py --all 进行全面代码检查',
+                '运行 python3 quality_check.py --all 进行全面代码检查',
                 '运行 pytest 执行测试用例',
                 '查看 monitoring.py 了解监控功能',
                 '使用 performance_optimizer.py 优化性能',

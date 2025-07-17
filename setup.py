@@ -140,7 +140,7 @@ def show_next_steps():
     print("   在 config.py 中配置要采集的 Twitter 账号和关键词")
     
     print("\n3. 运行系统:")
-    print("   python main.py")
+    print("   python3 main.py")
     
     print("\n4. 查看结果:")
     print("   生成的 Excel 文件将保存在 data/ 目录中")

@@ -13,7 +13,7 @@ Twitter抓取管理系统 - Web应用启动脚本
 - 系统配置管理
 
 使用方法：
-    python run_web.py
+    python3 run_web.py
     
     可选参数：
     --host: 指定主机地址 (默认: 127.0.0.1)
@@ -21,7 +21,7 @@ Twitter抓取管理系统 - Web应用启动脚本
     --debug: 启用调试模式 (默认: False)
     
 示例：
-    python run_web.py --host 0.0.0.0 --port 8080 --debug
+    python3 run_web.py --host 0.0.0.0 --port 8080 --debug
 """
 
 import os
@@ -45,10 +45,10 @@ def parse_arguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例用法:
-  python run_web.py                    # 使用默认设置启动
-  python run_web.py --port 8080        # 在端口8080启动
-  python run_web.py --host 0.0.0.0     # 允许外部访问
-  python run_web.py --debug            # 启用调试模式
+  python3 run_web.py                    # 使用默认设置启动
+python3 run_web.py --port 8080        # 在端口8080启动
+python3 run_web.py --host 0.0.0.0     # 允许外部访问
+python3 run_web.py --debug            # 启用调试模式
         """
     )
     

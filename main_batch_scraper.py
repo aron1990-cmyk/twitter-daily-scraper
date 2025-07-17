@@ -292,10 +292,10 @@ def create_cli_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用示例:
-  python main_batch_scraper.py start --config config/my_config.yaml
-  python main_batch_scraper.py start --accounts elonmusk openai --max-tweets 30
-  python main_batch_scraper.py status
-  python main_batch_scraper.py export batch_123456 --format json
+  python3 main_batch_scraper.py start --config config/my_config.yaml
+python3 main_batch_scraper.py start --accounts elonmusk openai --max-tweets 30
+python3 main_batch_scraper.py status
+python3 main_batch_scraper.py export batch_123456 --format json
         """
     )
     

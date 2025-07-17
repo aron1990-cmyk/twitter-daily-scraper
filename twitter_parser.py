@@ -12,14 +12,36 @@ from datetime import datetime
 from playwright.async_api import async_playwright, Browser, Page
 from config import BROWSER_CONFIG, TWITTER_TARGETS, FILTER_CONFIG
 from human_behavior_simulator import HumanBehaviorSimulator
+from performance_optimizer import EnhancedSearchOptimizer
 
 class TwitterParser:
-    def __init__(self, debug_port: str):
+    def __init__(self, debug_port: str = None):
         self.debug_port = debug_port
         self.browser: Optional[Browser] = None
         self.page: Optional[Page] = None
         self.behavior_simulator = None
+        self.search_optimizer = EnhancedSearchOptimizer()
         self.logger = logging.getLogger(__name__)
+        self.config = None
+    
+    async def initialize(self, debug_port: str = None):
+        """初始化TwitterParser
+        
+        Args:
+            debug_port: 浏览器调试端口
+        """
+        if debug_port:
+            self.debug_port = debug_port
+        
+        if not self.debug_port:
+            raise ValueError("debug_port is required for initialization")
+        
+        self.logger.info(f"Initializing TwitterParser with debug_port: {self.debug_port}")
+        
+        # 连接浏览器
+        await self.connect_browser()
+        
+        self.logger.info("TwitterParser initialization completed")
         
     async def connect_browser(self):
         """
@@ -199,8 +221,8 @@ class TwitterParser:
                 self.logger.warning(f"第{attempt + 1}次导航尝试失败: {e}")
                 
                 if attempt < max_retries - 1:
-                    # 等待后重试（快速模式）
-                    wait_time = (attempt + 1) * 2  # 减少递增等待时间
+                    # 等待后重试（极速模式）
+                    wait_time = (attempt + 1) * 1  # 极短递增等待时间
                     self.logger.info(f"等待{wait_time}秒后重试...")
                     await asyncio.sleep(wait_time)
                 else:
@@ -244,9 +266,9 @@ class TwitterParser:
                 # 确保页面焦点后再等待搜索结果
                 await self.ensure_page_focus()
                 
-                # 等待搜索结果加载（快速模式）
+                # 等待搜索结果加载（极速模式）
                 self.logger.info("等待搜索结果加载...")
-                await asyncio.sleep(2)  # 减少等待时间
+                await asyncio.sleep(1)  # 极短等待时间
                 
                 # 检查是否有搜索结果
                 try:
@@ -263,7 +285,7 @@ class TwitterParser:
                 self.logger.warning(f"第{attempt + 1}次搜索尝试失败: {e}")
                 
                 if attempt < max_retries:
-                    wait_time = (attempt + 1) * 1.5  # 减少重试等待时间
+                    wait_time = (attempt + 1) * 0.8  # 极短重试等待时间
                     self.logger.info(f"等待{wait_time}秒后重试...")
                     await asyncio.sleep(wait_time)
                 else:
@@ -282,19 +304,19 @@ class TwitterParser:
                 
                 # 尝试将页面带到前台
                 await self.page.bring_to_front()
-                await asyncio.sleep(1)              
+                await asyncio.sleep(0.3)              
                 # 使用更安全的方式恢复焦点，避免误点击链接
                 try:
                     # 方法1：直接聚焦到页面
                     await self.page.evaluate('window.focus()')
-                    await asyncio.sleep(0.3)
+                    await asyncio.sleep(0.1)
                     
                     # 方法2：如果还是没有焦点，尝试点击一个安全的区域（页面边缘）
                     is_visible = await self.page.evaluate('!document.hidden')
                     if not is_visible:
                         # 点击页面左上角的安全区域，避免点击到链接
                         await self.page.mouse.click(10, 10)
-                        await asyncio.sleep(0.3)
+                        await asyncio.sleep(0.1)
                 except Exception as focus_error:
                     self.logger.debug(f"焦点恢复操作失败: {focus_error}")
                 
@@ -310,7 +332,7 @@ class TwitterParser:
     
     async def scroll_and_load_tweets(self, max_tweets: int = 10):
         """
-        使用人工行为模拟器滚动页面并加载更多推文
+        使用优化的滚动策略加载更多推文
         
         Args:
             max_tweets: 最大加载推文数量
@@ -319,32 +341,81 @@ class TwitterParser:
             # 确保页面焦点
             await self.ensure_page_focus()
             
-            if not self.behavior_simulator:
-                self.logger.warning("人工行为模拟器未初始化，使用基础滚动")
-                # 回退到基础滚动
-                for i in range(max_tweets // 5 + 1):
-                    await self.ensure_page_focus()  # 每次滚动前检查焦点
-                    await self.page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
-                    await asyncio.sleep(BROWSER_CONFIG['scroll_pause_time'])
-                    tweets = await self.page.query_selector_all('[data-testid="tweet"]')
-                    if len(tweets) >= max_tweets:
-                        break
-                return
+            scroll_attempts = 0
+            current_tweets = 0
+            last_tweet_count = 0
+            stagnant_count = 0
             
-            self.logger.info(f"开始使用人工行为模拟器加载推文，目标: {max_tweets} 条")
+            self.logger.info(f"开始优化滚动加载推文，目标: {max_tweets} 条")
             
-            # 使用人工行为模拟器进行智能滚动
-            collected_data = await self.behavior_simulator.smart_scroll_and_collect(
-                max_tweets=max_tweets,
-                target_selector='[data-testid="tweet"]'
-            )
+            while current_tweets < max_tweets:
+                # 获取当前推文数量
+                tweets = await self.page.query_selector_all('[data-testid="tweet"]')
+                current_tweets = len(tweets)
+                
+                # 检查是否有新推文加载
+                if current_tweets == last_tweet_count:
+                    stagnant_count += 1
+                else:
+                    stagnant_count = 0
+                last_tweet_count = current_tweets
+                
+                # 使用优化的滚动策略
+                strategy = self.search_optimizer.optimize_scroll_strategy(
+                    current_tweets, max_tweets, scroll_attempts
+                )
+                
+                if not strategy['should_continue']:
+                    self.logger.info(f"滚动策略建议停止，当前推文数: {current_tweets}")
+                    break
+                
+                # 如果连续多次没有新内容，启用激进模式
+                if stagnant_count >= 3:
+                    strategy['scroll_distance'] = 3000
+                    strategy['wait_time'] = 1.0
+                    strategy['aggressive_mode'] = True
+                    self.logger.debug("检测到内容停滞，启用激进滚动模式")
+                
+                # 执行滚动
+                if strategy['aggressive_mode']:
+                    self.logger.debug(f"激进滚动模式，距离: {strategy['scroll_distance']}")
+                
+                await self.ensure_page_focus()
+                await self.page.evaluate(f'window.scrollBy(0, {strategy["scroll_distance"]})')
+                await asyncio.sleep(strategy['wait_time'])
+                
+                scroll_attempts += 1
+                
+                # 防止无限滚动
+                if scroll_attempts >= strategy['max_scrolls']:
+                    self.logger.warning(f"达到最大滚动次数 {strategy['max_scrolls']}，停止滚动")
+                    break
+                
+                # 如果长时间没有新内容，尝试刷新页面
+                if stagnant_count >= 8:
+                    self.logger.info("长时间无新内容，尝试页面刷新")
+                    await self.page.reload()
+                    await asyncio.sleep(2)
+                    stagnant_count = 0
+            
+            # 如果有人工行为模拟器且效果不佳，作为补充
+            if self.behavior_simulator and current_tweets < max_tweets * 0.7:
+                self.logger.info("当前效果不佳，使用人工行为模拟器作为补充")
+                try:
+                    await self.behavior_simulator.smart_scroll_and_collect(
+                        max_tweets=max_tweets - current_tweets,
+                        target_selector='[data-testid="tweet"]'
+                    )
+                except Exception as e:
+                    self.logger.warning(f"人工行为模拟器补充失败: {e}")
             
             # 获取最终的推文数量
             final_tweets = await self.page.query_selector_all('[data-testid="tweet"]')
-            self.logger.info(f"人工行为模拟完成，当前可见推文数量: {len(final_tweets)}")
+            efficiency = len(final_tweets) / max(scroll_attempts, 1)
+            self.logger.info(f"优化滚动完成，滚动 {scroll_attempts} 次，最终推文数量: {len(final_tweets)}，效率: {efficiency:.2f} 推文/滚动")
             
         except Exception as e:
-            self.logger.error(f"人工行为滚动失败: {e}")
+            self.logger.error(f"优化滚动失败: {e}")
             raise
     
     def extract_number(self, text: str) -> int:
@@ -556,6 +627,14 @@ class TwitterParser:
             tweet_data.setdefault('retweets', 0)
             tweet_data.setdefault('media', {'images': [], 'videos': []})
             
+            # 识别帖子类型
+            try:
+                tweet_data['post_type'] = self.identify_tweet_type(tweet_data)
+                self.logger.debug(f"识别帖子类型: {tweet_data['post_type']}")
+            except Exception as e:
+                self.logger.debug(f"识别帖子类型失败: {e}")
+                tweet_data['post_type'] = '文字'
+            
             # 验证推文数据的有效性
             if not tweet_data.get('content') and not tweet_data.get('username', '').replace('unknown', ''):
                 self.logger.debug("推文数据无效，跳过")
@@ -607,9 +686,9 @@ class TwitterParser:
                     tweets_data.append(tweet_data)
                     self.logger.info(f"成功解析第 {i+1} 条推文: @{tweet_data['username']}")
                 
-                # 模拟人工阅读间隔
+                # 模拟人工阅读间隔（极速模式）
                 if self.behavior_simulator:
-                    await self.behavior_simulator.random_pause(0.5, 2.0)
+                    await asyncio.sleep(0.05)  # 极短等待时间
             
             self.logger.info(f"总共抓取到 {len(tweets_data)} 条推文")
             return tweets_data
@@ -644,7 +723,7 @@ class TwitterParser:
                 # 模拟阅读行为
                 await self.behavior_simulator.simulate_reading_behavior()
             else:
-                await asyncio.sleep(3)  # 回退到基础等待
+                await asyncio.sleep(0.8)  # 极速回退等待
             
             tweets = await self.scrape_tweets(max_tweets, enable_enhanced)
             
@@ -689,7 +768,7 @@ class TwitterParser:
                 # 模拟阅读搜索结果
                 await self.behavior_simulator.simulate_reading_behavior()
             else:
-                await asyncio.sleep(3)  # 回退到基础等待
+                await asyncio.sleep(0.8)  # 极速回退等待
             
             tweets = await self.scrape_tweets(max_tweets, enable_enhanced)
             
@@ -750,9 +829,9 @@ class TwitterParser:
             # 确保页面焦点后再等待搜索结果
             await self.ensure_page_focus()
             
-            # 等待搜索结果加载
+            # 等待搜索结果加载（极速模式）
             self.logger.info("等待搜索结果加载...")
-            await asyncio.sleep(2)
+            await asyncio.sleep(0.8)
             
             # 检查是否有搜索结果
             try:
@@ -767,7 +846,7 @@ class TwitterParser:
                 await self.behavior_simulator.simulate_page_exploration()
                 await self.behavior_simulator.simulate_reading_behavior()
             else:
-                await asyncio.sleep(3)
+                await asyncio.sleep(0.8)  # 极速回退等待
             
             tweets = await self.scrape_tweets(max_tweets, enable_enhanced)
             
@@ -802,8 +881,8 @@ class TwitterParser:
             await self.page.goto(tweet_url, timeout=BROWSER_CONFIG['navigation_timeout'])
             await self.page.wait_for_load_state('domcontentloaded', timeout=30000)
             
-            # 等待内容加载
-            await asyncio.sleep(3)
+            # 等待内容加载（极速模式）
+            await asyncio.sleep(1)
             
             # 抓取完整的推文内容
             full_content = await self.extract_full_tweet_content()
@@ -867,6 +946,50 @@ class TwitterParser:
         except Exception as e:
             self.logger.error(f"提取完整推文内容失败: {e}")
             return ""
+    
+    def identify_tweet_type(self, tweet_data: Dict[str, Any]) -> str:
+        """
+        识别推文的类型
+        
+        Args:
+            tweet_data: 推文数据
+            
+        Returns:
+            推文类型: '文字', '图文', '视频', '嵌套视频', '嵌套图文'
+        """
+        try:
+            content = tweet_data.get('content', '')
+            media = tweet_data.get('media', {})
+            quoted_tweet = tweet_data.get('quoted_tweet')
+            
+            # 获取媒体数量
+            image_count = len(media.get('images', []))
+            video_count = len(media.get('videos', []))
+            
+            # 检查是否有引用推文（嵌套）
+            has_quoted = quoted_tweet is not None
+            
+            # 判断类型
+            if has_quoted:
+                # 嵌套推文
+                if video_count > 0:
+                    return '嵌套视频'
+                elif image_count > 0:
+                    return '嵌套图文'
+                else:
+                    return '嵌套文字'
+            else:
+                # 普通推文
+                if video_count > 0:
+                    return '视频'
+                elif image_count > 0:
+                    return '图文'
+                else:
+                    return '文字'
+                    
+        except Exception as e:
+            self.logger.error(f"识别推文类型失败: {e}")
+            return '文字'  # 默认返回文字类型
     
     async def extract_media_content(self, tweet_element=None) -> Dict[str, List[Dict[str, Any]]]:
         """

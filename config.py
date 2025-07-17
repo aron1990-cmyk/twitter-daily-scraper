@@ -19,14 +19,14 @@ ADS_POWER_CONFIG = {
     ],
     
     # 并行任务配置
-    'max_concurrent_tasks': 4,  # 最大并发任务数（增加并发数）
-    'task_timeout': 900,        # 单个任务超时时间（秒）- 减少超时时间
-    'browser_startup_delay': 2, # 浏览器启动间隔（秒）- 减少启动延迟
+    'max_concurrent_tasks': 6,  # 最大并发任务数（进一步增加并发数）
+    'task_timeout': 300,        # 单个任务超时时间（秒）- 极速模式
+    'browser_startup_delay': 0.5, # 浏览器启动间隔（秒）- 极速启动
     
     # 混合模式增强配置
-    'timeout': 30,          # 连接超时时间（秒）
-    'retry_count': 3,       # 重试次数
-    'retry_delay': 5,       # 重试延迟（秒）
+    'timeout': 15,          # 连接超时时间（秒）- 极速模式
+    'retry_count': 2,       # 重试次数 - 减少重试
+    'retry_delay': 2,       # 重试延迟（秒）- 极速重试
     'health_check': True,   # 启用健康检查
     'headless': False,      # 是否无头模式 - 设为False以显示浏览器窗口
     'window_visible': True, # 窗口是否可见 - 确保用户能看到操作过程
@@ -122,7 +122,7 @@ FILTER_CONFIG = {
     ],
     
     # 采集数量配置
-    'max_tweets_per_target': 15,  # 每个目标最大抓取数量（增加以获得更多选择）
+    'max_tweets_per_target': 8,   # 每个目标最大抓取数量（减少以提升速度）
     'max_total_tweets': 200,      # 总最大抓取数量限制
     
     # 内容质量筛选
@@ -143,11 +143,11 @@ OUTPUT_CONFIG = {
 # 浏览器配置
 BROWSER_CONFIG = {
     'headless': False,      # 是否无头模式
-    'timeout': 15000,       # 页面加载超时时间（毫秒）- 减少超时时间
-    'wait_time': 1,         # 页面操作间隔时间（秒）- 减少等待时间
-    'scroll_pause_time': 0.8, # 滚动间隔时间（秒）- 减少滚动间隔
-    'navigation_timeout': 20000,  # 导航超时时间（毫秒）- 减少导航超时
-    'load_state_timeout': 8000,   # 加载状态超时时间（毫秒）- 减少加载超时
+    'timeout': 8000,        # 页面加载超时时间（毫秒）- 极速模式
+    'wait_time': 0.3,       # 页面操作间隔时间（秒）- 极速等待
+    'scroll_pause_time': 0.3, # 滚动间隔时间（秒）- 极速滚动
+    'navigation_timeout': 10000,  # 导航超时时间（毫秒）- 极速导航
+    'load_state_timeout': 4000,   # 加载状态超时时间（毫秒）- 极速加载
     'fast_mode': True,      # 启用快速模式
     'skip_images': True,    # 跳过图片加载以提升速度
     'disable_animations': True,  # 禁用动画效果

@@ -27,7 +27,9 @@ from cloud_sync import CloudSyncManager
 from ai_analyzer import AIContentAnalyzer as AIAnalyzer
 from account_manager import AccountManager
 from system_monitor import SystemMonitor
+from performance_optimizer import HighSpeedCollector, EnhancedSearchOptimizer
 import json
+import time
 
 class TwitterDailyScraper:
     def __init__(self):
@@ -37,6 +39,10 @@ class TwitterDailyScraper:
         self.excel_writer = ExcelWriter()
         self.cloud_sync = CloudSyncManager(CLOUD_SYNC_CONFIG)
         self.ai_analyzer = AIAnalyzer()
+        
+        # 性能优化组件
+        self.high_speed_collector = HighSpeedCollector()
+        self.search_optimizer = EnhancedSearchOptimizer()
         
         # 加载账号配置
         accounts_config = self._load_accounts_config()
@@ -181,7 +187,7 @@ class TwitterDailyScraper:
     
     async def scrape_keyword_tweets(self, keywords: List[str], max_tweets_per_keyword: int = 10) -> List[Dict[str, Any]]:
         """
-        抓取包含指定关键词的推文
+        抓取包含指定关键词的推文 - 增强版本
         
         Args:
             keywords: 关键词列表
@@ -196,10 +202,29 @@ class TwitterDailyScraper:
             try:
                 self.logger.info(f"开始搜索关键词 '{keyword}' 的推文...")
                 
-                tweets = await self.parser.scrape_keyword_tweets(keyword, max_tweets_per_keyword)
-                all_tweets.extend(tweets)
+                # 使用增强搜索查询
+                enhanced_queries = self.search_optimizer.get_enhanced_search_queries(keyword)
+                self.logger.info(f"为关键词 '{keyword}' 生成了 {len(enhanced_queries)} 个增强查询")
                 
-                self.logger.info(f"关键词 '{keyword}' 搜索完成，获得 {len(tweets)} 条推文")
+                keyword_tweets = []
+                for query in enhanced_queries[:3]:  # 限制查询数量避免过度请求
+                    try:
+                        tweets = await self.parser.scrape_keyword_tweets(query, max_tweets_per_keyword // len(enhanced_queries[:3]))
+                        keyword_tweets.extend(tweets)
+                        
+                        # 短暂延迟
+                        await asyncio.sleep(0.5)
+                    except Exception as e:
+                        self.logger.warning(f"查询 '{query}' 失败: {e}")
+                        continue
+                
+                # 如果增强查询没有足够结果，使用原始关键词
+                if len(keyword_tweets) < max_tweets_per_keyword // 2:
+                    original_tweets = await self.parser.scrape_keyword_tweets(keyword, max_tweets_per_keyword)
+                    keyword_tweets.extend(original_tweets)
+                
+                all_tweets.extend(keyword_tweets)
+                self.logger.info(f"关键词 '{keyword}' 搜索完成，获得 {len(keyword_tweets)} 条推文")
                 
                 # 添加延迟避免被限制
                 await asyncio.sleep(BROWSER_CONFIG['wait_time'])
@@ -212,7 +237,7 @@ class TwitterDailyScraper:
     
     def remove_duplicates(self, tweets: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        去除重复的推文
+        去除重复的推文 - 使用高级去重算法
         
         Args:
             tweets: 推文数据列表
@@ -220,23 +245,14 @@ class TwitterDailyScraper:
         Returns:
             去重后的推文列表
         """
-        seen_links = set()
+        # 使用高级去重器
         unique_tweets = []
-        
         for tweet in tweets:
-            link = tweet.get('link', '')
-            content = tweet.get('content', '')
-            
-            # 使用链接或内容作为去重标识
-            identifier = link if link else content
-            
-            if identifier and identifier not in seen_links:
-                seen_links.add(identifier)
+            if not self.high_speed_collector.deduplicator.is_duplicate(tweet):
                 unique_tweets.append(tweet)
         
-        removed_count = len(tweets) - len(unique_tweets)
-        if removed_count > 0:
-            self.logger.info(f"去除了 {removed_count} 条重复推文")
+        dedup_stats = self.high_speed_collector.deduplicator.stats
+        self.logger.info(f"高级去重完成：处理 {dedup_stats['total_processed']} 条，去除 {dedup_stats['duplicates_removed']} 条重复")
         
         return unique_tweets
     
@@ -286,16 +302,33 @@ class TwitterDailyScraper:
                 self.logger.warning("没有抓取到任何推文数据")
                 return ''
             
-            # 去除重复推文
-            unique_tweets = self.remove_duplicates(all_tweets)
-            self.logger.info(f"去重后共有 {len(unique_tweets)} 条推文")
+            # 使用高速采集器进行批量处理：去重、价值筛选、优化
+            self.logger.info("开始高级处理推文：去重、价值分析、优化...")
+            start_time = time.time()
             
-            # 筛选推文
-            self.logger.info("开始筛选推文...")
-            filtered_tweets = self.filter_engine.filter_tweets(unique_tweets)
+            # 批量处理推文
+            processed_tweets = self.high_speed_collector.process_tweets_batch(
+                all_tweets, 
+                enable_dedup=True, 
+                enable_value_filter=True
+            )
+            
+            processing_time = time.time() - start_time
+            self.logger.info(f"高级处理完成，耗时 {processing_time:.2f}秒")
+            self.logger.info(f"处理结果：{len(processed_tweets)}/{len(all_tweets)} 条推文通过处理")
+            
+            # 获取性能报告
+            performance_report = self.high_speed_collector.get_performance_report()
+            self.logger.info(f"采集效率：{performance_report['efficiency_metrics']['collection_rate_per_minute']:.1f} 推文/分钟")
+            self.logger.info(f"目标达成率：{performance_report['efficiency_metrics']['rate_achievement']:.1f}%")
+            self.logger.info(f"高价值推文比例：{performance_report['efficiency_metrics']['high_value_rate']:.2%}")
+            
+            # 传统筛选作为补充
+            self.logger.info("开始传统筛选作为补充...")
+            filtered_tweets = self.filter_engine.filter_tweets(processed_tweets)
             passed_tweets = self.filter_engine.get_passed_tweets(filtered_tweets)
             
-            self.logger.info(f"筛选完成，{len(passed_tweets)}/{len(unique_tweets)} 条推文通过筛选")
+            self.logger.info(f"最终筛选完成，{len(passed_tweets)}/{len(processed_tweets)} 条推文通过所有筛选")
             
             if not passed_tweets:
                 self.logger.warning("没有推文通过筛选条件")

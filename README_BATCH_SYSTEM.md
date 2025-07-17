@@ -116,16 +116,16 @@ output_formats: ["json", "csv", "excel"]
 #### 1. 基本抓取
 ```bash
 # 使用默认配置开始抓取
-python main_batch_scraper.py start
+python3 main_batch_scraper.py start
 
 # 使用自定义配置
-python main_batch_scraper.py start --config config/my_config.yaml
+python3 main_batch_scraper.py start --config config/my_config.yaml
 ```
 
 #### 2. 自定义参数抓取
 ```bash
 # 指定账号和推文数量
-python main_batch_scraper.py start \
+python3 main_batch_scraper.py start \
   --accounts elonmusk openai github \
   --max-tweets 30 \
   --concurrent 2 \
@@ -135,40 +135,40 @@ python main_batch_scraper.py start \
 #### 3. 查看状态
 ```bash
 # 查看当前抓取状态
-python main_batch_scraper.py status
+python3 main_batch_scraper.py status
 
 # 查看特定批次状态
-python main_batch_scraper.py status --batch-id batch_1234567890
+python3 main_batch_scraper.py status --batch-id batch_1234567890
 ```
 
 #### 4. 控制抓取过程
 ```bash
 # 暂停当前抓取
-python main_batch_scraper.py control pause
+python3 main_batch_scraper.py control pause
 
 # 恢复抓取
-python main_batch_scraper.py control resume
+python3 main_batch_scraper.py control resume
 
 # 取消抓取
-python main_batch_scraper.py control cancel
+python3 main_batch_scraper.py control cancel
 ```
 
 #### 5. 账号管理
 ```bash
 # 查看账号状态
-python main_batch_scraper.py accounts list
+python3 main_batch_scraper.py accounts list
 
 # 重置账号状态
-python main_batch_scraper.py accounts reset --username elonmusk
+python3 main_batch_scraper.py accounts reset --username elonmusk
 ```
 
 #### 6. 导出结果
 ```bash
 # 导出批次结果
-python main_batch_scraper.py export batch_1234567890 --format json
+python3 main_batch_scraper.py export batch_1234567890 --format json
 
 # 查看历史记录
-python main_batch_scraper.py history --limit 5
+python3 main_batch_scraper.py history --limit 5
 ```
 
 ### 编程接口使用
@@ -417,7 +417,7 @@ tail -f logs/batch_scraper.log
 ### 监控命令
 ```bash
 # 查看实时状态
-watch -n 5 "python main_batch_scraper.py status"
+watch -n 5 "python3 main_batch_scraper.py status"
 
 # 查看系统资源
 top -p $(pgrep -f main_batch_scraper)

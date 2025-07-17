@@ -11,7 +11,6 @@ import logging
 import time
 from datetime import datetime
 from typing import List, Dict, Any
-import pytest
 
 # 导入测试所需的模块
 from ads_browser_launcher import AdsPowerLauncher
@@ -54,7 +53,7 @@ class ComprehensiveScrapingTest:
                 raise Exception("无法获取浏览器调试端口")
             
             self.parser = TwitterParser(debug_port)
-            await self.parser.initialize()
+            await self.parser.connect_browser()
             
             self.logger.info("✅ 浏览器初始化成功")
             return True

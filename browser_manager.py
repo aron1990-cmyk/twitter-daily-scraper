@@ -111,8 +111,16 @@ class BrowserManager:
                 '--disable-features=VizDisplayCompositor',
                 '--disable-extensions',
                 '--disable-plugins',
-                '--disable-images',  # 禁用图片加载以提高性能
-                '--disable-javascript',  # 可选：禁用JS以提高性能
+                '--mute-audio',  # 静音所有音频
+                '--autoplay-policy=no-user-gesture-required',  # 允许自动播放但静音
+                '--disable-background-timer-throttling',  # 禁用后台定时器限制
+                '--disable-renderer-backgrounding',  # 禁用渲染器后台化
+                '--disable-backgrounding-occluded-windows',  # 禁用被遮挡窗口的后台化
+                '--disable-ipc-flooding-protection',  # 禁用IPC洪水保护
+                '--disable-dev-shm-usage',  # 禁用/dev/shm使用
+                '--no-first-run',  # 跳过首次运行
+                '--no-default-browser-check',  # 跳过默认浏览器检查
+                '--disable-default-apps',  # 禁用默认应用
             ]
         }
         
@@ -171,6 +179,10 @@ class BrowserManager:
                 'viewport': {'width': 1920, 'height': 1080},
                 'locale': 'en-US',
                 'timezone_id': 'America/New_York',
+                'permissions': [],  # 不授予任何权限
+                'extra_http_headers': {
+                    'Accept-Language': 'en-US,en;q=0.9',
+                },
             }
             
             # 添加用户数据目录
@@ -210,15 +222,17 @@ class BrowserManager:
     async def _configure_page(self, page: Page):
         """配置页面设置"""
         try:
-            # 设置超时
-            page.set_default_timeout(30000)  # 30秒
-            page.set_default_navigation_timeout(60000)  # 60秒
+            # 设置超时（缩短超时时间）
+            page.set_default_timeout(15000)  # 15秒
+            page.set_default_navigation_timeout(30000)  # 30秒
             
-            # 拦截不必要的资源
-            await page.route("**/*.{png,jpg,jpeg,gif,svg,ico,woff,woff2}", 
-                           lambda route: route.abort())
+            # 拦截不必要的资源（保留图片但拦截其他资源）
+            await page.route("**/*.{woff,woff2,ttf,eot}", lambda route: route.abort())
+            await page.route("**/analytics**", lambda route: route.abort())
+            await page.route("**/ads**", lambda route: route.abort())
+            await page.route("**/tracking**", lambda route: route.abort())
             
-            # 注入反检测脚本
+            # 注入反检测和音频控制脚本
             await page.add_init_script("""
                 // 移除 webdriver 属性
                 Object.defineProperty(navigator, 'webdriver', {
@@ -234,6 +248,27 @@ class BrowserManager:
                 Object.defineProperty(navigator, 'languages', {
                     get: () => ['en-US', 'en'],
                 });
+                
+                // 静音所有音频和视频
+                const originalPlay = HTMLMediaElement.prototype.play;
+                HTMLMediaElement.prototype.play = function() {
+                    this.muted = true;
+                    this.volume = 0;
+                    return originalPlay.call(this);
+                };
+                
+                // 监听新添加的媒体元素
+                const observer = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                        mutation.addedNodes.forEach(function(node) {
+                            if (node.tagName === 'VIDEO' || node.tagName === 'AUDIO') {
+                                node.muted = true;
+                                node.volume = 0;
+                            }
+                        });
+                    });
+                });
+                observer.observe(document.body, { childList: true, subtree: true });
             """)
             
         except Exception as e:

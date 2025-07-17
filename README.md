@@ -353,7 +353,7 @@ python3 run_enhanced.py --mode console
 #### 1. 基本使用
 
 ```bash
-python main.py
+python3 main.py
 ```
 
 #### 2. 指定 AdsPower 用户ID
@@ -795,7 +795,7 @@ python3 validate_config.py
 
 ```bash
 # 每天上午 9 点执行
-0 9 * * * cd /path/to/twitter-daily-scraper && python main.py
+0 9 * * * cd /path/to/twitter-daily-scraper && python3 main.py
 ```
 
 ### 2. 多账号轮换
