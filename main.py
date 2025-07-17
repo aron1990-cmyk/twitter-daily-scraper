@@ -11,6 +11,8 @@ import sys
 import os
 from datetime import datetime
 from typing import List, Dict, Any
+import threading
+import signal
 
 # 添加当前目录到 Python 路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -28,6 +30,7 @@ from ai_analyzer import AIContentAnalyzer as AIAnalyzer
 from account_manager import AccountManager
 from system_monitor import SystemMonitor
 from performance_optimizer import HighSpeedCollector, EnhancedSearchOptimizer
+from exception_handler import ExceptionHandler, resilient_task_execution
 import json
 import time
 
@@ -51,8 +54,21 @@ class TwitterDailyScraper:
         self.system_monitor = SystemMonitor()
         self.logger = self.setup_logging()
         
+        # 异常处理器
+        self.exception_handler = ExceptionHandler()
+        
+        # 运行状态
+        self.is_running = False
+        self.should_stop = False
+        self._background_thread = None
+        self._task_lock = threading.Lock()
+        
         # 启动系统监控
         self.system_monitor.start_monitoring()
+        
+        # 注册信号处理器
+        signal.signal(signal.SIGINT, self._signal_handler)
+        signal.signal(signal.SIGTERM, self._signal_handler)
         
         self.logger.info("TwitterDailyScraper 初始化完成")
     
@@ -256,9 +272,15 @@ class TwitterDailyScraper:
         
         return unique_tweets
     
+    def _signal_handler(self, signum, frame):
+        """信号处理器"""
+        self.logger.info(f"接收到信号 {signum}，准备停止任务...")
+        self.should_stop = True
+    
+    @resilient_task_execution(max_retries=3, checkpoint_key="scraping_task")
     async def run_scraping_task(self, user_id: str = None) -> str:
         """
-        执行完整的抓取任务
+        执行完整的抓取任务（支持断点续传和弹性执行）
         
         Args:
             user_id: AdsPower 用户ID
@@ -267,136 +289,206 @@ class TwitterDailyScraper:
             生成的 Excel 文件路径
         """
         try:
+            with self._task_lock:
+                self.is_running = True
+            
             self.logger.info("="*50)
             self.logger.info("Twitter 日报采集任务开始")
             self.logger.info(f"开始时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             self.logger.info("="*50)
             
+            # 检查是否有断点数据
+            checkpoint = self.exception_handler.checkpoint_manager.load_checkpoint("scraping_task")
+            start_step = checkpoint.get('current_step', 'initialize') if checkpoint else 'initialize'
+            
             # 初始化浏览器
-            if not await self.initialize_browser(user_id):
-                raise Exception("浏览器初始化失败")
+            if start_step == 'initialize':
+                if not await self.initialize_browser(user_id):
+                    raise Exception("浏览器初始化失败")
+                self.exception_handler.checkpoint_manager.save_checkpoint("scraping_task", {
+                    'current_step': 'scrape',
+                    'user_id': user_id
+                })
+                start_step = 'scrape'
             
             all_tweets = []
             
-            # 抓取用户推文
-            if TWITTER_TARGETS['accounts']:
-                self.logger.info(f"开始抓取 {len(TWITTER_TARGETS['accounts'])} 个用户的推文...")
-                user_tweets = await self.scrape_user_tweets(
-                    TWITTER_TARGETS['accounts'], 
-                    FILTER_CONFIG['max_tweets_per_target']
+            # 抓取推文
+            if start_step == 'scrape':
+                # 抓取用户推文
+                if TWITTER_TARGETS['accounts']:
+                    self.logger.info(f"开始抓取 {len(TWITTER_TARGETS['accounts'])} 个用户的推文...")
+                    user_tweets = await self.scrape_user_tweets(
+                        TWITTER_TARGETS['accounts'], 
+                        FILTER_CONFIG['max_tweets_per_target']
+                    )
+                    all_tweets.extend(user_tweets)
+                    self.logger.info(f"用户推文抓取完成，共获得 {len(user_tweets)} 条推文")
+                
+                # 抓取关键词推文
+                if TWITTER_TARGETS['keywords']:
+                    self.logger.info(f"开始搜索 {len(TWITTER_TARGETS['keywords'])} 个关键词的推文...")
+                    keyword_tweets = await self.scrape_keyword_tweets(
+                        TWITTER_TARGETS['keywords'], 
+                        FILTER_CONFIG['max_tweets_per_target']
+                    )
+                    all_tweets.extend(keyword_tweets)
+                    self.logger.info(f"关键词推文搜索完成，共获得 {len(keyword_tweets)} 条推文")
+                
+                if not all_tweets:
+                    self.logger.warning("没有抓取到任何推文数据")
+                    return ''
+                
+                self.exception_handler.checkpoint_manager.save_checkpoint("scraping_task", {
+                    'current_step': 'process',
+                    'all_tweets': all_tweets
+                })
+                start_step = 'process'
+            else:
+                all_tweets = checkpoint.get('all_tweets', [])
+            
+            # 处理推文
+            if start_step == 'process':
+                # 使用高速采集器进行批量处理：去重、价值筛选、优化
+                self.logger.info("开始高级处理推文：去重、价值分析、优化...")
+                start_time = time.time()
+                
+                # 批量处理推文
+                processed_tweets = self.high_speed_collector.process_tweets_batch(
+                    all_tweets, 
+                    enable_dedup=True, 
+                    enable_value_filter=True
                 )
-                all_tweets.extend(user_tweets)
-                self.logger.info(f"用户推文抓取完成，共获得 {len(user_tweets)} 条推文")
-            
-            # 抓取关键词推文
-            if TWITTER_TARGETS['keywords']:
-                self.logger.info(f"开始搜索 {len(TWITTER_TARGETS['keywords'])} 个关键词的推文...")
-                keyword_tweets = await self.scrape_keyword_tweets(
-                    TWITTER_TARGETS['keywords'], 
-                    FILTER_CONFIG['max_tweets_per_target']
-                )
-                all_tweets.extend(keyword_tweets)
-                self.logger.info(f"关键词推文搜索完成，共获得 {len(keyword_tweets)} 条推文")
-            
-            if not all_tweets:
-                self.logger.warning("没有抓取到任何推文数据")
-                return ''
-            
-            # 使用高速采集器进行批量处理：去重、价值筛选、优化
-            self.logger.info("开始高级处理推文：去重、价值分析、优化...")
-            start_time = time.time()
-            
-            # 批量处理推文
-            processed_tweets = self.high_speed_collector.process_tweets_batch(
-                all_tweets, 
-                enable_dedup=True, 
-                enable_value_filter=True
-            )
-            
-            processing_time = time.time() - start_time
-            self.logger.info(f"高级处理完成，耗时 {processing_time:.2f}秒")
-            self.logger.info(f"处理结果：{len(processed_tweets)}/{len(all_tweets)} 条推文通过处理")
-            
-            # 获取性能报告
-            performance_report = self.high_speed_collector.get_performance_report()
-            self.logger.info(f"采集效率：{performance_report['efficiency_metrics']['collection_rate_per_minute']:.1f} 推文/分钟")
-            self.logger.info(f"目标达成率：{performance_report['efficiency_metrics']['rate_achievement']:.1f}%")
-            self.logger.info(f"高价值推文比例：{performance_report['efficiency_metrics']['high_value_rate']:.2%}")
-            
-            # 传统筛选作为补充
-            self.logger.info("开始传统筛选作为补充...")
-            filtered_tweets = self.filter_engine.filter_tweets(processed_tweets)
-            passed_tweets = self.filter_engine.get_passed_tweets(filtered_tweets)
-            
-            self.logger.info(f"最终筛选完成，{len(passed_tweets)}/{len(processed_tweets)} 条推文通过所有筛选")
-            
-            if not passed_tweets:
-                self.logger.warning("没有推文通过筛选条件")
-                # 仍然生成文件，但只包含统计信息
-                passed_tweets = []
-            
-            # 生成统计信息
-            statistics = self.filter_engine.get_filter_statistics(filtered_tweets)
+                
+                processing_time = time.time() - start_time
+                self.logger.info(f"高级处理完成，耗时 {processing_time:.2f}秒")
+                self.logger.info(f"处理结果：{len(processed_tweets)}/{len(all_tweets)} 条推文通过处理")
+                
+                # 获取性能报告
+                performance_report = self.high_speed_collector.get_performance_report()
+                self.logger.info(f"采集效率：{performance_report['efficiency_metrics']['collection_rate_per_minute']:.1f} 推文/分钟")
+                self.logger.info(f"目标达成率：{performance_report['efficiency_metrics']['rate_achievement']:.1f}%")
+                self.logger.info(f"高价值推文比例：{performance_report['efficiency_metrics']['high_value_rate']:.2%}")
+                
+                # 传统筛选作为补充
+                self.logger.info("开始传统筛选作为补充...")
+                filtered_tweets = self.filter_engine.filter_tweets(processed_tweets)
+                passed_tweets = self.filter_engine.get_passed_tweets(filtered_tweets)
+                
+                self.logger.info(f"最终筛选完成，{len(passed_tweets)}/{len(processed_tweets)} 条推文通过所有筛选")
+                
+                if not passed_tweets:
+                    self.logger.warning("没有推文通过筛选条件")
+                    # 仍然生成文件，但只包含统计信息
+                    passed_tweets = []
+                
+                # 生成统计信息
+                statistics = self.filter_engine.get_filter_statistics(filtered_tweets)
+                
+                self.exception_handler.checkpoint_manager.save_checkpoint("scraping_task", {
+                    'current_step': 'ai_analyze',
+                    'passed_tweets': passed_tweets,
+                    'statistics': statistics
+                })
+                start_step = 'ai_analyze'
+            else:
+                passed_tweets = checkpoint.get('passed_tweets', [])
+                statistics = checkpoint.get('statistics', {})
             
             # AI分析
-            try:
-                self.logger.info("开始AI分析...")
-                ai_insights = await self.ai_analyzer.analyze_tweets_batch(passed_tweets)
+            if start_step == 'ai_analyze':
+                try:
+                    self.logger.info("开始AI分析...")
+                    ai_insights = await self.ai_analyzer.analyze_tweets_batch(passed_tweets)
+                    
+                    # 添加AI分析结果到推文数据
+                    for i, tweet in enumerate(passed_tweets):
+                        if i < len(ai_insights):
+                            tweet.update({
+                                'ai_quality_score': ai_insights[i].get('quality_score', 0),
+                                'ai_sentiment': ai_insights[i].get('sentiment', 'neutral'),
+                                'ai_engagement_prediction': ai_insights[i].get('engagement_score', 0),
+                                'ai_trend_relevance': ai_insights[i].get('trend_relevance', 0)
+                            })
+                    
+                    self.logger.info(f"AI分析完成，处理了 {len(ai_insights)} 条推文")
                 
-                # 添加AI分析结果到推文数据
-                for i, tweet in enumerate(passed_tweets):
-                    if i < len(ai_insights):
-                        tweet.update({
-                            'ai_quality_score': ai_insights[i].get('quality_score', 0),
-                            'ai_sentiment': ai_insights[i].get('sentiment', 'neutral'),
-                            'ai_engagement_prediction': ai_insights[i].get('engagement_score', 0),
-                            'ai_trend_relevance': ai_insights[i].get('trend_relevance', 0)
-                        })
+                except Exception as e:
+                    self.logger.error(f"AI分析过程中发生错误: {e}")
                 
-                self.logger.info(f"AI分析完成，处理了 {len(ai_insights)} 条推文")
-            
-            except Exception as e:
-                self.logger.error(f"AI分析过程中发生错误: {e}")
+                self.exception_handler.checkpoint_manager.save_checkpoint("scraping_task", {
+                    'current_step': 'export',
+                    'passed_tweets': passed_tweets,
+                    'statistics': statistics
+                })
+                start_step = 'export'
             
             # 导出到 Excel
-            self.logger.info("开始导出数据到 Excel...")
-            output_file = self.excel_writer.write_tweets_with_summary(passed_tweets, statistics)
+            if start_step == 'export':
+                self.logger.info("开始导出数据到 Excel...")
+                output_file = self.excel_writer.write_tweets_with_summary(passed_tweets, statistics)
+                
+                self.exception_handler.checkpoint_manager.save_checkpoint("scraping_task", {
+                    'current_step': 'sync',
+                    'passed_tweets': passed_tweets,
+                    'statistics': statistics,
+                    'output_file': output_file
+                })
+                start_step = 'sync'
+            else:
+                output_file = checkpoint.get('output_file', '')
             
             # 云端同步
             sync_results = {}
-            if any(config.get('enabled', False) for config in CLOUD_SYNC_CONFIG.values()):
-                self.logger.info("开始同步数据到云端平台...")
-                try:
-                    sync_results = await self.cloud_sync.sync_all_platforms(passed_tweets, CLOUD_SYNC_CONFIG)
-                    for platform, success in sync_results.items():
-                        if success:
-                            self.logger.info(f"✅ {platform} 同步成功")
-                        else:
-                            self.logger.warning(f"❌ {platform} 同步失败")
-                except Exception as e:
-                    self.logger.error(f"云端同步过程中出现异常: {e}")
+            if start_step == 'sync':
+                if any(config.get('enabled', False) for config in CLOUD_SYNC_CONFIG.values()):
+                    self.logger.info("开始同步数据到云端平台...")
+                    try:
+                        sync_results = await self._sync_to_cloud_with_retry(passed_tweets, CLOUD_SYNC_CONFIG)
+                        for platform, success in sync_results.items():
+                            if success:
+                                self.logger.info(f"✅ {platform} 同步成功")
+                            else:
+                                self.logger.warning(f"❌ {platform} 同步失败")
+                    except Exception as e:
+                        self.logger.error(f"云端同步过程中出现异常: {e}")
+                
+                self.exception_handler.checkpoint_manager.save_checkpoint("scraping_task", {
+                    'current_step': 'insights',
+                    'passed_tweets': passed_tweets,
+                    'statistics': statistics,
+                    'output_file': output_file,
+                    'sync_results': sync_results
+                })
+                start_step = 'insights'
+            else:
+                sync_results = checkpoint.get('sync_results', {})
             
             # 生成AI洞察报告
-            try:
-                ai_report = await self.ai_analyzer.generate_insights_report(passed_tweets)
-                report_file = f"ai_insights_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            if start_step == 'insights':
+                try:
+                    ai_report = await self.ai_analyzer.generate_insights_report(passed_tweets)
+                    report_file = f"ai_insights_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                    
+                    import json
+                    with open(report_file, 'w', encoding='utf-8') as f:
+                        json.dump(ai_report, f, ensure_ascii=False, indent=2)
+                    
+                    self.logger.info(f"AI洞察报告已生成: {report_file}")
                 
-                import json
-                with open(report_file, 'w', encoding='utf-8') as f:
-                    json.dump(ai_report, f, ensure_ascii=False, indent=2)
+                except Exception as e:
+                    self.logger.error(f"生成AI洞察报告时发生错误: {e}")
                 
-                self.logger.info(f"AI洞察报告已生成: {report_file}")
-            
-            except Exception as e:
-                self.logger.error(f"生成AI洞察报告时发生错误: {e}")
+                # 清除断点数据
+                self.exception_handler.checkpoint_manager.delete_checkpoint("scraping_task")
             
             self.logger.info("="*50)
             self.logger.info("Twitter 日报采集任务完成")
             self.logger.info(f"结束时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             self.logger.info(f"输出文件: {output_file}")
-            self.logger.info(f"总推文数: {statistics['total_tweets']}")
-            self.logger.info(f"通过筛选: {statistics['passed_tweets']}")
-            self.logger.info(f"通过率: {statistics['pass_rate']:.2%}")
+            self.logger.info(f"总推文数: {statistics.get('total_tweets', 0)}")
+            self.logger.info(f"通过筛选: {statistics.get('passed_tweets', 0)}")
+            self.logger.info(f"通过率: {statistics.get('pass_rate', 0):.2%}")
             if sync_results:
                 self.logger.info(f"云端同步结果: {sync_results}")
             self.logger.info("="*50)
@@ -405,9 +497,30 @@ class TwitterDailyScraper:
             
         except Exception as e:
             self.logger.error(f"抓取任务执行失败: {e}")
-            raise
+            await self.exception_handler.handle_exception(e, "scraping_task")
+            raise e  # 让装饰器处理重试逻辑
         finally:
+            with self._task_lock:
+                self.is_running = False
             await self.cleanup()
+    
+    async def _sync_to_cloud_with_retry(self, tweets: List[Dict[str, Any]], config: Dict[str, Any]) -> Dict[str, bool]:
+        """带重试机制的云端同步"""
+        sync_results = {}
+        
+        try:
+            sync_results = await self.cloud_sync.sync_all_platforms(tweets, config)
+        except Exception as e:
+            self.logger.error(f"云端同步失败，尝试重试: {e}")
+            await asyncio.sleep(5)  # 等待5秒后重试
+            try:
+                sync_results = await self.cloud_sync.sync_all_platforms(tweets, config)
+            except Exception as retry_e:
+                self.logger.error(f"云端同步重试失败: {retry_e}")
+                # 返回失败状态但不中断程序
+                sync_results = {platform: False for platform in config.keys()}
+        
+        return sync_results
     
     async def cleanup(self):
         """

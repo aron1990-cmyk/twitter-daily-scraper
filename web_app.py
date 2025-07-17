@@ -8,6 +8,8 @@ Twitter抓取Web管理系统
 import os
 import json
 import sqlite3
+import subprocess
+import tempfile
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
@@ -373,6 +375,7 @@ class ParallelTaskManager:
     def __init__(self, max_concurrent_tasks=3):
         self.max_concurrent_tasks = max_concurrent_tasks
         self.running_tasks = {}  # {task_id: {'executor': executor, 'thread': thread}}
+        self.background_processes = {}  # {task_id: {'process': process, 'user_id': user_id}}
         # 从配置文件读取可用的AdsPower用户ID池
         from config import ADS_POWER_CONFIG
         self.available_user_ids = ADS_POWER_CONFIG.get('multi_user_ids', [ADS_POWER_CONFIG['user_id']])
@@ -398,17 +401,18 @@ class ParallelTaskManager:
     
     def can_start_task(self):
         """检查是否可以启动新任务"""
-        return len(self.running_tasks) < self.max_concurrent_tasks and len(self.user_id_pool) > 0
+        total_running = len(self.running_tasks) + len(self.background_processes)
+        return total_running < self.max_concurrent_tasks and len(self.user_id_pool) > 0
     
     def get_running_task_count(self):
         """获取正在运行的任务数量"""
-        return len(self.running_tasks)
+        return len(self.running_tasks) + len(self.background_processes)
     
     def is_task_running(self, task_id):
         """检查特定任务是否正在运行"""
-        return task_id in self.running_tasks
+        return task_id in self.running_tasks or task_id in self.background_processes
     
-    def start_task(self, task_id):
+    def start_task(self, task_id, use_background_process=True):
         """启动任务"""
         if not self.can_start_task():
             return False, "已达到最大并发任务数或无可用浏览器资源"
@@ -417,6 +421,70 @@ class ParallelTaskManager:
         if not user_id:
             return False, "无可用的浏览器用户ID"
         
+        try:
+            if use_background_process:
+                return self._start_background_task(task_id, user_id)
+            else:
+                return self._start_thread_task(task_id, user_id)
+                
+        except Exception as e:
+            self.return_user_id(user_id)
+            return False, f"任务启动失败: {str(e)}"
+    
+    def _start_background_task(self, task_id, user_id):
+        """在后台进程中启动任务"""
+        try:
+            # 获取任务信息
+            task = ScrapingTask.query.get(task_id)
+            if not task:
+                raise Exception(f"任务 {task_id} 不存在")
+            
+            # 创建任务配置文件
+            config_data = {
+                'task_id': task_id,
+                'task_type': 'daily',  # 默认类型
+                'kwargs': {
+                    'user_id': user_id
+                }
+            }
+            
+            # 创建临时配置文件
+            config_file = tempfile.NamedTemporaryFile(
+                mode='w', 
+                suffix='.json', 
+                delete=False,
+                encoding='utf-8'
+            )
+            json.dump(config_data, config_file, ensure_ascii=False, indent=2)
+            config_file.close()
+            
+            # 启动后台进程
+            process = subprocess.Popen([
+                'python3', 
+                'background_task_runner.py', 
+                config_file.name
+            ], 
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+            )
+            
+            # 记录后台进程
+            self.background_processes[task_id] = {
+                'process': process,
+                'user_id': user_id,
+                'config_file': config_file.name,
+                'start_time': datetime.utcnow()
+            }
+            
+            return True, "后台任务启动成功"
+            
+        except Exception as e:
+            raise Exception(f"后台任务启动失败: {str(e)}")
+    
+    def _start_thread_task(self, task_id, user_id):
+        """在线程中启动任务（原有方式）"""
         try:
             # 创建任务执行器
             executor = ScrapingTaskExecutor(user_id)
@@ -447,45 +515,83 @@ class ParallelTaskManager:
             return True, "任务启动成功"
             
         except Exception as e:
-            self.return_user_id(user_id)
-            return False, f"任务启动失败: {str(e)}"
+            raise Exception(f"线程任务启动失败: {str(e)}")
     
     def stop_task(self, task_id):
         """停止特定任务"""
-        if task_id not in self.running_tasks:
+        if task_id not in self.running_tasks and task_id not in self.background_processes:
             return False, "任务未在运行中"
         
         try:
-            task_info = self.running_tasks[task_id]
-            executor = task_info['executor']
-            user_id = task_info['user_id']
+            # 停止后台进程任务
+            if task_id in self.background_processes:
+                process_info = self.background_processes[task_id]
+                process = process_info['process']
+                user_id = process_info['user_id']
+                config_file = process_info.get('config_file')
+                
+                # 终止进程
+                process.terminate()
+                try:
+                    process.wait(timeout=5)  # 等待5秒
+                except subprocess.TimeoutExpired:
+                    process.kill()  # 强制杀死进程
+                
+                # 清理配置文件
+                if config_file and os.path.exists(config_file):
+                    try:
+                        os.unlink(config_file)
+                    except:
+                        pass
+                
+                # 清理任务
+                self.cleanup_background_task(task_id, user_id)
+                
+                return True, "后台任务已停止"
             
-            # 停止执行器
-            executor.stop_task()
-            
-            # 清理任务
-            self.cleanup_task(task_id, user_id)
-            
-            return True, "任务已停止"
+            # 停止线程任务
+            elif task_id in self.running_tasks:
+                task_info = self.running_tasks[task_id]
+                executor = task_info['executor']
+                user_id = task_info['user_id']
+                
+                # 停止执行器
+                executor.stop_task()
+                
+                # 清理任务
+                self.cleanup_task(task_id, user_id)
+                
+                return True, "任务已停止"
             
         except Exception as e:
             return False, f"停止任务失败: {str(e)}"
     
     def cleanup_task(self, task_id, user_id):
-        """清理已完成的任务"""
+        """清理已完成的线程任务"""
         with self.lock:
             if task_id in self.running_tasks:
                 del self.running_tasks[task_id]
             self.return_user_id(user_id)
     
+    def cleanup_background_task(self, task_id, user_id):
+        """清理已完成的后台进程任务"""
+        with self.lock:
+            if task_id in self.background_processes:
+                del self.background_processes[task_id]
+            self.return_user_id(user_id)
+    
     def get_task_status(self):
         """获取所有任务状态"""
+        total_running = len(self.running_tasks) + len(self.background_processes)
         status = {
-            'running_count': len(self.running_tasks),
+            'running_count': total_running,
+            'thread_tasks': len(self.running_tasks),
+            'background_tasks': len(self.background_processes),
             'max_concurrent': self.max_concurrent_tasks,
-            'available_slots': self.max_concurrent_tasks - len(self.running_tasks),
+            'available_slots': self.max_concurrent_tasks - total_running,
             'available_browsers': len(self.user_id_pool),
-            'running_tasks': list(self.running_tasks.keys())
+            'running_tasks': list(self.running_tasks.keys()),
+            'background_task_ids': list(self.background_processes.keys())
         }
         return status
 

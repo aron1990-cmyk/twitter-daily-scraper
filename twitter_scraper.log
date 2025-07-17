@@ -440,3 +440,19 @@
 2025-07-17 19:59:15,133 - TwitterScraper - INFO - 系统监控已停止
 2025-07-17 19:59:15,134 - TwitterScraper - INFO - 账户状态已保存
 2025-07-17 19:59:15,134 - TwitterScraper - INFO - 资源清理完成
+2025-07-17 20:49:20,150 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-17 20:49:20,150 - TwitterScraper - INFO - ==================================================
+2025-07-17 20:49:20,150 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-17 20:49:20,150 - TwitterScraper - INFO - 开始时间: 2025-07-17 20:49:20
+2025-07-17 20:49:20,150 - TwitterScraper - INFO - ==================================================
+2025-07-17 20:49:20,150 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-17 20:49:24,538 - TwitterScraper - INFO - 浏览器调试端口: ws://127.0.0.1:61261/devtools/browser/bbc6872b-2d5b-4c4a-a2f8-6e777200300e
+2025-07-17 20:49:41,719 - TwitterScraper - ERROR - 浏览器初始化失败: 导航到 X (Twitter) 失败: Page.evaluate: Target page, context or browser has been closed
+2025-07-17 20:49:41,720 - TwitterScraper - ERROR - 抓取任务执行失败: 浏览器初始化失败
+2025-07-17 20:49:51,741 - TwitterScraper - INFO - 系统监控已停止
+2025-07-17 20:49:51,743 - TwitterScraper - INFO - 账户状态已保存
+2025-07-17 20:49:51,743 - TwitterScraper - INFO - 资源清理完成
+2025-07-17 20:49:51,743 - TwitterScraper - ERROR - 任务执行失败: 浏览器初始化失败
+2025-07-17 20:50:04,868 - TwitterScraper - INFO - 系统监控已停止
+2025-07-17 20:50:04,869 - TwitterScraper - INFO - 账户状态已保存
+2025-07-17 20:50:04,869 - TwitterScraper - INFO - 资源清理完成

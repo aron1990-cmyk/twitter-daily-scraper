@@ -8,6 +8,8 @@
 import logging
 import time
 import traceback
+import os
+import json
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Callable, Type
 from functools import wraps
@@ -150,6 +152,7 @@ class ExceptionHandler:
         self.error_history: List[ErrorInfo] = []
         self.error_patterns: Dict[str, ErrorCategory] = self._init_error_patterns()
         self.recovery_strategies: Dict[ErrorCategory, Callable] = self._init_recovery_strategies()
+        self.checkpoint_manager = CheckpointManager()
         
         # 配置日志
         if log_file:
@@ -399,6 +402,86 @@ class ExceptionHandler:
             self.logger.info(f"清理了 {removed_count} 条旧错误记录")
 
 
+class CheckpointManager:
+    """断点续传管理器"""
+    
+    def __init__(self, checkpoint_dir: str = "checkpoints"):
+        self.checkpoint_dir = checkpoint_dir
+        self.logger = logging.getLogger('CheckpointManager')
+        
+        # 确保检查点目录存在
+        os.makedirs(checkpoint_dir, exist_ok=True)
+    
+    def save_checkpoint(self, task_id: str, checkpoint_data: Dict[str, Any]) -> bool:
+        """保存检查点数据"""
+        try:
+            checkpoint_file = os.path.join(self.checkpoint_dir, f"task_{task_id}.json")
+            
+            checkpoint_info = {
+                'task_id': task_id,
+                'timestamp': datetime.now().isoformat(),
+                'data': checkpoint_data
+            }
+            
+            with open(checkpoint_file, 'w', encoding='utf-8') as f:
+                json.dump(checkpoint_info, f, ensure_ascii=False, indent=2)
+            
+            self.logger.info(f"检查点已保存: {checkpoint_file}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"保存检查点失败: {e}")
+            return False
+    
+    def load_checkpoint(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """加载检查点数据"""
+        try:
+            checkpoint_file = os.path.join(self.checkpoint_dir, f"task_{task_id}.json")
+            
+            if not os.path.exists(checkpoint_file):
+                return None
+            
+            with open(checkpoint_file, 'r', encoding='utf-8') as f:
+                checkpoint_info = json.load(f)
+            
+            self.logger.info(f"检查点已加载: {checkpoint_file}")
+            return checkpoint_info.get('data')
+            
+        except Exception as e:
+            self.logger.error(f"加载检查点失败: {e}")
+            return None
+    
+    def delete_checkpoint(self, task_id: str) -> bool:
+        """删除检查点文件"""
+        try:
+            checkpoint_file = os.path.join(self.checkpoint_dir, f"task_{task_id}.json")
+            
+            if os.path.exists(checkpoint_file):
+                os.remove(checkpoint_file)
+                self.logger.info(f"检查点已删除: {checkpoint_file}")
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"删除检查点失败: {e}")
+            return False
+    
+    def list_checkpoints(self) -> List[str]:
+        """列出所有可用的检查点"""
+        try:
+            checkpoints = []
+            for filename in os.listdir(self.checkpoint_dir):
+                if filename.startswith('task_') and filename.endswith('.json'):
+                    task_id = filename[5:-5]  # 移除 'task_' 前缀和 '.json' 后缀
+                    checkpoints.append(task_id)
+            
+            return checkpoints
+            
+        except Exception as e:
+            self.logger.error(f"列出检查点失败: {e}")
+            return []
+
+
 def retry_on_error(max_retries: int = 3, delay: float = 1.0, 
                   backoff_factor: float = 2.0, exceptions: tuple = None):
     """重试装饰器"""
@@ -435,6 +518,104 @@ def retry_on_error(max_retries: int = 3, delay: float = 1.0,
             raise last_exception
         
         return wrapper
+    return decorator
+
+
+def resilient_task_execution(checkpoint_manager: CheckpointManager = None):
+    """弹性任务执行装饰器，支持断点续传和错误恢复"""
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        async def async_wrapper(*args, **kwargs):
+            task_id = kwargs.get('task_id') or str(int(time.time()))
+            logger = logging.getLogger('ResilientTask')
+            
+            # 尝试从检查点恢复
+            if checkpoint_manager:
+                checkpoint_data = checkpoint_manager.load_checkpoint(task_id)
+                if checkpoint_data:
+                    logger.info(f"从检查点恢复任务 {task_id}")
+                    kwargs.update(checkpoint_data)
+            
+            max_attempts = 3
+            for attempt in range(max_attempts):
+                try:
+                    # 执行任务
+                    result = await func(*args, **kwargs)
+                    
+                    # 任务成功完成，删除检查点
+                    if checkpoint_manager:
+                        checkpoint_manager.delete_checkpoint(task_id)
+                    
+                    return result
+                    
+                except Exception as e:
+                    logger.error(f"任务执行失败 (尝试 {attempt + 1}/{max_attempts}): {e}")
+                    
+                    if attempt < max_attempts - 1:
+                        # 保存检查点
+                        if checkpoint_manager:
+                            checkpoint_data = {
+                                'attempt': attempt + 1,
+                                'last_error': str(e),
+                                'kwargs': kwargs
+                            }
+                            checkpoint_manager.save_checkpoint(task_id, checkpoint_data)
+                        
+                        # 等待后重试
+                        await asyncio.sleep(30 * (attempt + 1))
+                    else:
+                        # 最后一次尝试失败
+                        raise e
+        
+        @wraps(func)
+        def sync_wrapper(*args, **kwargs):
+            task_id = kwargs.get('task_id') or str(int(time.time()))
+            logger = logging.getLogger('ResilientTask')
+            
+            # 尝试从检查点恢复
+            if checkpoint_manager:
+                checkpoint_data = checkpoint_manager.load_checkpoint(task_id)
+                if checkpoint_data:
+                    logger.info(f"从检查点恢复任务 {task_id}")
+                    kwargs.update(checkpoint_data)
+            
+            max_attempts = 3
+            for attempt in range(max_attempts):
+                try:
+                    # 执行任务
+                    result = func(*args, **kwargs)
+                    
+                    # 任务成功完成，删除检查点
+                    if checkpoint_manager:
+                        checkpoint_manager.delete_checkpoint(task_id)
+                    
+                    return result
+                    
+                except Exception as e:
+                    logger.error(f"任务执行失败 (尝试 {attempt + 1}/{max_attempts}): {e}")
+                    
+                    if attempt < max_attempts - 1:
+                        # 保存检查点
+                        if checkpoint_manager:
+                            checkpoint_data = {
+                                'attempt': attempt + 1,
+                                'last_error': str(e),
+                                'kwargs': kwargs
+                            }
+                            checkpoint_manager.save_checkpoint(task_id, checkpoint_data)
+                        
+                        # 等待后重试
+                        time.sleep(30 * (attempt + 1))
+                    else:
+                        # 最后一次尝试失败
+                        raise e
+        
+        # 根据函数类型返回相应的包装器
+        if asyncio.iscoroutinefunction(func):
+            return async_wrapper
+        else:
+            return sync_wrapper
+    
     return decorator
 
 
