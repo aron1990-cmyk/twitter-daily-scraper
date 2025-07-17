@@ -184,6 +184,10 @@
                                                 <button onclick="stopTask('{{ task.id }}')" class="btn btn-warning" title="停止任务">
                                                     <i class="fas fa-stop"></i>
                                                 </button>
+                                            {% elif task.status == 'failed' or (task.status == 'completed' and task.tweets_collected < task.max_tweets) %}
+                                                <button onclick="restartTask('{{ task.id }}')" class="btn btn-primary" title="重新执行任务">
+                                                    <i class="fas fa-redo"></i>
+                                                </button>
                                             {% endif %}
                                             
                                             <button onclick="viewTask('{{ task.id }}')" class="btn btn-info" title="查看详情">
@@ -358,6 +362,20 @@ function stopTask(taskId) {
             .fail(function(xhr) {
                 const error = xhr.responseJSON ? xhr.responseJSON.error : '停止失败';
                 showAlert('停止失败: ' + error, 'danger');
+            });
+    }
+}
+
+function restartTask(taskId) {
+    if (confirm('确定要重新执行这个任务吗？任务将重置状态并重新开始抓取。')) {
+        $.post(`/api/tasks/${taskId}/restart`)
+            .done(function(response) {
+                showAlert('任务已重新启动！AdsPower浏览器将自动打开并开始执行抓取任务。', 'success');
+                setTimeout(() => location.reload(), 1000);
+            })
+            .fail(function(xhr) {
+                const error = xhr.responseJSON ? xhr.responseJSON.error : '重新启动失败';
+                showAlert('重新启动失败: ' + error, 'danger');
             });
     }
 }

@@ -1,0 +1,81 @@
+{
+  "timestamp": "2025-07-17 13:55:24",
+  "total_tests": 9,
+  "passed_tests": 6,
+  "failed_tests": 3,
+  "test_results": [
+    {
+      "test_name": "API检测AdsPower安装 - 成功情况",
+      "success": true,
+      "message": "API正确返回AdsPower安装状态",
+      "details": null,
+      "timestamp": "2025-07-17 13:55:19"
+    },
+    {
+      "test_name": "API检测AdsPower安装 - 未运行情况",
+      "success": false,
+      "message": "未正确处理连接失败情况",
+      "details": {
+        "message": "检测失败: Failed to parse: http://localhost:99999/api/v1/user/list",
+        "success": false
+      },
+      "timestamp": "2025-07-17 13:55:19"
+    },
+    {
+      "test_name": "API检测AdsPower安装 - 超时情况",
+      "success": false,
+      "message": "未正确处理超时情况",
+      "details": {
+        "message": "AdsPower未启动或未安装",
+        "success": false
+      },
+      "timestamp": "2025-07-17 13:55:24"
+    },
+    {
+      "test_name": "API检测AdsPower安装 - API错误情况",
+      "success": false,
+      "message": "未正确处理API错误",
+      "details": {
+        "message": "AdsPower已安装并正在运行",
+        "success": true,
+        "user_count": 1
+      },
+      "timestamp": "2025-07-17 13:55:24"
+    },
+    {
+      "test_name": "配置页面可访问性",
+      "success": true,
+      "message": "配置页面包含所有必需元素",
+      "details": null,
+      "timestamp": "2025-07-17 13:55:24"
+    },
+    {
+      "test_name": "JavaScript函数存在性",
+      "success": true,
+      "message": "所有JavaScript函数都存在",
+      "details": null,
+      "timestamp": "2025-07-17 13:55:24"
+    },
+    {
+      "test_name": "真实AdsPower连接测试",
+      "success": true,
+      "message": "AdsPower未运行: AdsPower API返回错误: Too many request per second, please check",
+      "details": null,
+      "timestamp": "2025-07-17 13:55:24"
+    },
+    {
+      "test_name": "边界情况测试",
+      "success": true,
+      "message": "所有4个边界情况都正确处理",
+      "details": null,
+      "timestamp": "2025-07-17 13:55:24"
+    },
+    {
+      "test_name": "并发请求测试",
+      "success": true,
+      "message": "所有并发请求都成功",
+      "details": null,
+      "timestamp": "2025-07-17 13:55:24"
+    }
+  ]
+}

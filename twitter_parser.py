@@ -99,6 +99,9 @@ class TwitterParser:
         """
         for attempt in range(max_retries):
             try:
+                # 确保页面焦点
+                await self.ensure_page_focus()
+                
                 current_url = self.page.url
                 self.logger.info(f"当前页面URL: {current_url}")
                 
@@ -119,6 +122,9 @@ class TwitterParser:
                     self.logger.info("成功导航到 X (Twitter)")
                 else:
                     self.logger.info("页面已经在 X (Twitter)，跳过导航")
+                
+                # 确保页面焦点后再进行测试
+                await self.ensure_page_focus()
                 
                 # 测试页面交互 - 执行几次下拉操作
                 self.logger.info("开始测试页面下拉功能...")
@@ -157,6 +163,9 @@ class TwitterParser:
         
         for attempt in range(max_retries):
             try:
+                # 确保页面焦点
+                await self.ensure_page_focus()
+                
                 self.logger.info(f"尝试导航到 @{username} 的个人资料页面 (第{attempt + 1}次)")
                 
                 # 使用更长的超时时间进行导航
@@ -171,6 +180,9 @@ class TwitterParser:
                     self.logger.info("网络空闲状态达到")
                 except Exception as load_error:
                     self.logger.warning(f"等待加载状态失败: {load_error}，继续尝试")
+                
+                # 确保页面焦点后再等待
+                await self.ensure_page_focus()
                 
                 # 额外等待时间确保页面完全加载
                 await asyncio.sleep(BROWSER_CONFIG['wait_time'])
@@ -187,8 +199,8 @@ class TwitterParser:
                 self.logger.warning(f"第{attempt + 1}次导航尝试失败: {e}")
                 
                 if attempt < max_retries - 1:
-                    # 等待后重试
-                    wait_time = (attempt + 1) * 5  # 递增等待时间
+                    # 等待后重试（快速模式）
+                    wait_time = (attempt + 1) * 2  # 减少递增等待时间
                     self.logger.info(f"等待{wait_time}秒后重试...")
                     await asyncio.sleep(wait_time)
                 else:
@@ -206,6 +218,9 @@ class TwitterParser:
         """
         for attempt in range(max_retries + 1):
             try:
+                # 确保页面焦点
+                await self.ensure_page_focus()
+                
                 self.logger.info(f"开始搜索关键词 '{keyword}' (第{attempt + 1}次尝试)")
                 
                 # 构建搜索URL，使用URL编码
@@ -226,9 +241,12 @@ class TwitterParser:
                 except Exception as load_error:
                     self.logger.warning(f"DOM加载超时: {load_error}")
                 
-                # 等待搜索结果加载
+                # 确保页面焦点后再等待搜索结果
+                await self.ensure_page_focus()
+                
+                # 等待搜索结果加载（快速模式）
                 self.logger.info("等待搜索结果加载...")
-                await asyncio.sleep(5)  # 使用固定等待时间
+                await asyncio.sleep(2)  # 减少等待时间
                 
                 # 检查是否有搜索结果
                 try:
@@ -245,12 +263,50 @@ class TwitterParser:
                 self.logger.warning(f"第{attempt + 1}次搜索尝试失败: {e}")
                 
                 if attempt < max_retries:
-                    wait_time = (attempt + 1) * 3
+                    wait_time = (attempt + 1) * 1.5  # 减少重试等待时间
                     self.logger.info(f"等待{wait_time}秒后重试...")
                     await asyncio.sleep(wait_time)
                 else:
                     self.logger.error(f"搜索关键词 '{keyword}' 失败，已尝试{max_retries + 1}次")
                     raise Exception(f"搜索关键词 '{keyword}' 失败: {e}")
+    
+    async def ensure_page_focus(self):
+        """
+        确保页面获得焦点，处理页面被切换出去的情况
+        """
+        try:
+            # 检查页面是否可见
+            is_visible = await self.page.evaluate('!document.hidden')
+            if not is_visible:
+                self.logger.info("检测到页面失去焦点，尝试恢复...")
+                
+                # 尝试将页面带到前台
+                await self.page.bring_to_front()
+                await asyncio.sleep(1)              
+                # 使用更安全的方式恢复焦点，避免误点击链接
+                try:
+                    # 方法1：直接聚焦到页面
+                    await self.page.evaluate('window.focus()')
+                    await asyncio.sleep(0.3)
+                    
+                    # 方法2：如果还是没有焦点，尝试点击一个安全的区域（页面边缘）
+                    is_visible = await self.page.evaluate('!document.hidden')
+                    if not is_visible:
+                        # 点击页面左上角的安全区域，避免点击到链接
+                        await self.page.mouse.click(10, 10)
+                        await asyncio.sleep(0.3)
+                except Exception as focus_error:
+                    self.logger.debug(f"焦点恢复操作失败: {focus_error}")
+                
+                # 再次检查
+                is_visible = await self.page.evaluate('!document.hidden')
+                if is_visible:
+                    self.logger.info("页面焦点已恢复")
+                else:
+                    self.logger.warning("页面仍然失去焦点，但继续执行")
+                    
+        except Exception as e:
+            self.logger.warning(f"页面焦点检查失败: {e}，继续执行")
     
     async def scroll_and_load_tweets(self, max_tweets: int = 10):
         """
@@ -260,10 +316,14 @@ class TwitterParser:
             max_tweets: 最大加载推文数量
         """
         try:
+            # 确保页面焦点
+            await self.ensure_page_focus()
+            
             if not self.behavior_simulator:
                 self.logger.warning("人工行为模拟器未初始化，使用基础滚动")
                 # 回退到基础滚动
                 for i in range(max_tweets // 5 + 1):
+                    await self.ensure_page_focus()  # 每次滚动前检查焦点
                     await self.page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
                     await asyncio.sleep(BROWSER_CONFIG['scroll_pause_time'])
                     tweets = await self.page.query_selector_all('[data-testid="tweet"]')
@@ -477,6 +537,15 @@ class TwitterParser:
             # 合并互动数据
             tweet_data.update(interaction_data)
             
+            # 提取媒体内容（图片和视频）
+            try:
+                media_content = await self.extract_media_content(tweet_element)
+                if media_content:
+                    tweet_data['media'] = media_content
+                    self.logger.debug(f"提取到媒体内容: {len(media_content.get('images', []))} 张图片, {len(media_content.get('videos', []))} 个视频")
+            except Exception as e:
+                self.logger.debug(f"提取媒体内容失败: {e}")
+            
             # 设置默认值
             tweet_data.setdefault('username', 'unknown')
             tweet_data.setdefault('content', '')
@@ -485,6 +554,7 @@ class TwitterParser:
             tweet_data.setdefault('likes', 0)
             tweet_data.setdefault('comments', 0)
             tweet_data.setdefault('retweets', 0)
+            tweet_data.setdefault('media', {'images': [], 'videos': []})
             
             # 验证推文数据的有效性
             if not tweet_data.get('content') and not tweet_data.get('username', '').replace('unknown', ''):
@@ -512,6 +582,9 @@ class TwitterParser:
             return await self.enhanced_tweet_scraping(max_tweets)
             
         try:
+            # 确保页面焦点
+            await self.ensure_page_focus()
+            
             # 滚动页面加载更多推文
             await self.scroll_and_load_tweets(max_tweets)
             
@@ -521,6 +594,10 @@ class TwitterParser:
             tweets_data = []
             
             for i, tweet_element in enumerate(tweet_elements[:max_tweets]):
+                # 每隔几条推文检查页面焦点
+                if i % 5 == 0:
+                    await self.ensure_page_focus()
+                
                 # 模拟人工查看推文的行为
                 if self.behavior_simulator and i % 3 == 0:  # 每3条推文模拟一次交互
                     await self.behavior_simulator.simulate_tweet_interaction(tweet_element)
@@ -554,6 +631,9 @@ class TwitterParser:
             推文数据列表
         """
         try:
+            # 确保页面焦点
+            await self.ensure_page_focus()
+            
             await self.navigate_to_profile(username)
             
             # 使用人工行为模拟器进行页面探索
@@ -596,6 +676,9 @@ class TwitterParser:
             推文数据列表
         """
         try:
+            # 确保页面焦点
+            await self.ensure_page_focus()
+            
             await self.search_tweets(keyword)
             
             # 使用人工行为模拟器进行搜索页面探索
@@ -708,35 +791,42 @@ class TwitterParser:
             self.logger.error(f"提取完整推文内容失败: {e}")
             return ""
     
-    async def extract_media_content(self) -> List[Dict[str, Any]]:
+    async def extract_media_content(self, tweet_element=None) -> Dict[str, List[Dict[str, Any]]]:
         """
         提取推文中的图片、视频等多媒体内容
         
+        Args:
+            tweet_element: 推文元素，如果为None则在整个页面中搜索
+        
         Returns:
-            多媒体内容列表
+            包含images和videos列表的字典
         """
-        media_items = []
+        media_content = {'images': [], 'videos': []}
         
         try:
+            # 确定搜索范围
+            search_context = tweet_element if tweet_element else self.page
+            
             # 抓取图片
             image_selectors = [
                 '[data-testid="tweetPhoto"] img',
                 'img[src*="pbs.twimg.com"]',
-                'div[data-testid="tweetPhoto"] img'
+                'div[data-testid="tweetPhoto"] img',
+                '[data-testid="card.layoutLarge.media"] img'
             ]
             
             for selector in image_selectors:
                 try:
-                    images = await self.page.query_selector_all(selector)
+                    images = await search_context.query_selector_all(selector)
                     for img in images:
                         src = await img.get_attribute('src')
                         alt = await img.get_attribute('alt') or ''
-                        if src and 'pbs.twimg.com' in src:
-                            media_items.append({
+                        if src and ('pbs.twimg.com' in src or 'twimg.com' in src):
+                            media_content['images'].append({
                                 'type': 'image',
                                 'url': src,
                                 'description': alt,
-                                'original_url': src.replace(':small', ':orig').replace(':medium', ':orig')
+                                'original_url': src.replace(':small', ':orig').replace(':medium', ':orig').replace(':large', ':orig')
                             })
                     if images:
                         break
@@ -747,16 +837,17 @@ class TwitterParser:
             video_selectors = [
                 'video',
                 '[data-testid="videoPlayer"] video',
-                'div[data-testid="videoComponent"] video'
+                'div[data-testid="videoComponent"] video',
+                '[data-testid="previewInterstitial"] video'
             ]
             
             for selector in video_selectors:
                 try:
-                    videos = await self.page.query_selector_all(selector)
+                    videos = await search_context.query_selector_all(selector)
                     for video in videos:
                         poster = await video.get_attribute('poster')
                         src = await video.get_attribute('src')
-                        media_items.append({
+                        media_content['videos'].append({
                             'type': 'video',
                             'poster': poster,
                             'url': src,
@@ -767,7 +858,7 @@ class TwitterParser:
                 except Exception:
                     continue
             
-            # 抓取GIF
+            # 抓取GIF（作为特殊的图片类型）
             gif_selectors = [
                 'img[src*="video.twimg.com"]',
                 '[data-testid="tweetPhoto"] img[src*=".gif"]'
@@ -775,12 +866,12 @@ class TwitterParser:
             
             for selector in gif_selectors:
                 try:
-                    gifs = await self.page.query_selector_all(selector)
+                    gifs = await search_context.query_selector_all(selector)
                     for gif in gifs:
                         src = await gif.get_attribute('src')
                         alt = await gif.get_attribute('alt') or ''
                         if src:
-                            media_items.append({
+                            media_content['images'].append({
                                 'type': 'gif',
                                 'url': src,
                                 'description': alt
@@ -790,12 +881,15 @@ class TwitterParser:
                 except Exception:
                     continue
             
-            self.logger.info(f"提取到 {len(media_items)} 个多媒体内容")
-            return media_items
+            total_media = len(media_content['images']) + len(media_content['videos'])
+            if total_media > 0:
+                self.logger.debug(f"提取到 {len(media_content['images'])} 张图片, {len(media_content['videos'])} 个视频")
+            
+            return media_content
             
         except Exception as e:
             self.logger.error(f"提取多媒体内容失败: {e}")
-            return []
+            return {'images': [], 'videos': []}
     
     async def extract_tweet_thread(self) -> List[Dict[str, Any]]:
         """
@@ -1125,6 +1219,128 @@ class TwitterParser:
             self.logger.error(f"增强推文抓取失败: {e}")
             return basic_tweets if 'basic_tweets' in locals() else []
     
+    def parse_tweets(self, tweet_elements: List[Any]) -> List[Dict[str, Any]]:
+        """
+        解析推文元素列表
+        
+        Args:
+            tweet_elements: 推文DOM元素列表
+            
+        Returns:
+            解析后的推文数据列表
+        """
+        parsed_tweets = []
+        
+        for element in tweet_elements:
+            try:
+                tweet_data = self.extract_tweet_data(element)
+                if tweet_data:
+                    parsed_tweets.append(tweet_data)
+            except Exception as e:
+                self.logger.warning(f"解析推文失败: {e}")
+                continue
+        
+        return parsed_tweets
+    
+    def parse_user_profile(self, profile_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        解析用户个人资料数据
+        
+        Args:
+            profile_data: 原始个人资料数据
+            
+        Returns:
+            解析后的用户资料
+        """
+        try:
+            parsed_profile = {
+                'username': profile_data.get('username', ''),
+                'display_name': profile_data.get('display_name', ''),
+                'bio': profile_data.get('bio', ''),
+                'followers_count': self._parse_count(profile_data.get('followers', '0')),
+                'following_count': self._parse_count(profile_data.get('following', '0')),
+                'tweets_count': self._parse_count(profile_data.get('tweets', '0')),
+                'verified': profile_data.get('verified', False),
+                'profile_image': profile_data.get('profile_image', ''),
+                'banner_image': profile_data.get('banner_image', ''),
+                'location': profile_data.get('location', ''),
+                'website': profile_data.get('website', ''),
+                'joined_date': profile_data.get('joined_date', ''),
+                'parsed_at': datetime.now().isoformat()
+            }
+            
+            return parsed_profile
+            
+        except Exception as e:
+            self.logger.error(f"解析用户资料失败: {e}")
+            return {}
+    
+    def extract_tweet_data(self, tweet_element: Any) -> Dict[str, Any]:
+        """
+        从推文元素中提取数据
+        
+        Args:
+            tweet_element: 推文DOM元素
+            
+        Returns:
+            提取的推文数据
+        """
+        try:
+            # 这里应该根据实际的DOM结构来提取数据
+            # 由于这是一个通用方法，返回基本结构
+            tweet_data = {
+                'id': '',
+                'username': '',
+                'display_name': '',
+                'content': '',
+                'timestamp': '',
+                'likes': 0,
+                'retweets': 0,
+                'comments': 0,
+                'link': '',
+                'images': [],
+                'videos': [],
+                'extracted_at': datetime.now().isoformat()
+            }
+            
+            # 如果tweet_element是字典类型（已解析的数据）
+            if isinstance(tweet_element, dict):
+                tweet_data.update(tweet_element)
+            
+            return tweet_data
+            
+        except Exception as e:
+            self.logger.error(f"提取推文数据失败: {e}")
+            return {}
+    
+    def _parse_count(self, count_str: str) -> int:
+        """
+        解析计数字符串（如1.2K, 5.6M等）
+        
+        Args:
+            count_str: 计数字符串
+            
+        Returns:
+            解析后的数字
+        """
+        try:
+            if not count_str or count_str == '-':
+                return 0
+            
+            count_str = count_str.strip().replace(',', '')
+            
+            if count_str.endswith('K'):
+                return int(float(count_str[:-1]) * 1000)
+            elif count_str.endswith('M'):
+                return int(float(count_str[:-1]) * 1000000)
+            elif count_str.endswith('B'):
+                return int(float(count_str[:-1]) * 1000000000)
+            else:
+                return int(count_str)
+                
+        except (ValueError, AttributeError):
+            return 0
+
     async def close(self):
         """
         关闭浏览器连接

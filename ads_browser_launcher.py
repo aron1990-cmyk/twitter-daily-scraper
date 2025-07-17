@@ -67,6 +67,42 @@ class AdsPowerLauncher:
             if self.group_id:
                 params['group_id'] = self.group_id
             
+            # 添加快速模式配置
+            from config import BROWSER_CONFIG
+            if BROWSER_CONFIG.get('fast_mode', False):
+                # 快速模式下的浏览器参数
+                launch_args = []
+                
+                if BROWSER_CONFIG.get('skip_images', False):
+                    launch_args.extend([
+                        '--blink-settings=imagesEnabled=false',
+                        '--disable-images'
+                    ])
+                
+                if BROWSER_CONFIG.get('disable_animations', False):
+                    launch_args.extend([
+                        '--disable-background-timer-throttling',
+                        '--disable-renderer-backgrounding',
+                        '--disable-backgrounding-occluded-windows',
+                        '--disable-features=TranslateUI',
+                        '--disable-ipc-flooding-protection'
+                    ])
+                
+                # 通用性能优化参数
+                launch_args.extend([
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--disable-gpu',
+                    '--disable-web-security',
+                    '--disable-features=VizDisplayCompositor'
+                ])
+                
+                if launch_args:
+                    params['launch_args'] = launch_args
+                    self.logger.info(f"启用快速模式，浏览器参数: {launch_args}")
+            
             self.logger.info(f"正在启动 AdsPower 浏览器，用户ID: {target_user_id}")
             
             # 发送启动请求

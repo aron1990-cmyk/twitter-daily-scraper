@@ -452,6 +452,27 @@ class AccountManager:
         
         return recommendations
     
+    def mark_account_used(self, user_id: str) -> bool:
+        """
+        标记账号为已使用状态
+        
+        Args:
+            user_id: 账号ID
+            
+        Returns:
+            是否成功标记
+        """
+        for account in self.accounts:
+            if account.user_id == user_id:
+                account.status = AccountStatus.IN_USE
+                account.last_used = datetime.now()
+                account.usage_count += 1
+                self.logger.info(f"账号 {account.name} 已标记为使用中")
+                return True
+        
+        self.logger.warning(f"未找到账号 ID: {user_id}")
+        return False
+    
     def save_accounts(self):
         """
         保存账号状态（占位方法）

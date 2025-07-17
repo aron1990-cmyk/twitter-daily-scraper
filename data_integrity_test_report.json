@@ -1,0 +1,109 @@
+{
+  "test_summary": {
+    "total_suites": 6,
+    "passed_suites": 5,
+    "suite_success_rate": 0.8333333333333334,
+    "total_tests": 13,
+    "passed_tests": 11,
+    "test_success_rate": 0.8461538461538461,
+    "timestamp": "2025-07-17T14:11:23.132267"
+  },
+  "severity_analysis": {
+    "error_issues": 0,
+    "warning_issues": 2,
+    "info_issues": 0
+  },
+  "detailed_results": [
+    {
+      "test_name": "数据库文件检查",
+      "success": false,
+      "details": "未找到数据库文件",
+      "severity": "WARNING",
+      "timestamp": "2025-07-17T14:11:22.982646"
+    },
+    {
+      "test_name": "测试数据创建",
+      "success": true,
+      "details": "创建了包含 3 条记录的测试数据库",
+      "severity": "INFO",
+      "timestamp": "2025-07-17T14:11:22.983852"
+    },
+    {
+      "test_name": "数据备份",
+      "success": true,
+      "details": "备份文件哈希值匹配",
+      "severity": "INFO",
+      "timestamp": "2025-07-17T14:11:22.984133"
+    },
+    {
+      "test_name": "数据恢复",
+      "success": true,
+      "details": "成功恢复 3 条记录",
+      "severity": "INFO",
+      "timestamp": "2025-07-17T14:11:22.984564"
+    },
+    {
+      "test_name": "数据内容验证",
+      "success": true,
+      "details": "恢复的数据内容完全匹配",
+      "severity": "INFO",
+      "timestamp": "2025-07-17T14:11:22.984585"
+    },
+    {
+      "test_name": "数据一致性检查",
+      "success": false,
+      "details": "未找到数据库文件进行一致性检查",
+      "severity": "WARNING",
+      "timestamp": "2025-07-17T14:11:22.984842"
+    },
+    {
+      "test_name": "并发写入测试",
+      "success": true,
+      "details": "成功写入 50 条记录 (期望: 50)",
+      "severity": "INFO",
+      "timestamp": "2025-07-17T14:11:23.123517"
+    },
+    {
+      "test_name": "并发数据完整性",
+      "success": true,
+      "details": "所有线程的数据都完整写入",
+      "severity": "INFO",
+      "timestamp": "2025-07-17T14:11:23.123553"
+    },
+    {
+      "test_name": "数据导出导入 - export_test",
+      "success": true,
+      "details": "成功导出导入 3 行数据",
+      "severity": "INFO",
+      "timestamp": "2025-07-17T14:11:23.130390"
+    },
+    {
+      "test_name": "数据导出导入总体",
+      "success": true,
+      "details": "成功率: 100.0% (1/1)",
+      "severity": "INFO",
+      "timestamp": "2025-07-17T14:11:23.130461"
+    },
+    {
+      "test_name": "数据目录大小",
+      "success": true,
+      "details": "数据目录总大小: 31.1 KB",
+      "severity": "INFO",
+      "timestamp": "2025-07-17T14:11:23.131887"
+    },
+    {
+      "test_name": "大文件检查",
+      "success": true,
+      "details": "未发现异常大文件",
+      "severity": "INFO",
+      "timestamp": "2025-07-17T14:11:23.132241"
+    },
+    {
+      "test_name": "磁盘空间检查",
+      "success": true,
+      "details": "可用空间: 173.6 GB",
+      "severity": "INFO",
+      "timestamp": "2025-07-17T14:11:23.132252"
+    }
+  ]
+}

@@ -4,10 +4,12 @@
 云端同步模块 - 支持Google Sheets和飞书文档API同步
 """
 
+import requests
 import json
-import logging
-from typing import List, Dict, Any, Optional
+import time
+from typing import Dict, List, Any, Optional
 from datetime import datetime
+import logging
 import asyncio
 
 try:
@@ -198,6 +200,119 @@ class CloudSyncManager:
         except Exception as e:
             self.logger.error(f"获取飞书令牌异常: {e}")
             return None
+    
+    def sync_to_feishu(self, data: List[Dict[str, Any]], 
+                      spreadsheet_token: str, 
+                      table_id: str = None) -> bool:
+        """
+        同步数据到飞书多维表格
+        
+        Args:
+            data: 要同步的数据
+            spreadsheet_token: 飞书表格token
+            table_id: 多维表格ID
+            
+        Returns:
+            是否同步成功
+        """
+        access_token = self.get_feishu_access_token()
+        if not access_token:
+            return False
+            
+        try:
+            headers = {
+                'Authorization': f'Bearer {access_token}',
+                'Content-Type': 'application/json'
+            }
+            
+            # 准备数据记录
+            records = []
+            for tweet in data:
+                # 处理时间字段 - 飞书多维表格的时间字段需要毫秒时间戳（整数）
+                publish_time = tweet.get('发布时间', '')
+                create_time = tweet.get('创建时间', '')
+                
+                # 如果时间是字符串，尝试转换为时间戳
+                if isinstance(publish_time, str) and publish_time:
+                    try:
+                        from datetime import datetime
+                        dt = datetime.fromisoformat(publish_time.replace('Z', '+00:00'))
+                        publish_time = int(dt.timestamp() * 1000)
+                    except:
+                        publish_time = None
+                elif isinstance(publish_time, (int, float)):
+                    # 确保是毫秒时间戳
+                    if publish_time < 10000000000:  # 如果是秒时间戳，转换为毫秒
+                        publish_time = int(publish_time * 1000)
+                    else:
+                        publish_time = int(publish_time)
+                else:
+                    publish_time = None
+                    
+                if isinstance(create_time, str) and create_time:
+                    try:
+                        from datetime import datetime
+                        dt = datetime.fromisoformat(create_time.replace('Z', '+00:00'))
+                        create_time = int(dt.timestamp() * 1000)
+                    except:
+                        create_time = None
+                elif isinstance(create_time, (int, float)):
+                    # 确保是毫秒时间戳
+                    if create_time < 10000000000:  # 如果是秒时间戳，转换为毫秒
+                        create_time = int(create_time * 1000)
+                    else:
+                        create_time = int(create_time)
+                else:
+                    create_time = None
+                
+                # 处理数值字段 - 确保数值字段为有效数字
+                def safe_int(value, default=0):
+                    """安全转换为整数"""
+                    try:
+                        if value is None or value == '':
+                            return default
+                        return int(float(str(value)))
+                    except (ValueError, TypeError):
+                        return default
+                
+                record = {
+                    'fields': {
+                        '推文原文内容': str(tweet.get('推文原文内容', '')),
+                        '作者（账号）': str(tweet.get('作者（账号）', '')),
+                        '推文链接': str(tweet.get('推文链接', '')),
+                        '话题标签（Hashtag）': str(tweet.get('话题标签（Hashtag）', '')),
+                        '类型标签': str(tweet.get('类型标签', '')),
+                        '收藏数': safe_int(tweet.get('收藏数')),
+                        '点赞数': safe_int(tweet.get('点赞数')),
+                        '转发数': safe_int(tweet.get('转发数')),
+                        # 时间字段：如果为None，使用当前时间戳
+                        '发布时间': publish_time if publish_time is not None else int(time.time() * 1000),
+                        '创建时间': create_time if create_time is not None else int(time.time() * 1000)
+                    }
+                }
+                    
+                records.append(record)
+            
+            # 批量创建记录
+            url = f"{self.feishu_config['base_url']}/bitable/v1/apps/{spreadsheet_token}/tables/{table_id}/records/batch_create"
+            payload = {
+                'records': records
+            }
+            
+            response = requests.post(url, headers=headers, json=payload)
+            response.raise_for_status()
+            
+            result = response.json()
+            if result.get('code') == 0:
+                self.logger.info(f"成功同步 {len(data)} 条数据到飞书多维表格")
+                return True
+            else:
+                self.logger.error(f"飞书同步失败: {result.get('msg')}")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"飞书同步异常: {e}")
+            return False
     
     def sync_to_feishu_sheet(self, data: List[Dict[str, Any]], 
                             spreadsheet_token: str, 

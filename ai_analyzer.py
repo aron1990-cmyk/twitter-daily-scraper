@@ -541,3 +541,31 @@ class AIContentAnalyzer:
             recommendations.append(f"当前热门话题：{', '.join(top_topics)}，建议围绕这些话题创作内容")
         
         return recommendations
+    
+    def analyze_tweet_quality(self, tweet: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        分析单条推文质量（兼容性方法）
+        
+        Args:
+            tweet: 推文数据
+            
+        Returns:
+            质量分析结果
+        """
+        return self.calculate_overall_quality_score(tweet)
+    
+    def generate_insights(self, tweets: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        生成洞察报告（兼容性方法）
+        
+        Args:
+            tweets: 推文列表
+            
+        Returns:
+            洞察报告
+        """
+        return self.generate_ai_insights_report(tweets)
+
+
+# 为了兼容性，提供AIAnalyzer别名
+AIAnalyzer = AIContentAnalyzer

@@ -31,6 +31,12 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="adspower-tab" data-bs-toggle="tab" 
+                        data-bs-target="#adspower" type="button" role="tab">
+                    <i class="fas fa-window-maximize me-2"></i>AdsPower配置
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="feishu-tab" data-bs-toggle="tab" 
                         data-bs-target="#feishu" type="button" role="tab">
                     <i class="fas fa-cloud me-2"></i>飞书配置
@@ -200,6 +206,180 @@
                 </div>
             </div>
             
+            <!-- AdsPower配置 -->
+            <div class="tab-pane fade" id="adspower" role="tabpanel">
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-window-maximize me-2"></i>
+                            AdsPower配置
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- AdsPower安装检测 -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-download me-2"></i>
+                                    AdsPower安装检测
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <div id="adspower-status" class="d-flex align-items-center">
+                                            <div class="spinner-border spinner-border-sm me-2" role="status" id="status-loading" style="display: none;">
+                                                <span class="visually-hidden">检测中...</span>
+                                            </div>
+                                            <span id="status-text" class="text-muted">点击检测按钮检查AdsPower安装状态</span>
+                                        </div>
+                                        <div id="install-guide" class="mt-2" style="display: none;">
+                                            <div class="alert alert-warning">
+                                                <h6><i class="fas fa-exclamation-triangle"></i> 未检测到AdsPower</h6>
+                                                <p class="mb-2">AdsPower是一个专业的多账号管理浏览器，用于安全地管理多个社交媒体账号。</p>
+                                                <p class="mb-2">请按以下步骤安装AdsPower：</p>
+                                                <ol class="mb-3">
+                                                    <li>点击下方注册链接创建AdsPower账号</li>
+                                                    <li>下载并安装AdsPower客户端</li>
+                                                    <li>启动AdsPower并创建浏览器配置文件</li>
+                                                    <li>返回此页面配置用户ID</li>
+                                                </ol>
+                                                <a href="https://www.adspower.net/share/hftJaRHMQl1r7jw" target="_blank" class="btn btn-warning">
+                                                    <i class="fas fa-external-link-alt me-2"></i>
+                                                    注册并下载AdsPower
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <button type="button" class="btn btn-outline-primary" onclick="checkAdsPowerInstallation()">
+                                            <i class="fas fa-search me-2"></i>
+                                            检测安装状态
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            配置AdsPower浏览器窗口ID，用于自动化抓取。请确保AdsPower客户端已启动并且浏览器配置文件可用。
+                            <a href="https://www.adspower.net/" target="_blank" class="alert-link">了解更多关于AdsPower</a>
+                        </div>
+                        
+                        <form action="{{ url_for('update_config') }}" method="POST">
+                            <input type="hidden" name="config_type" value="adspower">
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="adspower_api_url" class="form-label">AdsPower API地址</label>
+                                        <input type="text" class="form-control" id="adspower_api_url" name="adspower_api_url" 
+                                               value="{{ config.adspower_api_url or 'http://local.adspower.net:50325' }}" 
+                                               placeholder="http://local.adspower.net:50325">
+                                        <div class="form-text">AdsPower Local API的访问地址</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="adspower_user_id" class="form-label">主要用户ID</label>
+                                        <input type="text" class="form-control" id="adspower_user_id" name="adspower_user_id" 
+                                               value="{{ config.adspower_user_id or '' }}" 
+                                               placeholder="k11p9ypc">
+                                        <div class="form-text">AdsPower浏览器配置文件的用户ID</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="adspower_multi_user_ids" class="form-label">多窗口用户ID列表</label>
+                                <textarea class="form-control" id="adspower_multi_user_ids" name="adspower_multi_user_ids" rows="3" 
+                                          placeholder="每行一个用户ID，用于并行抓取\nk11p9ypc\nk11p9y6f">{{ config.adspower_multi_user_ids or '' }}</textarea>
+                                <div class="form-text">每行一个用户ID，用于并行抓取多个任务</div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="max_concurrent_tasks" class="form-label">最大并发任务数</label>
+                                        <input type="number" class="form-control" id="max_concurrent_tasks" 
+                                               name="max_concurrent_tasks" value="{{ config.max_concurrent_tasks or 2 }}" 
+                                               min="1" max="10">
+                                        <div class="form-text">同时运行的最大任务数量</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="task_timeout" class="form-label">任务超时时间(秒)</label>
+                                        <input type="number" class="form-control" id="task_timeout" 
+                                               name="task_timeout" value="{{ config.task_timeout or 900 }}" 
+                                               min="60" max="3600">
+                                        <div class="form-text">单个任务的最大执行时间</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="browser_startup_delay" class="form-label">浏览器启动延迟(秒)</label>
+                                        <input type="number" class="form-control" id="browser_startup_delay" 
+                                               name="browser_startup_delay" value="{{ config.browser_startup_delay or 2 }}" 
+                                               min="1" max="10">
+                                        <div class="form-text">浏览器启动间隔时间</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="adspower_headless" name="adspower_headless" 
+                                                   {{ 'checked' if config.adspower_headless }}>
+                                            <label class="form-check-label" for="adspower_headless">
+                                                无头模式
+                                            </label>
+                                        </div>
+                                        <div class="form-text">启用后浏览器将在后台运行，不显示窗口</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="adspower_health_check" name="adspower_health_check" 
+                                                   {{ 'checked' if config.adspower_health_check }}>
+                                            <label class="form-check-label" for="adspower_health_check">
+                                                启用健康检查
+                                            </label>
+                                        </div>
+                                        <div class="form-text">定期检查浏览器连接状态</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-warning">
+                                <h6><i class="fas fa-exclamation-triangle"></i> 重要提示</h6>
+                                <ul class="mb-0">
+                                    <li>请确保AdsPower客户端已启动并运行在指定端口</li>
+                                    <li>用户ID可以在AdsPower客户端的浏览器配置文件中找到</li>
+                                    <li>多窗口模式需要多个不同的浏览器配置文件</li>
+                                    <li>建议先使用单个用户ID测试连接，确认无误后再添加多个ID</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>
+                                    保存配置
+                                </button>
+                                <button type="button" class="btn btn-outline-info" onclick="testAdsPowerConnection()">
+                                    <i class="fas fa-plug me-2"></i>
+                                    测试连接
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
             <!-- 飞书配置 -->
             <div class="tab-pane fade" id="feishu" role="tabpanel">
                 <div class="card mt-3">
@@ -212,37 +392,50 @@
                     <div class="card-body">
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle me-2"></i>
-                            配置飞书应用信息后，可以将抓取的数据同步到飞书文档中。
-                            <a href="https://open.feishu.cn/" target="_blank" class="alert-link">获取飞书应用凭证</a>
+                            <strong>配置说明：</strong>配置飞书应用信息后，可以将抓取的数据同步到飞书多维表格中。
+                            <br><br>
+                            <strong>获取配置信息步骤：</strong>
+                            <ol class="mb-2">
+                                <li>访问 <a href="https://open.feishu.cn/" target="_blank" class="alert-link">飞书开放平台</a> 创建应用</li>
+                                <li>在应用管理页面获取 <strong>App ID</strong> 和 <strong>App Secret</strong></li>
+                                <li>创建或打开飞书多维表格，从URL中获取 <strong>文档 Token</strong></li>
+                                <li>在多维表格中获取具体数据表的 <strong>表格 ID</strong></li>
+                                <li>确保应用有多维表格的读写权限</li>
+                            </ol>
+                            <small class="text-muted">详细教程请参考飞书开放平台文档</small>
                         </div>
                         
                         <form action="{{ url_for('update_config') }}" method="POST">
                             <input type="hidden" name="config_type" value="feishu">
                             
                             <div class="mb-3">
-                                <label for="feishu_app_id" class="form-label">App ID</label>
+                                <label for="feishu_app_id" class="form-label">App ID <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="feishu_app_id" name="feishu_app_id" 
-                                       value="{{ config.feishu_app_id or 'cli_a8f94354c178900b' }}" placeholder="cli_xxxxxxxxxx">
+                                       value="{{ config.feishu_app_id or '' }}" placeholder="cli_xxxxxxxxxx" required>
+                                <div class="form-text">飞书应用的 App ID，格式如：cli_xxxxxxxxxx</div>
                             </div>
                             
                             <div class="mb-3">
-                                <label for="feishu_app_secret" class="form-label">App Secret</label>
+                                <label for="feishu_app_secret" class="form-label">App Secret <span class="text-danger">*</span></label>
                                 <input type="password" class="form-control" id="feishu_app_secret" name="feishu_app_secret" 
-                                       value="{{ config.feishu_app_secret or 'HGQGTQyvr2QsWVmPMdY8Oe7A67J3ihVV' }}" placeholder="应用密钥">
+                                       value="{{ config.feishu_app_secret or '' }}" placeholder="请输入应用密钥" required>
+                                <div class="form-text">飞书应用的密钥，用于身份验证</div>
                             </div>
                             
                             <div class="mb-3">
-                                <label for="feishu_spreadsheet_token" class="form-label">文档 Token</label>
+                                <label for="feishu_spreadsheet_token" class="form-label">文档 Token <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="feishu_spreadsheet_token" name="feishu_spreadsheet_token" 
-                                       value="{{ config.feishu_spreadsheet_token or 'V862biEswatwnRsGalochUI6n6d' }}" 
-                                       placeholder="输入飞书文档 Token">
+                                       value="{{ config.feishu_spreadsheet_token or '' }}" 
+                                       placeholder="请输入飞书文档 Token" required>
+                                <div class="form-text">飞书多维表格的文档标识符</div>
                             </div>
                             
                             <div class="mb-3">
-                                <label for="feishu_table_id" class="form-label">表格 ID</label>
+                                <label for="feishu_table_id" class="form-label">表格 ID <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="feishu_table_id" name="feishu_table_id" 
-                                       value="{{ config.feishu_table_id or 'tblicDZl35dn2vZ9' }}" 
-                                       placeholder="输入飞书表格 ID">
+                                       value="{{ config.feishu_table_id or '' }}" 
+                                       placeholder="请输入飞书表格 ID" required>
+                                <div class="form-text">多维表格中具体数据表的 ID</div>
                             </div>
                             
                             <div class="mb-3">
@@ -502,22 +695,129 @@ function testFeishuConnection() {
     
     const appId = $('#feishu_app_id').val();
     const appSecret = $('#feishu_app_secret').val();
+    const spreadsheetToken = $('#feishu_spreadsheet_token').val();
+    const tableId = $('#feishu_table_id').val();
     
-    if (!appId || !appSecret) {
-        showAlert('请先填写App ID和App Secret', 'warning');
+    // 验证必填字段
+    const requiredFields = [
+        { value: appId, name: 'App ID' },
+        { value: appSecret, name: 'App Secret' },
+        { value: spreadsheetToken, name: '文档 Token' },
+        { value: tableId, name: '表格 ID' }
+    ];
+    
+    const missingFields = requiredFields.filter(field => !field.value).map(field => field.name);
+    if (missingFields.length > 0) {
+        showAlert(`请先填写以下必填字段: ${missingFields.join(', ')}`, 'warning');
         hideLoading(button, originalText);
         return;
     }
     
-    $.post('/test_feishu', {
-        app_id: appId,
-        app_secret: appSecret
+    $.ajax({
+        url: '/api/config/feishu/test',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            app_id: appId,
+            app_secret: appSecret,
+            spreadsheet_token: spreadsheetToken,
+            table_id: tableId
+        })
     })
     .done(function(response) {
-        showAlert('飞书连接测试成功！', 'success');
+        if (response.success) {
+            showAlert('飞书连接测试成功！', 'success');
+        } else {
+            showAlert('连接测试失败: ' + response.error, 'danger');
+        }
     })
     .fail(function(xhr) {
         const error = xhr.responseJSON ? xhr.responseJSON.error : '连接测试失败';
+        showAlert('连接测试失败: ' + error, 'danger');
+    })
+    .always(function() {
+        hideLoading(button, originalText);
+    });
+}
+
+function checkAdsPowerInstallation() {
+    const statusLoading = document.getElementById('status-loading');
+    const statusText = document.getElementById('status-text');
+    const installGuide = document.getElementById('install-guide');
+    
+    // 显示加载状态
+    statusLoading.style.display = 'inline-block';
+    statusText.textContent = '正在检测AdsPower安装状态...';
+    statusText.className = 'text-muted';
+    installGuide.style.display = 'none';
+    
+    // 检测AdsPower是否安装（通过尝试连接API）
+    const apiUrl = $('#adspower_api_url').val() || 'http://local.adspower.net:50325';
+    
+    $.ajax({
+        url: '/api/check_adspower_installation',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            api_url: apiUrl
+        }),
+        timeout: 5000
+    })
+    .done(function(response) {
+        statusLoading.style.display = 'none';
+        if (response.success) {
+            statusText.innerHTML = '<i class="fas fa-check-circle text-success me-2"></i>AdsPower已安装并正在运行';
+            statusText.className = 'text-success';
+            installGuide.style.display = 'none';
+            
+            if (response.user_count > 0) {
+                statusText.innerHTML += ` (检测到 ${response.user_count} 个用户配置)`;
+            }
+        } else {
+            statusText.innerHTML = '<i class="fas fa-times-circle text-warning me-2"></i>' + response.message;
+            statusText.className = 'text-warning';
+            installGuide.style.display = 'block';
+        }
+    })
+    .fail(function(xhr) {
+        statusLoading.style.display = 'none';
+        statusText.innerHTML = '<i class="fas fa-times-circle text-danger me-2"></i>无法连接到AdsPower (可能未安装或未启动)';
+        statusText.className = 'text-danger';
+        installGuide.style.display = 'block';
+    });
+}
+
+function testAdsPowerConnection() {
+    const button = event.target;
+    const originalText = showLoading(button);
+    
+    const apiUrl = $('#adspower_api_url').val();
+    const userId = $('#adspower_user_id').val();
+    
+    if (!userId) {
+        showAlert('请先填写用户ID', 'warning');
+        hideLoading(button, originalText);
+        return;
+    }
+    
+    $.ajax({
+        url: '/api/test_adspower_connection',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            api_url: apiUrl,
+            user_id: userId
+        })
+    })
+    .done(function(response) {
+        if (response.success) {
+            showAlert(response.message, 'success');
+        } else {
+            showAlert(response.message, 'warning');
+        }
+    })
+    .fail(function(xhr) {
+        const error = xhr.responseJSON ? xhr.responseJSON.message : '连接测试失败';
         showAlert('连接测试失败: ' + error, 'danger');
     })
     .always(function() {

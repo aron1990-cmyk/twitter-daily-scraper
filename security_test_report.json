@@ -1,0 +1,172 @@
+{
+  "test_summary": {
+    "total_suites": 7,
+    "passed_suites": 4,
+    "suite_success_rate": 0.5714285714285714,
+    "total_tests": 22,
+    "passed_tests": 6,
+    "test_success_rate": 0.2727272727272727,
+    "timestamp": "2025-07-17T14:11:22.668523"
+  },
+  "risk_assessment": {
+    "high_risk_issues": 0,
+    "medium_risk_issues": 16,
+    "low_risk_issues": 0
+  },
+  "detailed_results": [
+    {
+      "test_name": "SQL注入防护",
+      "success": false,
+      "details": "防护率: 66.7% (16/24)",
+      "risk_level": "MEDIUM",
+      "timestamp": "2025-07-17T14:11:22.399973"
+    },
+    {
+      "test_name": "XSS防护",
+      "success": true,
+      "details": "防护率: 100.0% (24/24)",
+      "risk_level": "LOW",
+      "timestamp": "2025-07-17T14:11:22.458001"
+    },
+    {
+      "test_name": "输入验证 - 空字符串",
+      "success": false,
+      "details": "未正确验证输入 (HTTP 200)",
+      "risk_level": "MEDIUM",
+      "timestamp": "2025-07-17T14:11:22.459322"
+    },
+    {
+      "test_name": "输入验证 - 超长字符串",
+      "success": false,
+      "details": "未正确验证输入 (HTTP 200)",
+      "risk_level": "MEDIUM",
+      "timestamp": "2025-07-17T14:11:22.461194"
+    },
+    {
+      "test_name": "输入验证 - 无效URL格式",
+      "success": false,
+      "details": "未正确验证输入 (HTTP 200)",
+      "risk_level": "MEDIUM",
+      "timestamp": "2025-07-17T14:11:22.462781"
+    },
+    {
+      "test_name": "输入验证 - 特殊字符",
+      "success": false,
+      "details": "未正确验证输入 (HTTP 200)",
+      "risk_level": "MEDIUM",
+      "timestamp": "2025-07-17T14:11:22.463813"
+    },
+    {
+      "test_name": "输入验证 - NULL字符",
+      "success": false,
+      "details": "未正确验证输入 (HTTP 200)",
+      "risk_level": "MEDIUM",
+      "timestamp": "2025-07-17T14:11:22.464851"
+    },
+    {
+      "test_name": "整体输入验证",
+      "success": false,
+      "details": "验证成功率: 0.0%",
+      "risk_level": "MEDIUM",
+      "timestamp": "2025-07-17T14:11:22.464858"
+    },
+    {
+      "test_name": "路径遍历防护",
+      "success": true,
+      "details": "防护率: 100.0% (24/24)",
+      "risk_level": "LOW",
+      "timestamp": "2025-07-17T14:11:22.488080"
+    },
+    {
+      "test_name": "安全头 - X-Content-Type-Options",
+      "success": false,
+      "details": "缺失",
+      "risk_level": "MEDIUM",
+      "timestamp": "2025-07-17T14:11:22.490683"
+    },
+    {
+      "test_name": "安全头 - X-Frame-Options",
+      "success": false,
+      "details": "缺失",
+      "risk_level": "MEDIUM",
+      "timestamp": "2025-07-17T14:11:22.490689"
+    },
+    {
+      "test_name": "安全头 - X-XSS-Protection",
+      "success": false,
+      "details": "缺失",
+      "risk_level": "MEDIUM",
+      "timestamp": "2025-07-17T14:11:22.490691"
+    },
+    {
+      "test_name": "安全头 - Strict-Transport-Security",
+      "success": false,
+      "details": "缺失",
+      "risk_level": "MEDIUM",
+      "timestamp": "2025-07-17T14:11:22.490693"
+    },
+    {
+      "test_name": "安全头 - Content-Security-Policy",
+      "success": false,
+      "details": "缺失",
+      "risk_level": "MEDIUM",
+      "timestamp": "2025-07-17T14:11:22.490694"
+    },
+    {
+      "test_name": "安全头 - Referrer-Policy",
+      "success": false,
+      "details": "缺失",
+      "risk_level": "MEDIUM",
+      "timestamp": "2025-07-17T14:11:22.490696"
+    },
+    {
+      "test_name": "服务器信息泄露",
+      "success": false,
+      "details": "暴露了服务器信息: Werkzeug/3.1.3 Python/3.12.8",
+      "risk_level": "MEDIUM",
+      "timestamp": "2025-07-17T14:11:22.490698"
+    },
+    {
+      "test_name": "HTTP安全头总体",
+      "success": false,
+      "details": "安全头覆盖率: 0.0%",
+      "risk_level": "MEDIUM",
+      "timestamp": "2025-07-17T14:11:22.490702"
+    },
+    {
+      "test_name": "速率限制",
+      "success": false,
+      "details": "请求速率: 287.5/秒, 被阻止: 0",
+      "risk_level": "MEDIUM",
+      "timestamp": "2025-07-17T14:11:22.664642"
+    },
+    {
+      "test_name": "错误信息安全 - 404错误",
+      "success": true,
+      "details": "未泄露敏感信息",
+      "risk_level": "LOW",
+      "timestamp": "2025-07-17T14:11:22.665754"
+    },
+    {
+      "test_name": "错误信息安全 - 500错误",
+      "success": true,
+      "details": "未泄露敏感信息",
+      "risk_level": "LOW",
+      "timestamp": "2025-07-17T14:11:22.666761"
+    },
+    {
+      "test_name": "错误信息安全 - 400错误",
+      "success": true,
+      "details": "未泄露敏感信息",
+      "risk_level": "LOW",
+      "timestamp": "2025-07-17T14:11:22.668479"
+    },
+    {
+      "test_name": "错误信息泄露防护",
+      "success": true,
+      "details": "安全率: 100.0%",
+      "risk_level": "LOW",
+      "timestamp": "2025-07-17T14:11:22.668487"
+    }
+  ]
+}

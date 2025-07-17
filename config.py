@@ -10,12 +10,18 @@ ADS_POWER_CONFIG = {
     'group_id': '',  # AdsPower 分组ID（可选）
     
     # 多窗口模式配置 - 多个用户ID用于并行抓取
+    # 注意：为了实现真正的并行抓取，每个用户ID应该对应不同的AdsPower浏览器实例
+    # 如果只有一个AdsPower账号，可以创建多个浏览器配置文件
     'multi_user_ids': [
-        'k11p9ypc',  # 窗口1
-        'k11p9ypc',  # 窗口2 - 如果有多个账号，请替换为不同的user_id
-        'k11p9ypc',  # 窗口3 - 如果有多个账号，请替换为不同的user_id
-        'k11p9ypc',  # 窗口4 - 如果有多个账号，请替换为不同的user_id
+        'k11p9ypc',  # 窗口1 - 主要浏览器实例
+        'k11p9y6f',  # 窗口2 - 如果有多个AdsPower账号，请替换为不同的user_id
+        # 'user_id_4',  # 窗口4 - 可以添加更多用户ID
     ],
+    
+    # 并行任务配置
+    'max_concurrent_tasks': 4,  # 最大并发任务数（增加并发数）
+    'task_timeout': 900,        # 单个任务超时时间（秒）- 减少超时时间
+    'browser_startup_delay': 2, # 浏览器启动间隔（秒）- 减少启动延迟
     
     # 混合模式增强配置
     'timeout': 30,          # 连接超时时间（秒）
@@ -137,11 +143,14 @@ OUTPUT_CONFIG = {
 # 浏览器配置
 BROWSER_CONFIG = {
     'headless': False,      # 是否无头模式
-    'timeout': 30000,       # 页面加载超时时间（毫秒）- 减少到30秒
-    'wait_time': 3,         # 页面操作间隔时间（秒）- 减少等待时间
-    'scroll_pause_time': 2, # 滚动间隔时间（秒）- 减少滚动间隔
-    'navigation_timeout': 30000,  # 导航超时时间（毫秒）- 减少到30秒
-    'load_state_timeout': 20000,  # 加载状态超时时间（毫秒）- 减少到20秒
+    'timeout': 15000,       # 页面加载超时时间（毫秒）- 减少超时时间
+    'wait_time': 1,         # 页面操作间隔时间（秒）- 减少等待时间
+    'scroll_pause_time': 0.8, # 滚动间隔时间（秒）- 减少滚动间隔
+    'navigation_timeout': 20000,  # 导航超时时间（毫秒）- 减少导航超时
+    'load_state_timeout': 8000,   # 加载状态超时时间（毫秒）- 减少加载超时
+    'fast_mode': True,      # 启用快速模式
+    'skip_images': True,    # 跳过图片加载以提升速度
+    'disable_animations': True,  # 禁用动画效果
 }
 
 # 日志配置
@@ -170,3 +179,11 @@ CLOUD_SYNC_CONFIG = {
         'sheet_id': '',  # 工作表ID（可选，留空使用第一个工作表）
     }
 }
+
+# 核心功能测试所需的配置项
+ADSPOWER_API_URL = 'http://local.adspower.net:50325'
+ADSPOWER_USER_ID = 'k11p9ypc'
+ADSPOWER_GROUP_ID = ''
+TWITTER_USERNAME = 'test_user'
+TWITTER_PASSWORD = 'test_password'
+DATA_EXPORT_PATH = './data/exports'

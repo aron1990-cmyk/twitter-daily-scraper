@@ -15,13 +15,13 @@ class HumanBehaviorSimulator:
         self.page = page
         self.logger = logging.getLogger(__name__)
         
-        # 人工行为参数配置
-        self.scroll_speeds = [200, 300, 400, 500, 600]  # 不同的滚动速度
-        self.pause_times = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0]  # 随机停顿时间
-        self.reading_times = [2, 3, 4, 5, 6, 8, 10]  # 模拟阅读时间
+        # 人工行为参数配置（优化为快速模式）
+        self.scroll_speeds = [400, 500, 600, 700, 800]  # 更快的滚动速度
+        self.pause_times = [0.2, 0.3, 0.5, 0.8, 1.0]  # 减少停顿时间
+        self.reading_times = [0.5, 1, 1.5, 2, 2.5]  # 减少阅读时间
         
-    async def random_pause(self, min_time: float = 0.5, max_time: float = 3.0):
-        """随机停顿，模拟人类思考时间"""
+    async def random_pause(self, min_time: float = 0.1, max_time: float = 0.8):
+        """随机停顿，模拟人类思考时间（快速模式）"""
         pause_time = random.uniform(min_time, max_time)
         await asyncio.sleep(pause_time)
         
@@ -63,6 +63,9 @@ class HumanBehaviorSimulator:
     async def human_like_scroll(self, direction: str = 'down', distance: int = None):
         """模拟人类滚动行为"""
         try:
+            # 确保页面焦点
+            await self.ensure_page_focus()
+            
             # 随机选择滚动距离
             if distance is None:
                 distance = random.choice(self.scroll_speeds)
@@ -79,8 +82,8 @@ class HumanBehaviorSimulator:
                 await self.page.evaluate(f'window.scrollBy(0, {step_distance})')
                 await self.random_pause(0.1, 0.3)
             
-            # 滚动后的停顿
-            await self.random_pause(0.5, 2.0)
+            # 滚动后的停顿（减少等待时间）
+            await self.random_pause(0.2, 0.8)
             
         except Exception as e:
             self.logger.error(f"滚动模拟失败: {e}")
@@ -88,6 +91,9 @@ class HumanBehaviorSimulator:
     async def simulate_tweet_interaction(self, tweet_element):
         """模拟与推文的交互"""
         try:
+            # 确保页面焦点
+            await self.ensure_page_focus()
+            
             # 移动鼠标到推文上
             await self.simulate_reading_behavior(tweet_element)
             
@@ -111,6 +117,9 @@ class HumanBehaviorSimulator:
     async def simulate_page_exploration(self):
         """模拟页面探索行为"""
         try:
+            # 确保页面焦点
+            await self.ensure_page_focus()
+            
             # 随机滚动到页面不同位置
             actions = [
                 lambda: self.human_like_scroll('down', random.randint(200, 800)),
@@ -128,6 +137,45 @@ class HumanBehaviorSimulator:
         except Exception as e:
             self.logger.error(f"页面探索模拟失败: {e}")
     
+    async def ensure_page_focus(self):
+        """
+        确保页面获得焦点，处理页面被切换出去的情况
+        """
+        try:
+            # 检查页面是否可见
+            is_visible = await self.page.evaluate('!document.hidden')
+            if not is_visible:
+                self.logger.info("检测到页面失去焦点，尝试恢复...")
+                
+                # 尝试将页面带到前台
+                await self.page.bring_to_front()
+                await asyncio.sleep(1)
+                
+                # 使用更安全的方式恢复焦点，避免误点击链接
+                try:
+                    # 方法1：直接聚焦到页面
+                    await self.page.evaluate('window.focus()')
+                    await asyncio.sleep(0.3)
+                    
+                    # 方法2：如果还是没有焦点，尝试点击一个安全的区域（页面边缘）
+                    is_visible = await self.page.evaluate('!document.hidden')
+                    if not is_visible:
+                        # 点击页面左上角的安全区域，避免点击到链接
+                        await self.page.mouse.click(10, 10)
+                        await asyncio.sleep(0.3)
+                except Exception as focus_error:
+                    self.logger.debug(f"焦点恢复操作失败: {focus_error}")
+                
+                # 再次检查
+                is_visible = await self.page.evaluate('!document.hidden')
+                if is_visible:
+                    self.logger.info("页面焦点已恢复")
+                else:
+                    self.logger.warning("页面仍然失去焦点，但继续执行")
+                    
+        except Exception as e:
+            self.logger.warning(f"页面焦点检查失败: {e}，继续执行")
+    
     async def smart_scroll_and_collect(self, max_tweets: int = 10, target_selector: str = '[data-testid="tweet"]'):
         """智能滚动并收集推文，模拟真实用户行为"""
         collected_tweets = []
@@ -138,6 +186,9 @@ class HumanBehaviorSimulator:
             self.logger.info(f"开始智能滚动收集，目标: {max_tweets} 条推文")
             
             while len(collected_tweets) < max_tweets and scroll_attempts < max_scroll_attempts:
+                # 确保页面焦点
+                await self.ensure_page_focus()
+                
                 # 获取当前可见的推文
                 current_tweets = await self.page.query_selector_all(target_selector)
                 
@@ -163,11 +214,14 @@ class HumanBehaviorSimulator:
                 
                 # 如果还需要更多推文，继续滚动
                 if len(collected_tweets) < max_tweets:
+                    # 滚动前再次确保页面焦点
+                    await self.ensure_page_focus()
                     await self.human_like_scroll('down')
                     scroll_attempts += 1
                     
                     # 偶尔向上滚动，模拟重新查看
                     if random.random() < 0.1:
+                        await self.ensure_page_focus()
                         await self.human_like_scroll('up', random.randint(100, 300))
                         await self.random_pause(1, 2)
                         await self.human_like_scroll('down', random.randint(200, 400))

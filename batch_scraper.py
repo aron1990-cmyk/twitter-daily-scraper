@@ -706,6 +706,32 @@ class BatchScraper:
     def get_results(self) -> Dict[str, ScrapingResult]:
         """获取抓取结果"""
         return self.batch_results.copy()
+    
+    async def stop_scraping(self):
+        """停止批量抓取"""
+        try:
+            self.logger.info("正在停止批量抓取...")
+            
+            # 设置取消标志
+            self.cancel()
+            
+            # 等待当前任务完成
+            if self.active_tasks:
+                self.logger.info(f"等待 {len(self.active_tasks)} 个活动任务完成...")
+                await asyncio.gather(*self.active_tasks.values(), return_exceptions=True)
+            
+            # 清理资源
+            await self._cleanup_resources()
+            
+            # 保存当前进度和结果
+            if self.progress.total_tweets > 0:
+                await self._save_final_results()
+            
+            self.logger.info("批量抓取已停止")
+            
+        except Exception as e:
+            self.logger.error(f"停止抓取时发生错误: {e}")
+            raise e
 
 
 # 使用示例
