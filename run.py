@@ -23,22 +23,11 @@ from config import (
 
 def print_banner():
     """打印启动横幅"""
-    print("\n" + "="*60)
-    print("🐦 Twitter 日报采集系统 - 快速启动")
-    print("="*60)
-    print("📊 自动化采集 Twitter 数据，生成日报矩阵")
-    print("🚀 基于 AdsPower 虚拟浏览器技术")
-    print("="*60 + "\n")
+    pass
 
 def print_config_summary():
     """打印当前配置摘要"""
-    print("📋 当前配置摘要:")
-    print(f"   🌐 AdsPower API: {ADS_POWER_CONFIG['local_api_url']}")
-    print(f"   🎯 目标账号: {', '.join(TWITTER_TARGETS['accounts'])}")
-    print(f"   🔍 关键词: {', '.join(TWITTER_TARGETS['keywords'])}")
-    print(f"   📊 最大采集数: {FILTER_CONFIG['max_tweets_per_target']}")
-    print(f"   💾 输出目录: {OUTPUT_CONFIG['data_dir']}")
-    print()
+    pass
 
 def check_adspower_status():
     """检查 AdsPower 状态"""
@@ -52,13 +41,9 @@ def check_adspower_status():
             data = response.json()
             if data.get('code') == 0:
                 browsers = data.get('data', {}).get('list', [])
-                print(f"✅ AdsPower 连接正常，发现 {len(browsers)} 个浏览器配置")
                 return True
-        print("⚠️  AdsPower API 响应异常")
         return False
     except Exception as e:
-        print(f"❌ 无法连接到 AdsPower: {e}")
-        print("   请确保 AdsPower 客户端已启动")
         return False
 
 def run_with_options(args):
@@ -79,21 +64,15 @@ def run_with_options(args):
     # 检查 AdsPower 状态
     if not check_adspower_status():
         if not args.force:
-            print("\n❌ AdsPower 连接失败，使用 --force 参数强制运行")
             return
-        else:
-            print("\n⚠️  强制运行模式，忽略 AdsPower 连接检查")
     
     # 运行主程序
-    print("\n🚀 开始执行采集任务...\n")
     try:
         main()
-        print("\n✅ 采集任务完成！")
-        print(f"📁 请查看输出目录: {OUTPUT_CONFIG['data_dir']}")
     except KeyboardInterrupt:
-        print("\n⏹️  用户中断操作")
+        pass
     except Exception as e:
-        print(f"\n❌ 采集过程中出现错误: {e}")
+        pass
         if args.debug:
             import traceback
             traceback.print_exc()

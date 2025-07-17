@@ -114,14 +114,16 @@
                                placeholder="输入任务名称" required>
                     </div>
                     <div class="mb-3">
-                        <label for="keywords" class="form-label">关键词</label>
+                        <label for="keywords" class="form-label">关键词（可选）</label>
                         <input type="text" class="form-control" id="keywords" name="keywords" 
-                               placeholder="输入关键词，用逗号分隔" required>
+                               placeholder="输入关键词，用逗号分隔">
+                        <small class="form-text text-muted">关键词和目标账号至少需要填写一个</small>
                     </div>
                     <div class="mb-3">
                         <label for="target_accounts" class="form-label">目标账号（可选）</label>
                         <input type="text" class="form-control" id="target_accounts" name="target_accounts" 
                                placeholder="输入Twitter用户名，用逗号分隔">
+                        <small class="form-text text-muted">关键词和目标账号至少需要填写一个</small>
                     </div>
                     <div class="mb-3">
                         <label for="max_tweets" class="form-label">最大抓取数量</label>
@@ -788,6 +790,19 @@ async function startInfluencerScraping() {
 
 // 表单提交处理
 $('form').on('submit', function(e) {
+    // 检查是否是创建任务表单
+    if ($(this).attr('action') && $(this).attr('action').includes('create_task')) {
+        const keywords = $('#keywords').val().trim();
+        const targetAccounts = $('#target_accounts').val().trim();
+        
+        // 验证关键词和目标账号至少填写一个
+        if (!keywords && !targetAccounts) {
+            e.preventDefault();
+            alert('关键词和目标账号至少需要填写一个！');
+            return false;
+        }
+    }
+    
     const submitBtn = $(this).find('button[type="submit"]');
     showLoading(submitBtn[0]);
 });

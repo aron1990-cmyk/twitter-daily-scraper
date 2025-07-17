@@ -443,24 +443,14 @@ async def main():
     try:
         # 验证配置
         if not scraper.validate_config():
-            print("配置验证失败，请检查 config.py 文件")
             return
         
         # 执行抓取任务
         output_file = await scraper.run_scraping_task()
-        
-        if output_file:
-            print(f"\n✅ 任务完成！")
-            print(f"📊 Excel 报表已生成: {output_file}")
-            print(f"📁 数据目录: {OUTPUT_CONFIG['data_dir']}")
-        else:
-            print("\n❌ 任务失败，请查看日志了解详情")
             
     except KeyboardInterrupt:
-        print("\n⏹️  任务被用户中断")
         scraper.logger.info("任务被用户中断")
     except Exception as e:
-        print(f"\n❌ 任务执行失败: {e}")
         scraper.logger.error(f"任务执行失败: {e}")
     finally:
         await scraper.cleanup()
@@ -468,12 +458,10 @@ async def main():
 if __name__ == "__main__":
     # 检查 Python 版本
     if sys.version_info < (3, 7):
-        print("错误: 需要 Python 3.7 或更高版本")
         sys.exit(1)
     
     # 运行主程序
     try:
         asyncio.run(main())
     except Exception as e:
-        print(f"程序启动失败: {e}")
         sys.exit(1)

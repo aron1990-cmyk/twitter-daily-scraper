@@ -225,45 +225,84 @@ class CloudSyncManager:
                 'Content-Type': 'application/json'
             }
             
+            # 获取表格字段信息以确定字段类型
+            fields_url = f"{self.feishu_config['base_url']}/bitable/v1/apps/{spreadsheet_token}/tables/{table_id}/fields"
+            fields_response = requests.get(fields_url, headers=headers)
+            field_types = {}
+            if fields_response.status_code == 200:
+                fields_result = fields_response.json()
+                if fields_result.get('code') == 0:
+                    fields_data = fields_result.get('data', {}).get('items', [])
+                    field_types = {field.get('field_name'): field.get('type') for field in fields_data}
+            
             # 准备数据记录
             records = []
             for tweet in data:
-                # 处理时间字段 - 飞书多维表格的时间字段需要毫秒时间戳（整数）
+                # 处理时间字段 - 根据字段类型决定格式
                 publish_time = tweet.get('发布时间', '')
                 create_time = tweet.get('创建时间', '')
                 
-                # 如果时间是字符串，尝试转换为时间戳
-                if isinstance(publish_time, str) and publish_time:
-                    try:
-                        from datetime import datetime
-                        dt = datetime.fromisoformat(publish_time.replace('Z', '+00:00'))
-                        publish_time = int(dt.timestamp() * 1000)
-                    except:
-                        publish_time = None
-                elif isinstance(publish_time, (int, float)):
-                    # 确保是毫秒时间戳
-                    if publish_time < 10000000000:  # 如果是秒时间戳，转换为毫秒
-                        publish_time = int(publish_time * 1000)
+                # 获取时间字段的类型（5=时间戳，1=文本）
+                publish_time_type = field_types.get('发布时间', 5)  # 默认为时间戳类型
+                create_time_type = field_types.get('创建时间', 1)   # 默认为文本类型
+                
+                # 处理发布时间
+                if publish_time_type == 5:  # 时间戳类型
+                    if isinstance(publish_time, str) and publish_time:
+                        try:
+                            from datetime import datetime
+                            dt = datetime.fromisoformat(publish_time.replace('Z', '+00:00'))
+                            publish_time = int(dt.timestamp() * 1000)
+                        except:
+                            publish_time = int(time.time() * 1000)
+                    elif isinstance(publish_time, (int, float)):
+                        if publish_time < 10000000000:  # 如果是秒时间戳，转换为毫秒
+                            publish_time = int(publish_time * 1000)
+                        else:
+                            publish_time = int(publish_time)
                     else:
-                        publish_time = int(publish_time)
-                else:
-                    publish_time = None
-                    
-                if isinstance(create_time, str) and create_time:
-                    try:
+                        publish_time = int(time.time() * 1000)
+                else:  # 文本类型
+                    if isinstance(publish_time, str):
+                        publish_time = publish_time
+                    elif isinstance(publish_time, (int, float)):
                         from datetime import datetime
-                        dt = datetime.fromisoformat(create_time.replace('Z', '+00:00'))
-                        create_time = int(dt.timestamp() * 1000)
-                    except:
-                        create_time = None
-                elif isinstance(create_time, (int, float)):
-                    # 确保是毫秒时间戳
-                    if create_time < 10000000000:  # 如果是秒时间戳，转换为毫秒
-                        create_time = int(create_time * 1000)
+                        if publish_time > 10000000000:  # 毫秒时间戳
+                            publish_time = datetime.fromtimestamp(publish_time / 1000).strftime('%Y-%m-%d %H:%M:%S')
+                        else:  # 秒时间戳
+                            publish_time = datetime.fromtimestamp(publish_time).strftime('%Y-%m-%d %H:%M:%S')
                     else:
-                        create_time = int(create_time)
-                else:
-                    create_time = None
+                        from datetime import datetime
+                        publish_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                
+                # 处理创建时间
+                if create_time_type == 5:  # 时间戳类型
+                    if isinstance(create_time, str) and create_time:
+                        try:
+                            from datetime import datetime
+                            dt = datetime.fromisoformat(create_time.replace('Z', '+00:00'))
+                            create_time = int(dt.timestamp() * 1000)
+                        except:
+                            create_time = int(time.time() * 1000)
+                    elif isinstance(create_time, (int, float)):
+                        if create_time < 10000000000:  # 如果是秒时间戳，转换为毫秒
+                            create_time = int(create_time * 1000)
+                        else:
+                            create_time = int(create_time)
+                    else:
+                        create_time = int(time.time() * 1000)
+                else:  # 文本类型
+                    if isinstance(create_time, str):
+                        create_time = create_time
+                    elif isinstance(create_time, (int, float)):
+                        from datetime import datetime
+                        if create_time > 10000000000:  # 毫秒时间戳
+                            create_time = datetime.fromtimestamp(create_time / 1000).strftime('%Y-%m-%d %H:%M:%S')
+                        else:  # 秒时间戳
+                            create_time = datetime.fromtimestamp(create_time).strftime('%Y-%m-%d %H:%M:%S')
+                    else:
+                        from datetime import datetime
+                        create_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 
                 # 处理数值字段 - 确保数值字段为有效数字
                 def safe_int(value, default=0):
@@ -282,12 +321,12 @@ class CloudSyncManager:
                         '推文链接': str(tweet.get('推文链接', '')),
                         '话题标签（Hashtag）': str(tweet.get('话题标签（Hashtag）', '')),
                         '类型标签': str(tweet.get('类型标签', '')),
-                        '收藏数': safe_int(tweet.get('收藏数')),
-                        '点赞数': safe_int(tweet.get('点赞数')),
+                        '评论数': safe_int(tweet.get('评论数')),
                         '转发数': safe_int(tweet.get('转发数')),
-                        # 时间字段：如果为None，使用当前时间戳
-                        '发布时间': publish_time if publish_time is not None else int(time.time() * 1000),
-                        '创建时间': create_time if create_time is not None else int(time.time() * 1000)
+                        '点赞数': safe_int(tweet.get('点赞数')),
+                        # 时间字段：已根据字段类型处理
+                        '发布时间': publish_time
+                        # 注意：创建时间不再传递给飞书
                     }
                 }
                     
@@ -364,8 +403,8 @@ class CloudSyncManager:
             
             # 准备数据
             values = [[
-                '序号', '用户名', '推文内容', '发布时间', '点赞数', 
-                '评论数', '转发数', '链接', '标签', '筛选状态'
+                '序号', '用户名', '推文内容', '发布时间', '评论数', 
+                '转发数', '点赞数', '链接', '标签', '筛选状态'
             ]]
             
             for i, tweet in enumerate(data, 1):
@@ -374,9 +413,9 @@ class CloudSyncManager:
                     tweet.get('username', ''),
                     tweet.get('content', ''),
                     tweet.get('timestamp', ''),
-                    str(tweet.get('likes', 0)),
                     str(tweet.get('comments', 0)),
                     str(tweet.get('retweets', 0)),
+                    str(tweet.get('likes', 0)),
                     tweet.get('link', ''),
                     ', '.join(tweet.get('tags', [])),
                     tweet.get('filter_status', '')

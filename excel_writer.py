@@ -196,9 +196,9 @@ class ExcelWriter:
                 '账号',
                 '推文内容',
                 '发布时间',
-                '点赞数',
                 '评论数',
                 '转发数',
+                '点赞数',
                 '推文链接',
                 '来源',
                 '来源类型',
@@ -215,9 +215,9 @@ class ExcelWriter:
                 ws.cell(row=row, column=2, value=f"@{tweet.get('username', '')}")
                 ws.cell(row=row, column=3, value=self.format_tweet_content(tweet.get('content', '')))
                 ws.cell(row=row, column=4, value=self.format_datetime(tweet.get('publish_time', '')))
-                ws.cell(row=row, column=5, value=tweet.get('likes', 0))
-                ws.cell(row=row, column=6, value=tweet.get('comments', 0))
-                ws.cell(row=row, column=7, value=tweet.get('retweets', 0))
+                ws.cell(row=row, column=5, value=tweet.get('comments', 0))
+                ws.cell(row=row, column=6, value=tweet.get('retweets', 0))
+                ws.cell(row=row, column=7, value=tweet.get('likes', 0))
                 ws.cell(row=row, column=8, value=tweet.get('link', ''))
                 ws.cell(row=row, column=9, value=tweet.get('source', ''))
                 ws.cell(row=row, column=10, value=tweet.get('source_type', ''))

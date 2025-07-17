@@ -100,7 +100,9 @@ class AdsPowerLauncher:
                 ])
                 
                 if launch_args:
-                    params['launch_args'] = launch_args
+                    # AdsPower API需要launch_args为JSON字符串格式
+                    import json
+                    params['launch_args'] = json.dumps(launch_args)
                     self.logger.info(f"启用快速模式，浏览器参数: {launch_args}")
             
             self.logger.info(f"正在启动 AdsPower 浏览器，用户ID: {target_user_id}")

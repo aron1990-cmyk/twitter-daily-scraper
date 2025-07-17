@@ -36,8 +36,6 @@ sys.path.insert(0, str(project_root))
 try:
     from web_app import app, init_database
 except ImportError as e:
-    print(f"错误：无法导入web_app模块: {e}")
-    print("请确保已安装所有依赖包：pip install -r requirements.txt")
     sys.exit(1)
 
 def parse_arguments():
@@ -101,11 +99,6 @@ def check_dependencies():
             missing_packages.append(package)
     
     if missing_packages:
-        print("错误：缺少以下依赖包：")
-        for package in missing_packages:
-            print(f"  - {package}")
-        print("\n请运行以下命令安装依赖：")
-        print("pip install -r requirements.txt")
         return False
     
     return True
@@ -119,7 +112,6 @@ def open_browser(host, port):
     def delayed_open():
         time.sleep(1.5)  # 等待服务器启动
         url = f"http://{host}:{port}"
-        print(f"正在打开浏览器: {url}")
         webbrowser.open(url)
     
     thread = threading.Thread(target=delayed_open)
@@ -128,21 +120,11 @@ def open_browser(host, port):
 
 def print_startup_info(host, port, debug):
     """打印启动信息"""
-    print("\n" + "="*60)
-    print("🐦 Twitter抓取管理系统 - Web应用")
-    print("="*60)
-    print(f"📍 服务器地址: http://{host}:{port}")
-    print(f"🔧 调试模式: {'启用' if debug else '禁用'}")
-    print(f"📁 工作目录: {project_root}")
-    print("="*60)
-    print("\n功能特性:")
-    print("  ✅ Web界面管理抓取任务")
-    print("  ✅ 关键词配置和任务调度")
-    print("  ✅ 数据查看和导出")
-    print("  ✅ 飞书文档同步")
-    print("  ✅ 系统配置管理")
-    print("\n💡 提示: 按 Ctrl+C 停止服务器")
-    print("="*60 + "\n")
+    print(f"🐦 Twitter抓取管理系统启动成功")
+    print(f"📍 访问地址: http://{host}:{port}")
+    if debug:
+        print(f"🔧 调试模式: 启用")
+    print("💡 按 Ctrl+C 停止服务器\n")
 
 def main():
     """主函数"""
@@ -155,11 +137,8 @@ def main():
     
     # 初始化数据库
     try:
-        print("正在初始化数据库...")
         init_database()
-        print("数据库初始化完成")
     except Exception as e:
-        print(f"数据库初始化失败: {e}")
         sys.exit(1)
     
     # 打印启动信息
@@ -178,9 +157,8 @@ def main():
             threaded=True
         )
     except KeyboardInterrupt:
-        print("\n\n👋 感谢使用Twitter抓取管理系统！")
+        pass
     except Exception as e:
-        print(f"\n❌ 服务器启动失败: {e}")
         sys.exit(1)
 
 if __name__ == '__main__':

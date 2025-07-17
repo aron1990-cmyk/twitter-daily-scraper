@@ -708,6 +708,83 @@ class TwitterParser:
             self.logger.error(f"抓取关键词 '{keyword}' 的推文失败: {e}")
             return []
     
+    async def scrape_user_keyword_tweets(self, username: str, keyword: str, max_tweets: int = 10, enable_enhanced: bool = False) -> List[Dict[str, Any]]:
+        """
+        在指定用户下搜索包含关键词的推文
+        
+        Args:
+            username: Twitter 用户名
+            keyword: 搜索关键词
+            max_tweets: 最大抓取推文数量
+            enable_enhanced: 是否启用增强抓取（包含详情页内容）
+            
+        Returns:
+            推文数据列表
+        """
+        try:
+            # 确保页面焦点
+            await self.ensure_page_focus()
+            
+            self.logger.info(f"开始在用户 @{username} 下搜索关键词 '{keyword}'")
+            
+            # 构建用户特定的搜索URL
+            import urllib.parse
+            encoded_keyword = urllib.parse.quote(keyword)
+            encoded_username = urllib.parse.quote(username)
+            # 使用 from:username 语法在特定用户下搜索
+            search_query = f"from:{encoded_username} {encoded_keyword}"
+            search_url = f'https://x.com/search?q={urllib.parse.quote(search_query)}&src=typed_query&f=live'
+            
+            self.logger.info(f"用户关键词搜索URL: {search_url}")
+            
+            # 导航到搜索页面
+            await self.page.goto(search_url, timeout=BROWSER_CONFIG['timeout'])
+            
+            # 等待页面加载
+            try:
+                await self.page.wait_for_load_state('domcontentloaded', timeout=10000)
+                self.logger.info("DOM内容加载完成")
+            except Exception as load_error:
+                self.logger.warning(f"DOM加载超时: {load_error}")
+            
+            # 确保页面焦点后再等待搜索结果
+            await self.ensure_page_focus()
+            
+            # 等待搜索结果加载
+            self.logger.info("等待搜索结果加载...")
+            await asyncio.sleep(2)
+            
+            # 检查是否有搜索结果
+            try:
+                await self.page.wait_for_selector('[data-testid="tweet"]', timeout=10000)
+                self.logger.info("找到推文元素")
+            except Exception:
+                self.logger.warning("未找到推文元素，可能没有搜索结果")
+            
+            # 使用人工行为模拟器进行搜索页面探索
+            if self.behavior_simulator:
+                self.logger.info(f"开始模拟用户浏览 @{username} 下关键词 '{keyword}' 的搜索结果")
+                await self.behavior_simulator.simulate_page_exploration()
+                await self.behavior_simulator.simulate_reading_behavior()
+            else:
+                await asyncio.sleep(3)
+            
+            tweets = await self.scrape_tweets(max_tweets, enable_enhanced)
+            
+            # 为每条推文添加来源信息
+            for tweet in tweets:
+                tweet['source'] = f"@{username} + {keyword}"
+                tweet['source_type'] = 'user_keyword_search'
+                tweet['target_username'] = username
+                tweet['target_keyword'] = keyword
+            
+            self.logger.info(f"在用户 @{username} 下搜索关键词 '{keyword}' 完成，获得 {len(tweets)} 条推文")
+            return tweets
+            
+        except Exception as e:
+            self.logger.error(f"在用户 @{username} 下搜索关键词 '{keyword}' 失败: {e}")
+            return []
+    
     async def scrape_tweet_details(self, tweet_url: str) -> Dict[str, Any]:
         """
         抓取推文详情页的完整内容
@@ -1370,15 +1447,11 @@ if __name__ == "__main__":
             # 抓取指定用户的推文
             tweets = await parser.scrape_user_tweets('elonmusk', 5)
             
-            for tweet in tweets:
-                print(f"用户: @{tweet['username']}")
-                print(f"内容: {tweet['content'][:100]}...")
-                print(f"点赞: {tweet['likes']}, 评论: {tweet['comments']}, 转发: {tweet['retweets']}")
-                print(f"链接: {tweet['link']}")
-                print("-" * 50)
+            # 推文抓取完成
+            pass
                 
         except Exception as e:
-            print(f"错误: {e}")
+            pass
         finally:
             await parser.close()
     

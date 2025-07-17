@@ -53,6 +53,15 @@ app.config['SECRET_KEY'] = 'twitter-scraper-web-2024'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///twitter_scraper.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# 设置字符编码
+app.config['JSON_AS_ASCII'] = False
+
+@app.after_request
+def after_request(response):
+    """设置响应头，确保正确处理中文字符"""
+    response.headers['Content-Type'] = 'text/html; charset=utf-8'
+    return response
+
 # 初始化Flask扩展
 db = SQLAlchemy(app)
 
@@ -95,32 +104,26 @@ def load_config_from_database():
         if 'feishu_enabled' in config_dict:
             FEISHU_CONFIG['enabled'] = config_dict['feishu_enabled'].lower() == 'true'
         
-        print("配置从数据库加载完成")
+        pass
         
     except Exception as e:
-        print(f"从数据库加载配置失败: {e}")
+        print(f"⚠️ 配置加载失败: {e}")
 
 def init_database():
     """初始化数据库"""
     with app.app_context():
         db.create_all()
-        print("数据库表创建完成")
         
         # 重置所有running状态的任务为pending状态
         # 这是为了解决系统重启后任务状态不一致的问题
         running_tasks = ScrapingTask.query.filter_by(status='running').all()
         if running_tasks:
-            print(f"发现 {len(running_tasks)} 个运行中的任务，正在重置状态...")
             for task in running_tasks:
                 task.status = 'pending'
-                print(f"重置任务 {task.id}: {task.name} 状态为 pending")
             db.session.commit()
-            print("任务状态重置完成")
         
         # 从数据库加载配置
         load_config_from_database()
-        
-        print("数据库初始化完成")
 
 # 数据库模型
 class ScrapingTask(db.Model):
@@ -378,7 +381,6 @@ class ParallelTaskManager:
         
         # 确保max_concurrent_tasks不超过可用用户ID数量
         if self.max_concurrent_tasks > len(self.available_user_ids):
-            print(f"[WARNING] max_concurrent_tasks ({self.max_concurrent_tasks}) 超过可用用户ID数量 ({len(self.available_user_ids)})，已调整为 {len(self.available_user_ids)}")
             self.max_concurrent_tasks = len(self.available_user_ids)
     
     def get_available_user_id(self):
@@ -546,36 +548,77 @@ class ScrapingTaskExecutor:
             
             all_tweets = []
             
-            # 抓取账号推文
-            for account in target_accounts:
-                if not self.is_running:  # 检查是否被停止
-                    break
+            # 判断是否需要组合搜索（同时有账号和关键词）
+            if target_accounts and target_keywords:
+                print(f"[DEBUG] 检测到组合搜索模式：在指定博主下搜索关键词")
+                print(f"[DEBUG] 目标博主: {target_accounts}")
+                print(f"[DEBUG] 搜索关键词: {target_keywords}")
+                
+                # 组合搜索：在每个指定博主下搜索每个关键词
+                for account in target_accounts:
+                    if not self.is_running:
+                        break
                     
-                try:
-                    await parser.navigate_to_profile(account)
-                    tweets = await parser.scrape_tweets(max_tweets=task.max_tweets)
-                    
-                    # 过滤推文
-                    filtered_tweets = self._filter_tweets(tweets, task)
-                    all_tweets.extend(filtered_tweets)
-                    
-                except Exception as e:
-                    print(f"抓取账号 {account} 失败: {e}")
-                    continue
-            
-            # 抓取关键词推文
-            for keyword in target_keywords:
-                if not self.is_running:
-                    break
-                    
-                try:
-                    tweets = await parser.scrape_keyword_tweets(keyword, max_tweets=task.max_tweets)
-                    filtered_tweets = self._filter_tweets(tweets, task)
-                    all_tweets.extend(filtered_tweets)
-                    
-                except Exception as e:
-                    print(f"搜索关键词 {keyword} 失败: {e}")
-                    continue
+                    for keyword in target_keywords:
+                        if not self.is_running:
+                            break
+                        
+                        try:
+                            print(f"[DEBUG] 在博主 @{account} 下搜索关键词 '{keyword}'")
+                            tweets = await parser.scrape_user_keyword_tweets(
+                                username=account, 
+                                keyword=keyword, 
+                                max_tweets=task.max_tweets
+                            )
+                            
+                            # 过滤推文
+                            filtered_tweets = self._filter_tweets(tweets, task)
+                            all_tweets.extend(filtered_tweets)
+                            
+                            print(f"[DEBUG] 在博主 @{account} 下搜索关键词 '{keyword}' 完成，获得 {len(filtered_tweets)} 条有效推文")
+                            
+                        except Exception as e:
+                            print(f"在博主 @{account} 下搜索关键词 '{keyword}' 失败: {e}")
+                            continue
+            else:
+                # 分别抓取账号推文和关键词推文（原有逻辑）
+                
+                # 抓取账号推文
+                for account in target_accounts:
+                    if not self.is_running:  # 检查是否被停止
+                        break
+                        
+                    try:
+                        print(f"[DEBUG] 抓取博主 @{account} 的推文")
+                        await parser.navigate_to_profile(account)
+                        tweets = await parser.scrape_tweets(max_tweets=task.max_tweets)
+                        
+                        # 过滤推文
+                        filtered_tweets = self._filter_tweets(tweets, task)
+                        all_tweets.extend(filtered_tweets)
+                        
+                        print(f"[DEBUG] 博主 @{account} 抓取完成，获得 {len(filtered_tweets)} 条有效推文")
+                        
+                    except Exception as e:
+                        print(f"抓取账号 {account} 失败: {e}")
+                        continue
+                
+                # 抓取关键词推文
+                for keyword in target_keywords:
+                    if not self.is_running:
+                        break
+                        
+                    try:
+                        print(f"[DEBUG] 全局搜索关键词 '{keyword}'")
+                        tweets = await parser.scrape_keyword_tweets(keyword, max_tweets=task.max_tweets)
+                        filtered_tweets = self._filter_tweets(tweets, task)
+                        all_tweets.extend(filtered_tweets)
+                        
+                        print(f"[DEBUG] 关键词 '{keyword}' 搜索完成，获得 {len(filtered_tweets)} 条有效推文")
+                        
+                    except Exception as e:
+                        print(f"搜索关键词 {keyword} 失败: {e}")
+                        continue
             
             # 保存到数据库
             saved_count = self._save_tweets_to_db(all_tweets, task_id)
@@ -655,13 +698,17 @@ class ScrapingTaskExecutor:
     def _check_auto_sync_feishu(self, task_id: int):
         """检查是否需要自动同步到飞书"""
         try:
+            print(f"[调试] 开始检查任务 {task_id} 的自动同步...")
+            
             # 检查飞书配置是否启用
             if not FEISHU_CONFIG.get('enabled'):
+                print(f"[调试] 飞书配置未启用，跳过同步")
                 return
             
             # 检查是否启用自动同步
             auto_sync_config = SystemConfig.query.filter_by(key='feishu_auto_sync').first()
-            if not auto_sync_config or auto_sync_config.value != 'true':
+            if not auto_sync_config or auto_sync_config.value.lower() not in ['true', '1']:
+                print(f"[调试] 自动同步未启用，跳过同步 (当前值: {auto_sync_config.value if auto_sync_config else 'None'})")
                 return
             
             # 检查飞书配置完整性
@@ -734,7 +781,11 @@ class ScrapingTaskExecutor:
                 )
                 
                 if success:
-                    print(f"任务 {task_id} 自动同步到飞书成功")
+                    # 更新同步状态
+                    for tweet in tweets:
+                        tweet.synced_to_feishu = True
+                    db.session.commit()
+                    print(f"任务 {task_id} 自动同步到飞书成功，已更新 {len(tweets)} 条记录的同步状态")
                 else:
                     print(f"任务 {task_id} 自动同步到飞书失败")
             else:
@@ -800,8 +851,13 @@ def create_task():
             target_accounts = request.form.get('target_accounts', '').strip()
             max_tweets = int(request.form.get('max_tweets', 100))
             
-            if not task_name or not keywords:
-                flash('任务名称和关键词不能为空', 'error')
+            if not task_name:
+                flash('任务名称不能为空', 'error')
+                return redirect(url_for('index'))
+            
+            # 验证关键词和目标账号至少填写一个
+            if not keywords and not target_accounts:
+                flash('关键词和目标账号至少需要填写一个', 'error')
                 return redirect(url_for('index'))
             
             # 解析关键词和账号
@@ -1061,10 +1117,22 @@ def api_create_task():
     try:
         data = request.get_json()
         
+        # 验证任务名称
+        task_name = data.get('name', '').strip()
+        if not task_name:
+            return jsonify({'success': False, 'error': '任务名称不能为空'}), 400
+        
+        # 验证关键词和目标账号至少填写一个
+        target_keywords = data.get('target_keywords', [])
+        target_accounts = data.get('target_accounts', [])
+        
+        if not target_keywords and not target_accounts:
+            return jsonify({'success': False, 'error': '关键词和目标账号至少需要填写一个'}), 400
+        
         task = ScrapingTask(
-            name=data.get('name', ''),
-            target_accounts=json.dumps(data.get('target_accounts', [])),
-            target_keywords=json.dumps(data.get('target_keywords', [])),
+            name=task_name,
+            target_accounts=json.dumps(target_accounts),
+            target_keywords=json.dumps(target_keywords),
             max_tweets=data.get('max_tweets', 50),
             min_likes=data.get('min_likes', 0),
             min_retweets=data.get('min_retweets', 0),
@@ -1832,7 +1900,6 @@ def api_start_enhanced_scraping():
                     try:
                         # 检测账号类型
                         account_type = detect_account_type(account)
-                        print(f"检测到账号 {account} 的类型: {account_type}")
                         
                         # 导航到用户页面并获取用户信息
                         loop.run_until_complete(parser.navigate_to_profile(account))
@@ -1883,7 +1950,6 @@ def api_start_enhanced_scraping():
                         })
                         
                     except Exception as e:
-                        print(f"抓取用户 {account} 失败: {e}")
                         continue
                 
                 # 抓取关键词推文
@@ -1934,7 +2000,6 @@ def api_start_enhanced_scraping():
                         })
                         
                     except Exception as e:
-                        print(f"抓取关键词 {keyword} 失败: {e}")
                         continue
                 
                 # 保存到数据库
@@ -2218,7 +2283,7 @@ def api_batch_scrape_influencers():
                 db.session.commit()
                 
             except Exception as e:
-                print(f"批量抓取失败: {e}")
+                pass
             finally:
                 loop.close()
         
@@ -2290,14 +2355,12 @@ def init_db():
         # 这是为了解决系统重启后任务状态不一致的问题
         running_tasks = ScrapingTask.query.filter_by(status='running').all()
         if running_tasks:
-            print(f"发现 {len(running_tasks)} 个运行中的任务，正在重置状态...")
             for task in running_tasks:
                 task.status = 'pending'
-                print(f"重置任务 {task.id}: {task.name} 状态为 pending")
             db.session.commit()
-            print("任务状态重置完成")
         
-        print("数据库初始化完成")
+        # 从数据库加载配置
+        load_config_from_database()
 
 if __name__ == '__main__':
     # 初始化数据库
@@ -2307,8 +2370,5 @@ if __name__ == '__main__':
     task_executor = ScrapingTaskExecutor()
     
     # 启动Web应用
-    print("🚀 Twitter抓取Web管理系统启动中...")
-    print("📱 访问地址: http://localhost:8086")
-    print("🎯 功能: 关键词配置、任务管理、数据查看、飞书同步、博主管理")
     
     app.run(debug=False, host='0.0.0.0', port=8086)
