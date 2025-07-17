@@ -271,22 +271,42 @@
                             <input type="hidden" name="config_type" value="adspower">
                             
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="mb-3">
-                                        <label for="adspower_api_url" class="form-label">AdsPower API地址</label>
-                                        <input type="text" class="form-control" id="adspower_api_url" name="adspower_api_url" 
-                                               value="{{ config.adspower_api_url or 'http://local.adspower.net:50325' }}" 
-                                               placeholder="http://local.adspower.net:50325">
-                                        <div class="form-text">AdsPower Local API的访问地址</div>
+                                        <label for="adspower_api_host" class="form-label">API主机地址</label>
+                                        <input type="text" class="form-control" id="adspower_api_host" name="adspower_api_host" 
+                                               value="{{ config.adspower_api_host or 'local.adspower.net' }}" 
+                                               placeholder="local.adspower.net">
+                                        <div class="form-text">AdsPower API的主机地址</div>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="adspower_api_port" class="form-label">API端口</label>
+                                        <input type="number" class="form-control" id="adspower_api_port" name="adspower_api_port" 
+                                               value="{{ config.adspower_api_port or '50325' }}" 
+                                               placeholder="50325" min="1" max="65535">
+                                        <div class="form-text">AdsPower API的端口号</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
                                     <div class="mb-3">
                                         <label for="adspower_user_id" class="form-label">主要用户ID</label>
                                         <input type="text" class="form-control" id="adspower_user_id" name="adspower_user_id" 
                                                value="{{ config.adspower_user_id or '' }}" 
                                                placeholder="k11p9ypc">
                                         <div class="form-text">AdsPower浏览器配置文件的用户ID</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="mb-3">
+                                        <label for="adspower_api_url_display" class="form-label">完整API地址预览</label>
+                                        <input type="text" class="form-control" id="adspower_api_url_display" readonly 
+                                               style="background-color: #f8f9fa;">
+                                        <div class="form-text">根据上述配置自动生成的完整API地址</div>
                                     </div>
                                 </div>
                             </div>
@@ -322,7 +342,7 @@
                                         <label for="browser_startup_delay" class="form-label">浏览器启动延迟(秒)</label>
                                         <input type="number" class="form-control" id="browser_startup_delay" 
                                                name="browser_startup_delay" value="{{ config.browser_startup_delay or 2 }}" 
-                                               min="1" max="10">
+                                               min="1" max="10" step="0.1">
                                         <div class="form-text">浏览器启动间隔时间</div>
                                     </div>
                                 </div>
@@ -330,6 +350,27 @@
                             
                             <div class="row">
                                 <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="request_interval" class="form-label">请求间隔时间(秒)</label>
+                                        <input type="number" class="form-control" id="request_interval" 
+                                               name="request_interval" value="{{ config.request_interval or 2.0 }}" 
+                                               min="0.5" max="10" step="0.1">
+                                        <div class="form-text">请求之间的间隔时间，避免频率限制</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="user_switch_interval" class="form-label">用户切换间隔(秒)</label>
+                                        <input type="number" class="form-control" id="user_switch_interval" 
+                                               name="user_switch_interval" value="{{ config.user_switch_interval or 30 }}" 
+                                               min="10" max="300">
+                                        <div class="form-text">用户ID轮询切换的间隔时间</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4">
                                     <div class="mb-3">
                                         <div class="form-check">
                                             <input class="form-check-input" type="checkbox" id="adspower_headless" name="adspower_headless" 
@@ -341,7 +382,7 @@
                                         <div class="form-text">启用后浏览器将在后台运行，不显示窗口</div>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="mb-3">
                                         <div class="form-check">
                                             <input class="form-check-input" type="checkbox" id="adspower_health_check" name="adspower_health_check" 
@@ -351,6 +392,18 @@
                                             </label>
                                         </div>
                                         <div class="form-text">定期检查浏览器连接状态</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="user_rotation_enabled" name="user_rotation_enabled" 
+                                                   {{ 'checked' if config.user_rotation_enabled }}>
+                                            <label class="form-check-label" for="user_rotation_enabled">
+                                                启用用户轮询
+                                            </label>
+                                        </div>
+                                        <div class="form-text">智能轮询多个用户ID，避免频率限制</div>
                                     </div>
                                 </div>
                             </div>
@@ -752,13 +805,17 @@ function checkAdsPowerInstallation() {
     installGuide.style.display = 'none';
     
     // 检测AdsPower是否安装（通过尝试连接API）
-    const apiUrl = $('#adspower_api_url').val() || 'http://local.adspower.net:50325';
+    const apiHost = $('#adspower_api_host').val() || 'local.adspower.net';
+    const apiPort = $('#adspower_api_port').val() || '50325';
+    const apiUrl = `http://${apiHost}:${apiPort}`;
     
     $.ajax({
         url: '/api/check_adspower_installation',
         method: 'POST',
         contentType: 'application/json',
         data: JSON.stringify({
+            api_host: apiHost,
+            api_port: apiPort,
             api_url: apiUrl
         }),
         timeout: 5000
@@ -791,7 +848,9 @@ function testAdsPowerConnection() {
     const button = event.target;
     const originalText = showLoading(button);
     
-    const apiUrl = $('#adspower_api_url').val();
+    const apiHost = $('#adspower_api_host').val() || 'local.adspower.net';
+    const apiPort = $('#adspower_api_port').val() || '50325';
+    const apiUrl = `http://${apiHost}:${apiPort}`;
     const userId = $('#adspower_user_id').val();
     
     if (!userId) {
@@ -805,6 +864,8 @@ function testAdsPowerConnection() {
         method: 'POST',
         contentType: 'application/json',
         data: JSON.stringify({
+            api_host: apiHost,
+            api_port: apiPort,
             api_url: apiUrl,
             user_id: userId
         })
@@ -911,6 +972,29 @@ function saveFeishuConfig() {
         showAlert('保存失败: ' + error.message, 'danger');
     });
 }
+
+// AdsPower API地址实时预览功能
+function updateAdsPowerApiUrl() {
+    const host = document.getElementById('adspower_api_host').value || 'local.adspower.net';
+    const port = document.getElementById('adspower_api_port').value || '50325';
+    const fullUrl = `http://${host}:${port}`;
+    document.getElementById('adspower_api_url_display').value = fullUrl;
+}
+
+// 监听输入变化，实时更新API地址预览
+document.addEventListener('DOMContentLoaded', function() {
+    const hostInput = document.getElementById('adspower_api_host');
+    const portInput = document.getElementById('adspower_api_port');
+    
+    if (hostInput && portInput) {
+        // 初始化显示
+        updateAdsPowerApiUrl();
+        
+        // 监听输入变化
+        hostInput.addEventListener('input', updateAdsPowerApiUrl);
+        portInput.addEventListener('input', updateAdsPowerApiUrl);
+    }
+});
 
 // 表单提交处理
 $('form').on('submit', function(e) {

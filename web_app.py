@@ -378,26 +378,112 @@ class ParallelTaskManager:
         self.background_processes = {}  # {task_id: {'process': process, 'user_id': user_id}}
         # 从配置文件读取可用的AdsPower用户ID池
         from config import ADS_POWER_CONFIG
+        self.config = ADS_POWER_CONFIG
         self.available_user_ids = ADS_POWER_CONFIG.get('multi_user_ids', [ADS_POWER_CONFIG['user_id']])
         self.user_id_pool = self.available_user_ids.copy()
         self.lock = threading.Lock()
         
+        # 请求频率控制配置
+        self.request_interval = ADS_POWER_CONFIG.get('request_interval', 2.0)
+        self.user_rotation_enabled = ADS_POWER_CONFIG.get('user_rotation_enabled', True)
+        self.user_switch_interval = ADS_POWER_CONFIG.get('user_switch_interval', 30)
+        self.api_retry_delay = ADS_POWER_CONFIG.get('api_retry_delay', 5.0)
+        
+        # 用户轮询状态跟踪
+        self.user_last_used = {}  # {user_id: timestamp}
+        self.user_request_count = {}  # {user_id: count}
+        self.current_user_index = 0
+        
         # 确保max_concurrent_tasks不超过可用用户ID数量
         if self.max_concurrent_tasks > len(self.available_user_ids):
             self.max_concurrent_tasks = len(self.available_user_ids)
+            
+        print(f"[TaskManager] 初始化完成，支持 {len(self.available_user_ids)} 个用户ID，最大并发 {self.max_concurrent_tasks}")
+        print(f"[TaskManager] 请求间隔: {self.request_interval}s，用户轮询: {self.user_rotation_enabled}")
     
     def get_available_user_id(self):
-        """获取可用的用户ID"""
+        """获取可用的用户ID（支持轮询机制）"""
         with self.lock:
-            if self.user_id_pool:
+            if not self.user_id_pool:
+                return None
+                
+            if self.user_rotation_enabled:
+                # 使用轮询机制选择用户ID
+                return self._get_rotated_user_id()
+            else:
+                # 原有逻辑：简单弹出第一个
                 return self.user_id_pool.pop(0)
-            return None
+    
+    def _get_rotated_user_id(self):
+        """轮询获取用户ID，避免频率限制"""
+        import time
+        current_time = time.time()
+        
+        # 寻找最适合的用户ID
+        best_user_id = None
+        best_score = -1
+        
+        for user_id in self.user_id_pool:
+            # 计算用户ID的适用性得分
+            last_used = self.user_last_used.get(user_id, 0)
+            time_since_last_use = current_time - last_used
+            request_count = self.user_request_count.get(user_id, 0)
+            
+            # 得分计算：时间间隔越长越好，请求次数越少越好
+            score = time_since_last_use - (request_count * 10)
+            
+            # 如果距离上次使用时间超过切换间隔，优先选择
+            if time_since_last_use >= self.user_switch_interval:
+                score += 1000
+            
+            if score > best_score:
+                best_score = score
+                best_user_id = user_id
+        
+        if best_user_id:
+            # 更新使用记录
+            self.user_last_used[best_user_id] = current_time
+            self.user_request_count[best_user_id] = self.user_request_count.get(best_user_id, 0) + 1
+            
+            # 从池中移除
+            self.user_id_pool.remove(best_user_id)
+            
+            print(f"[TaskManager] 选择用户ID: {best_user_id}，得分: {best_score:.2f}")
+            return best_user_id
+        
+        return None
     
     def return_user_id(self, user_id):
-        """归还用户ID到池中"""
+        """归还用户ID到池中（支持请求间隔控制）"""
+        import time
+        
         with self.lock:
             if user_id not in self.user_id_pool:
+                # 如果启用了请求间隔控制，延迟归还
+                if self.request_interval > 0:
+                    # 记录归还时间，确保下次使用时有足够间隔
+                    current_time = time.time()
+                    self.user_last_used[user_id] = current_time
+                    
+                    print(f"[TaskManager] 归还用户ID: {user_id}，下次可用时间: {current_time + self.request_interval:.2f}")
+                
                 self.user_id_pool.append(user_id)
+    
+    def _wait_for_request_interval(self, user_id):
+        """等待请求间隔时间"""
+        import time
+        
+        if self.request_interval <= 0:
+            return
+            
+        last_used = self.user_last_used.get(user_id, 0)
+        current_time = time.time()
+        time_since_last_use = current_time - last_used
+        
+        if time_since_last_use < self.request_interval:
+            wait_time = self.request_interval - time_since_last_use
+            print(f"[TaskManager] 用户ID {user_id} 需要等待 {wait_time:.2f}s 以避免频率限制")
+            time.sleep(wait_time)
     
     def can_start_task(self):
         """检查是否可以启动新任务"""
@@ -413,7 +499,7 @@ class ParallelTaskManager:
         return task_id in self.running_tasks or task_id in self.background_processes
     
     def start_task(self, task_id, use_background_process=True):
-        """启动任务"""
+        """启动任务（支持请求频率控制）"""
         if not self.can_start_task():
             return False, "已达到最大并发任务数或无可用浏览器资源"
         
@@ -422,6 +508,11 @@ class ParallelTaskManager:
             return False, "无可用的浏览器用户ID"
         
         try:
+            # 应用请求间隔控制
+            self._wait_for_request_interval(user_id)
+            
+            print(f"[TaskManager] 启动任务 {task_id}，使用用户ID: {user_id}")
+            
             if use_background_process:
                 return self._start_background_task(task_id, user_id)
             else:
@@ -1026,6 +1117,25 @@ def config():
     for cfg in configs:
         config_data[cfg.key] = cfg.value
     
+    # 处理AdsPower API地址的向后兼容性
+    if 'adspower_api_url' in config_data and ('adspower_api_host' not in config_data or 'adspower_api_port' not in config_data):
+        # 从完整URL中解析主机和端口
+        api_url = config_data['adspower_api_url']
+        if api_url.startswith('http://'):
+            url_parts = api_url.replace('http://', '').split(':')
+            if len(url_parts) == 2:
+                config_data['adspower_api_host'] = url_parts[0]
+                config_data['adspower_api_port'] = url_parts[1]
+            else:
+                config_data['adspower_api_host'] = 'local.adspower.net'
+                config_data['adspower_api_port'] = '50325'
+    
+    # 设置默认值
+    if 'adspower_api_host' not in config_data:
+        config_data['adspower_api_host'] = 'local.adspower.net'
+    if 'adspower_api_port' not in config_data:
+        config_data['adspower_api_port'] = '50325'
+    
     return render_template('config.html', config=config_data)
 
 @app.route('/update_config', methods=['POST'])
@@ -1036,15 +1146,24 @@ def update_config():
         
         if config_type == 'adspower':
             # 处理AdsPower配置
+            api_host = request.form.get('adspower_api_host', 'local.adspower.net')
+            api_port = request.form.get('adspower_api_port', '50325')
+            api_url = f'http://{api_host}:{api_port}'
+            
             adspower_configs = {
-                'adspower_api_url': request.form.get('adspower_api_url', 'http://local.adspower.net:50325'),
+                'adspower_api_host': api_host,
+                'adspower_api_port': api_port,
+                'adspower_api_url': api_url,  # 保持向后兼容
                 'adspower_user_id': request.form.get('adspower_user_id', ''),
                 'adspower_multi_user_ids': request.form.get('adspower_multi_user_ids', ''),
                 'max_concurrent_tasks': request.form.get('max_concurrent_tasks', '2'),
                 'task_timeout': request.form.get('task_timeout', '900'),
                 'browser_startup_delay': request.form.get('browser_startup_delay', '2'),
+                'request_interval': request.form.get('request_interval', '2.0'),
+                'user_switch_interval': request.form.get('user_switch_interval', '30'),
                 'adspower_headless': 'adspower_headless' in request.form,
-                'adspower_health_check': 'adspower_health_check' in request.form
+                'adspower_health_check': 'adspower_health_check' in request.form,
+                'user_rotation_enabled': 'user_rotation_enabled' in request.form
             }
             
             # 更新或创建配置记录
@@ -1069,7 +1188,10 @@ def update_config():
                 'multi_user_ids': [uid.strip() for uid in adspower_configs['adspower_multi_user_ids'].split('\n') if uid.strip()],
                 'max_concurrent_tasks': int(adspower_configs['max_concurrent_tasks']),
                 'task_timeout': int(adspower_configs['task_timeout']),
-                'browser_startup_delay': int(adspower_configs['browser_startup_delay']),
+                'browser_startup_delay': float(adspower_configs['browser_startup_delay']),
+                'request_interval': float(adspower_configs['request_interval']),
+                'user_switch_interval': int(adspower_configs['user_switch_interval']),
+                'user_rotation_enabled': adspower_configs['user_rotation_enabled'],
                 'headless': adspower_configs['adspower_headless'],
                 'health_check': adspower_configs['adspower_health_check']
             })
@@ -1079,6 +1201,12 @@ def update_config():
                 task_manager.max_concurrent_tasks = int(adspower_configs['max_concurrent_tasks'])
             if hasattr(task_manager, 'user_id_pool'):
                 task_manager.user_id_pool = [uid.strip() for uid in adspower_configs['adspower_multi_user_ids'].split('\n') if uid.strip()]
+            if hasattr(task_manager, 'request_interval'):
+                task_manager.request_interval = float(adspower_configs['request_interval'])
+            if hasattr(task_manager, 'user_switch_interval'):
+                task_manager.user_switch_interval = int(adspower_configs['user_switch_interval'])
+            if hasattr(task_manager, 'user_rotation_enabled'):
+                task_manager.user_rotation_enabled = adspower_configs['user_rotation_enabled']
             
             db.session.commit()
             flash('AdsPower配置已更新', 'success')
@@ -1676,7 +1804,10 @@ def api_check_adspower_installation():
     """检测AdsPower安装状态"""
     try:
         data = request.get_json()
-        api_url = data.get('api_url', 'http://local.adspower.net:50325')
+        # 支持新的主机和端口字段
+        api_host = data.get('api_host', 'local.adspower.net')
+        api_port = data.get('api_port', '50325')
+        api_url = data.get('api_url', f'http://{api_host}:{api_port}')
         
         import requests
         
@@ -1726,7 +1857,10 @@ def api_test_adspower_connection():
     """测试AdsPower连接"""
     try:
         data = request.get_json()
-        api_url = data.get('api_url', 'http://local.adspower.net:50325')
+        # 支持新的主机和端口字段
+        api_host = data.get('api_host', 'local.adspower.net')
+        api_port = data.get('api_port', '50325')
+        api_url = data.get('api_url', f'http://{api_host}:{api_port}')
         user_id = data.get('user_id')
         
         if not user_id:

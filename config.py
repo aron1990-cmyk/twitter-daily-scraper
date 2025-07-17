@@ -13,13 +13,18 @@ ADS_POWER_CONFIG = {
     # 注意：为了实现真正的并行抓取，每个用户ID应该对应不同的AdsPower浏览器实例
     # 如果只有一个AdsPower账号，可以创建多个浏览器配置文件
     'multi_user_ids': [
-        'k11p9ypc',  # 窗口1 - 主要浏览器实例
-        'k11p9y6f',  # 窗口2 - 如果有多个AdsPower账号，请替换为不同的user_id
-        # 'user_id_4',  # 窗口4 - 可以添加更多用户ID
+        'k11p9ypc',  # 窗口1 - 主要浏览器实例（已验证存在）
+        'k11p9y6f',  # 窗口2 - 第二个浏览器实例（已验证存在）
     ],
     
     # 并行任务配置
-    'max_concurrent_tasks': 6,  # 最大并发任务数（进一步增加并发数）
+    'max_concurrent_tasks': 2,  # 最大并发任务数（恢复为2，支持两个用户ID）
+    
+    # 请求频率控制配置 - 避免"Too many request per second"错误
+    'request_interval': 2.0,    # 请求间隔时间（秒）- 避免频率限制
+    'user_rotation_enabled': True,  # 启用用户轮询机制
+    'user_switch_interval': 30,     # 用户切换间隔（秒）
+    'api_retry_delay': 5.0,         # API重试延迟（秒）
     'task_timeout': 300,        # 单个任务超时时间（秒）- 极速模式
     'browser_startup_delay': 0.5, # 浏览器启动间隔（秒）- 极速启动
     
