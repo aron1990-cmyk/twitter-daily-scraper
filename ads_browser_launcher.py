@@ -11,13 +11,21 @@ import psutil
 import subprocess
 import os
 from typing import Optional, Dict, Any
-from config import ADS_POWER_CONFIG
+# 配置将从调用方传入，不再直接导入
 
 class AdsPowerLauncher:
-    def __init__(self):
-        self.api_url = ADS_POWER_CONFIG['local_api_url']
-        self.user_id = ADS_POWER_CONFIG['user_id']
-        self.group_id = ADS_POWER_CONFIG.get('group_id', '')
+    def __init__(self, config=None):
+        # 如果没有传入配置，使用默认配置
+        if config is None:
+            config = {
+                'local_api_url': 'http://local.adspower.net:50325',
+                'user_id': '',
+                'group_id': ''
+            }
+        
+        self.api_url = config.get('local_api_url', 'http://local.adspower.net:50325')
+        self.user_id = config.get('user_id', '')
+        self.group_id = config.get('group_id', '')
         self.browser_info = None
         self.logger = logging.getLogger(__name__)
         self.max_cpu_threshold = 80.0  # CPU使用率阈值
@@ -68,18 +76,23 @@ class AdsPowerLauncher:
                 params['group_id'] = self.group_id
             
             # 添加快速模式配置
-            from config import BROWSER_CONFIG
-            if BROWSER_CONFIG.get('fast_mode', False):
+            # 使用默认的浏览器配置
+            browser_config = {
+                'fast_mode': True,
+                'skip_images': True,
+                'disable_animations': True
+            }
+            if browser_config.get('fast_mode', False):
                 # 快速模式下的浏览器参数
                 launch_args = []
                 
-                if BROWSER_CONFIG.get('skip_images', False):
+                if browser_config.get('skip_images', False):
                     launch_args.extend([
                         '--blink-settings=imagesEnabled=false',
                         '--disable-images'
                     ])
                 
-                if BROWSER_CONFIG.get('disable_animations', False):
+                if browser_config.get('disable_animations', False):
                     launch_args.extend([
                         '--disable-background-timer-throttling',
                         '--disable-renderer-backgrounding',

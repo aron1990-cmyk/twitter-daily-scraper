@@ -344,8 +344,31 @@ function startTask(taskId) {
             })
             .fail(function(xhr) {
                 console.log('POST request failed:', xhr);
-                const error = xhr.responseJSON ? xhr.responseJSON.error : '启动失败';
-                showAlert('启动失败: ' + error, 'danger');
+                let errorMessage = '启动失败';
+                let detailsHtml = '';
+                
+                if (xhr.responseJSON) {
+                    errorMessage = xhr.responseJSON.error || '启动失败';
+                    
+                    // 如果有详细信息，构建详细错误信息
+                    if (xhr.responseJSON.details) {
+                        const details = xhr.responseJSON.details;
+                        detailsHtml = `
+                            <div class="mt-2">
+                                <strong>详细信息：</strong><br>
+                                <small>
+                                    • 当前运行任务数: ${details.running_count}/${details.max_concurrent}<br>
+                                    • 可用槽位: ${details.available_slots}<br>
+                                    • 可用浏览器: ${details.available_browsers}<br>
+                                    • 用户ID池: ${details.user_id_pool}<br>
+                                    • 配置的用户ID: ${details.available_user_ids ? details.available_user_ids.join(', ') : '无'}
+                                </small>
+                            </div>
+                        `;
+                    }
+                }
+                
+                showAlert(errorMessage + detailsHtml, 'danger');
             });
     } else {
         console.log('User cancelled the action');
@@ -374,8 +397,31 @@ function restartTask(taskId) {
                 setTimeout(() => location.reload(), 1000);
             })
             .fail(function(xhr) {
-                const error = xhr.responseJSON ? xhr.responseJSON.error : '重新启动失败';
-                showAlert('重新启动失败: ' + error, 'danger');
+                let errorMessage = '重新启动失败';
+                let detailsHtml = '';
+                
+                if (xhr.responseJSON) {
+                    errorMessage = xhr.responseJSON.error || '重新启动失败';
+                    
+                    // 如果有详细信息，构建详细错误信息
+                    if (xhr.responseJSON.details) {
+                        const details = xhr.responseJSON.details;
+                        detailsHtml = `
+                            <div class="mt-2">
+                                <strong>详细信息：</strong><br>
+                                <small>
+                                    • 当前运行任务数: ${details.running_count}/${details.max_concurrent}<br>
+                                    • 可用槽位: ${details.available_slots}<br>
+                                    • 可用浏览器: ${details.available_browsers}<br>
+                                    • 用户ID池: ${details.user_id_pool}<br>
+                                    • 配置的用户ID: ${details.available_user_ids ? details.available_user_ids.join(', ') : '无'}
+                                </small>
+                            </div>
+                        `;
+                    }
+                }
+                
+                showAlert(errorMessage + detailsHtml, 'danger');
             });
     }
 }

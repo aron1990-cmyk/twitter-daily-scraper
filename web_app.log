@@ -1,0 +1,84 @@
+2025-07-21 02:20:24,734 - optimized_scraping_engine - INFO - 滚动事件处理器已启动
+2025-07-21 02:20:24,734 - optimized_scraping_engine - INFO - 抓取协调器已启动
+2025-07-21 02:20:24,734 - optimized_scraping_engine - INFO - 保存协调器已启动
+2025-07-21 02:20:24,734 - optimized_scraping_engine - INFO - 优化抓取引擎已启动，工作线程数: 2
+2025-07-21 02:20:24,734 - enhanced_twitter_parser - INFO - 多窗口增强抓取器已初始化，最大工作线程: 2
+✅ 配置已从数据库加载完成
+[TaskManager] 初始化完成，支持 2 个用户ID，最大并发 2
+[TaskManager] 请求间隔: 2.0s，用户轮询: True
+✅ TaskManager已初始化，最大并发任务数: 2
+✅ OptimizedScraper已初始化，支持多窗口并发抓取
+ * Serving Flask app 'web_app'
+ * Debug mode: off
+/Users/aron/twitter-daily-scraper/web_app.py:2583: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  task_name = data.get('task_name', f'增强抓取_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}')
+/Users/aron/twitter-daily-scraper/web_app.py:2589: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  task_id = f"enhanced_scraping_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+2025-07-21 02:20:37,857 - ads_browser_launcher - INFO - 启用快速模式，浏览器参数: ['--blink-settings=imagesEnabled=false', '--disable-images', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-features=TranslateUI', '--disable-ipc-flooding-protection', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu', '--disable-web-security', '--disable-features=VizDisplayCompositor']
+2025-07-21 02:20:37,857 - ads_browser_launcher - INFO - 正在启动 AdsPower 浏览器，用户ID: k11p9ypc
+2025-07-21 02:20:37,871 - ads_browser_launcher - INFO - 浏览器启动成功，调试端口: ws://127.0.0.1:49863/devtools/browser/3ec41205-da4f-47ac-a748-1338587f63cd
+2025-07-21 02:20:37,872 - optimized_scraping_engine - INFO - 滚动事件处理器已启动
+2025-07-21 02:20:37,872 - optimized_scraping_engine - INFO - 抓取协调器已启动
+2025-07-21 02:20:37,872 - optimized_scraping_engine - INFO - 保存协调器已启动
+2025-07-21 02:20:37,872 - optimized_scraping_engine - INFO - 优化抓取引擎已启动，工作线程数: 4
+2025-07-21 02:20:37,872 - optimized_scraping_engine - INFO - 已注册窗口 window_k11p9ypc_1753035637 的解析器
+2025-07-21 02:20:37,872 - twitter_parser - INFO - 增强Twitter解析器已初始化 (窗口: window_k11p9ypc_1753035637)
+2025-07-21 02:20:37,872 - twitter_parser - INFO - Initializing TwitterParser with debug_port: ws://127.0.0.1:49863/devtools/browser/3ec41205-da4f-47ac-a748-1338587f63cd
+2025-07-21 02:20:37,872 - twitter_parser - INFO - 开始启动 Playwright...
+2025-07-21 02:20:38,082 - twitter_parser - INFO - 开始连接到浏览器调试端口: ws://127.0.0.1:49863/devtools/browser/3ec41205-da4f-47ac-a748-1338587f63cd
+2025-07-21 02:20:38,123 - twitter_parser - INFO - 成功连接到浏览器实例
+2025-07-21 02:20:38,124 - twitter_parser - INFO - 找到 1 个浏览器上下文
+2025-07-21 02:20:38,124 - twitter_parser - INFO - 在上下文中找到 2 个页面
+2025-07-21 02:20:38,124 - twitter_parser - INFO - 使用现有页面，当前URL: https://x.com/neilpatel
+2025-07-21 02:20:38,124 - twitter_parser - INFO - 设置页面超时时间: 30000ms
+2025-07-21 02:20:38,124 - twitter_parser - INFO - 设置导航超时时间: 60000ms
+2025-07-21 02:20:38,124 - twitter_parser - INFO - 人工行为模拟器初始化完成
+2025-07-21 02:20:38,124 - twitter_parser - INFO - 成功连接到浏览器
+2025-07-21 02:20:38,124 - twitter_parser - INFO - TwitterParser initialization completed
+2025-07-21 02:20:38,134 - twitter_parser - INFO - 尝试导航到 @neilpatel 的个人资料页面 (第1次)
+2025-07-21 02:20:38,473 - twitter_parser - INFO - DOM内容加载完成
+2025-07-21 02:21:08,488 - twitter_parser - WARNING - 等待加载状态失败: Timeout 30000ms exceeded.，继续尝试
+2025-07-21 02:21:10,496 - twitter_parser - INFO - 成功导航到 @neilpatel 的个人资料页面
+2025-07-21 02:21:10,497 - optimized_scraping_engine - INFO - 创建抓取任务: user_neilpatel_window_k11p9ypc_1753035637_1753035670 (窗口: window_k11p9ypc_1753035637, 类型: user, 目标: neilpatel)
+2025-07-21 02:21:10,497 - twitter_parser - INFO - 开始增强抓取用户 @neilpatel 的推文 (任务: user_neilpatel_window_k11p9ypc_1753035637_1753035670)
+2025-07-21 02:21:10,504 - twitter_parser - INFO - 尝试导航到 @neilpatel 的个人资料页面 (第1次)
+2025-07-21 02:21:10,797 - twitter_parser - INFO - DOM内容加载完成
+2025-07-21 02:21:40,799 - twitter_parser - WARNING - 等待加载状态失败: Timeout 30000ms exceeded.，继续尝试
+2025-07-21 02:21:42,807 - twitter_parser - INFO - 成功导航到 @neilpatel 的个人资料页面
+2025-07-21 02:21:42,809 - twitter_parser - INFO - 开始增强滚动和抓取，目标: 2 条推文
+2025-07-21 02:21:43,861 - optimized_scraping_engine - INFO - 开始执行抓取任务: user_neilpatel_window_k11p9ypc_1753035637_1753035670 (窗口: window_k11p9ypc_1753035637)
+2025-07-21 02:21:43,862 - optimized_scraping_engine - INFO - 开始抓取当前页面推文，目标数量: 2
+2025-07-21 02:21:44,863 - optimized_scraping_engine - INFO - 正在查找推文元素...
+2025-07-21 02:21:44,876 - optimized_scraping_engine - INFO - 开始执行抓取任务: user_neilpatel_window_k11p9ypc_1753035637_1753035670 (窗口: window_k11p9ypc_1753035637)
+2025-07-21 02:21:44,876 - optimized_scraping_engine - INFO - 开始抓取当前页面推文，目标数量: 2
+2025-07-21 02:21:45,391 - optimized_scraping_engine - INFO - 开始执行抓取任务: user_neilpatel_window_k11p9ypc_1753035637_1753035670 (窗口: window_k11p9ypc_1753035637)
+2025-07-21 02:21:45,391 - optimized_scraping_engine - INFO - 开始抓取当前页面推文，目标数量: 2
+2025-07-21 02:21:45,877 - optimized_scraping_engine - INFO - 正在查找推文元素...
+2025-07-21 02:21:46,393 - optimized_scraping_engine - INFO - 正在查找推文元素...
+2025-07-21 02:21:46,408 - optimized_scraping_engine - INFO - 开始执行抓取任务: user_neilpatel_window_k11p9ypc_1753035637_1753035670 (窗口: window_k11p9ypc_1753035637)
+2025-07-21 02:21:46,409 - optimized_scraping_engine - INFO - 开始抓取当前页面推文，目标数量: 2
+2025-07-21 02:21:47,410 - optimized_scraping_engine - INFO - 正在查找推文元素...
+2025-07-21 02:21:53,056 - twitter_parser - INFO - 增强滚动完成，总滚动次数: 6，最终推文数: 0
+2025-07-21 02:21:53,056 - optimized_scraping_engine - INFO - 任务 user_neilpatel_window_k11p9ypc_1753035637_1753035670 已完成
+2025-07-21 02:21:53,056 - twitter_parser - INFO - 增强抓取完成，共获得 0 条推文
+2025-07-21 02:21:53,061 - twitter_parser - INFO - 浏览器连接已关闭
+2025-07-21 02:21:54,864 - optimized_scraping_engine - INFO - 找到 4 个推文元素
+2025-07-21 02:21:54,865 - optimized_scraping_engine - INFO - 当前任务ID: user_neilpatel_window_k11p9ypc_1753035637_1753035670, 已有推文数: 0
+2025-07-21 02:21:55,878 - optimized_scraping_engine - INFO - 找到 4 个推文元素
+2025-07-21 02:21:55,878 - optimized_scraping_engine - INFO - 当前任务ID: user_neilpatel_window_k11p9ypc_1753035637_1753035670, 已有推文数: 0
+2025-07-21 02:21:56,394 - optimized_scraping_engine - INFO - 找到 4 个推文元素
+2025-07-21 02:21:56,394 - optimized_scraping_engine - INFO - 当前任务ID: user_neilpatel_window_k11p9ypc_1753035637_1753035670, 已有推文数: 0
+2025-07-21 02:21:57,411 - optimized_scraping_engine - INFO - 找到 4 个推文元素
+2025-07-21 02:21:57,412 - optimized_scraping_engine - INFO - 当前任务ID: user_neilpatel_window_k11p9ypc_1753035637_1753035670, 已有推文数: 0
+2025-07-21 02:22:43,863 - optimized_scraping_engine - WARNING - 任务 user_neilpatel_window_k11p9ypc_1753035637_1753035670 抓取超时，将重试
+2025-07-21 02:22:44,879 - optimized_scraping_engine - WARNING - 任务 user_neilpatel_window_k11p9ypc_1753035637_1753035670 抓取超时，将重试
+2025-07-21 02:22:45,396 - optimized_scraping_engine - WARNING - 任务 user_neilpatel_window_k11p9ypc_1753035637_1753035670 抓取超时，将重试
+2025-07-21 02:22:46,412 - optimized_scraping_engine - WARNING - 任务 user_neilpatel_window_k11p9ypc_1753035637_1753035670 抓取超时，将重试
+2025-07-21 02:22:46,920 - optimized_scraping_engine - WARNING - 任务 user_neilpatel_window_k11p9ypc_1753035637_1753035670 抓取超时，将重试
+2025-07-21 02:22:47,937 - optimized_scraping_engine - WARNING - 任务 user_neilpatel_window_k11p9ypc_1753035637_1753035670 抓取超时，将重试
+2025-07-21 02:22:48,463 - optimized_scraping_engine - WARNING - 任务 user_neilpatel_window_k11p9ypc_1753035637_1753035670 抓取超时，将重试
+2025-07-21 02:22:49,498 - optimized_scraping_engine - WARNING - 任务 user_neilpatel_window_k11p9ypc_1753035637_1753035670 抓取超时，将重试
+2025-07-21 02:22:50,013 - optimized_scraping_engine - WARNING - 任务 user_neilpatel_window_k11p9ypc_1753035637_1753035670 抓取超时，将重试
+2025-07-21 02:22:51,037 - optimized_scraping_engine - WARNING - 任务 user_neilpatel_window_k11p9ypc_1753035637_1753035670 抓取超时，将重试
+2025-07-21 02:22:51,541 - optimized_scraping_engine - WARNING - 任务 user_neilpatel_window_k11p9ypc_1753035637_1753035670 抓取超时，将重试
+2025-07-21 02:22:52,559 - optimized_scraping_engine - WARNING - 任务 user_neilpatel_window_k11p9ypc_1753035637_1753035670 抓取超时，将重试

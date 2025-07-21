@@ -1,0 +1,97 @@
+2025-07-21 03:58:38,625 - DEBUG - Using selector: KqueueSelector
+2025-07-21 03:58:38,625 - INFO - 🚀 初始化AdsPower启动器...
+2025-07-21 03:58:38,625 - INFO - 🌐 启动浏览器...
+2025-07-21 03:58:38,625 - ERROR - ❌ 测试过程中发生错误: AdsPowerLauncher.start_browser() got an unexpected keyword argument 'fast_mode'
+2025-07-21 03:58:38,626 - ERROR - Traceback (most recent call last):
+  File "/Users/aron/twitter-daily-scraper/test_scroll_strategy.py", line 42, in test_scroll_strategy
+    await launcher.start_browser(
+          ^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: AdsPowerLauncher.start_browser() got an unexpected keyword argument 'fast_mode'
+
+2025-07-21 03:58:38,626 - ERROR - 关闭浏览器时出错: 'AdsPowerLauncher' object has no attribute 'close_browser'
+2025-07-21 03:59:29,625 - DEBUG - Using selector: KqueueSelector
+2025-07-21 03:59:29,625 - INFO - 🚀 初始化AdsPower启动器...
+2025-07-21 03:59:29,625 - INFO - 🌐 启动浏览器...
+2025-07-21 03:59:29,625 - INFO - 启用快速模式，浏览器参数: ['--blink-settings=imagesEnabled=false', '--disable-images', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-features=TranslateUI', '--disable-ipc-flooding-protection', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu', '--disable-web-security', '--disable-features=VizDisplayCompositor']
+2025-07-21 03:59:29,625 - INFO - 正在启动 AdsPower 浏览器，用户ID: k11p9ypc
+2025-07-21 03:59:29,631 - DEBUG - Starting new HTTP connection (1): 127.0.0.1:1082
+2025-07-21 03:59:29,638 - DEBUG - http://127.0.0.1:1082 "GET http://local.adspower.net:50325/api/v1/browser/start?user_id=k11p9ypc&launch_args=%5B%22--blink-settings%3DimagesEnabled%3Dfalse%22%2C+%22--disable-images%22%2C+%22--disable-background-timer-throttling%22%2C+%22--disable-renderer-backgrounding%22%2C+%22--disable-backgrounding-occluded-windows%22%2C+%22--disable-features%3DTranslateUI%22%2C+%22--disable-ipc-flooding-protection%22%2C+%22--no-sandbox%22%2C+%22--disable-setuid-sandbox%22%2C+%22--disable-dev-shm-usage%22%2C+%22--disable-accelerated-2d-canvas%22%2C+%22--disable-gpu%22%2C+%22--disable-web-security%22%2C+%22--disable-features%3DVizDisplayCompositor%22%5D HTTP/1.1" 200 318
+2025-07-21 03:59:29,638 - INFO - 浏览器启动成功，调试端口: ws://127.0.0.1:54226/devtools/browser/3238e419-d4e3-41b4-8a68-191e673930b2
+2025-07-21 03:59:29,639 - DEBUG - Starting new HTTP connection (1): 127.0.0.1:1082
+2025-07-21 03:59:29,651 - DEBUG - http://127.0.0.1:1082 "GET http://local.adspower.net:50325/api/v1/browser/active?user_id=k11p9ypc HTTP/1.1" 200 336
+2025-07-21 03:59:29,652 - INFO - 浏览器已准备就绪
+2025-07-21 03:59:29,652 - INFO - ✅ 浏览器启动成功，调试端口: ws://127.0.0.1:54226/devtools/browser/3238e419-d4e3-41b4-8a68-191e673930b2
+2025-07-21 03:59:29,652 - INFO - 🔧 初始化TwitterParser...
+2025-07-21 03:59:29,652 - INFO - Initializing TwitterParser with debug_port: ws://127.0.0.1:54226/devtools/browser/3238e419-d4e3-41b4-8a68-191e673930b2
+2025-07-21 03:59:29,652 - INFO - 开始启动 Playwright...
+2025-07-21 03:59:29,996 - INFO - 开始连接到浏览器调试端口: ws://127.0.0.1:54226/devtools/browser/3238e419-d4e3-41b4-8a68-191e673930b2
+2025-07-21 03:59:30,062 - INFO - 成功连接到浏览器实例
+2025-07-21 03:59:30,062 - INFO - 找到 1 个浏览器上下文
+2025-07-21 03:59:30,062 - INFO - 在上下文中找到 4 个页面
+2025-07-21 03:59:30,062 - INFO - 使用现有页面，当前URL: https://x.com/neilpatel
+2025-07-21 03:59:30,062 - INFO - 设置页面超时时间: 30000ms
+2025-07-21 03:59:30,062 - INFO - 设置导航超时时间: 60000ms
+2025-07-21 03:59:30,062 - INFO - 人工行为模拟器初始化完成
+2025-07-21 03:59:30,062 - INFO - 成功连接到浏览器
+2025-07-21 03:59:30,062 - INFO - TwitterParser initialization completed
+2025-07-21 03:59:30,062 - INFO - ✅ TwitterParser初始化完成
+2025-07-21 03:59:30,062 - INFO - 🎯 开始测试抓取 @elonmusk 的 50 条推文...
+2025-07-21 03:59:30,083 - INFO - 尝试导航到 @elonmusk 的个人资料页面 (第1次)
+2025-07-21 03:59:30,606 - INFO - DOM内容加载完成
+2025-07-21 04:00:00,609 - WARNING - 等待加载状态失败: Timeout 30000ms exceeded.，继续尝试
+2025-07-21 04:00:02,617 - INFO - 成功导航到 @elonmusk 的个人资料页面
+2025-07-21 04:00:02,618 - ERROR - ❌ 无法导航到 @elonmusk 的页面
+2025-07-21 04:00:02,627 - INFO - 浏览器连接已关闭
+2025-07-21 04:00:02,628 - INFO - ✅ TwitterParser已关闭
+2025-07-21 04:00:02,628 - INFO - 正在停止 AdsPower 浏览器，用户ID: k11p9ypc
+2025-07-21 04:00:02,630 - DEBUG - Starting new HTTP connection (1): 127.0.0.1:1082
+2025-07-21 04:00:10,677 - DEBUG - http://127.0.0.1:1082 "GET http://local.adspower.net:50325/api/v1/browser/stop?user_id=k11p9ypc HTTP/1.1" 200 26
+2025-07-21 04:00:10,681 - INFO - 浏览器停止成功
+2025-07-21 04:00:10,681 - INFO - ✅ 浏览器已关闭
+2025-07-21 04:01:08,151 - DEBUG - Using selector: KqueueSelector
+2025-07-21 04:01:08,151 - INFO - 🚀 初始化AdsPower启动器...
+2025-07-21 04:01:08,151 - INFO - 🌐 启动浏览器...
+2025-07-21 04:01:08,151 - INFO - 启用快速模式，浏览器参数: ['--blink-settings=imagesEnabled=false', '--disable-images', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-features=TranslateUI', '--disable-ipc-flooding-protection', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu', '--disable-web-security', '--disable-features=VizDisplayCompositor']
+2025-07-21 04:01:08,151 - INFO - 正在启动 AdsPower 浏览器，用户ID: k11p9ypc
+2025-07-21 04:01:08,157 - DEBUG - Starting new HTTP connection (1): 127.0.0.1:1082
+2025-07-21 04:01:12,178 - DEBUG - http://127.0.0.1:1082 "GET http://local.adspower.net:50325/api/v1/browser/start?user_id=k11p9ypc&launch_args=%5B%22--blink-settings%3DimagesEnabled%3Dfalse%22%2C+%22--disable-images%22%2C+%22--disable-background-timer-throttling%22%2C+%22--disable-renderer-backgrounding%22%2C+%22--disable-backgrounding-occluded-windows%22%2C+%22--disable-features%3DTranslateUI%22%2C+%22--disable-ipc-flooding-protection%22%2C+%22--no-sandbox%22%2C+%22--disable-setuid-sandbox%22%2C+%22--disable-dev-shm-usage%22%2C+%22--disable-accelerated-2d-canvas%22%2C+%22--disable-gpu%22%2C+%22--disable-web-security%22%2C+%22--disable-features%3DVizDisplayCompositor%22%5D HTTP/1.1" 200 318
+2025-07-21 04:01:12,179 - INFO - 浏览器启动成功，调试端口: ws://127.0.0.1:57047/devtools/browser/ae8b4f38-2861-46ac-9b56-1e23fed1b64f
+2025-07-21 04:01:12,181 - DEBUG - Starting new HTTP connection (1): 127.0.0.1:1082
+2025-07-21 04:01:12,239 - DEBUG - http://127.0.0.1:1082 "GET http://local.adspower.net:50325/api/v1/browser/active?user_id=k11p9ypc HTTP/1.1" 200 336
+2025-07-21 04:01:12,239 - INFO - 浏览器已准备就绪
+2025-07-21 04:01:12,239 - INFO - ✅ 浏览器启动成功，调试端口: ws://127.0.0.1:57047/devtools/browser/ae8b4f38-2861-46ac-9b56-1e23fed1b64f
+2025-07-21 04:01:12,239 - INFO - 🔧 初始化TwitterParser...
+2025-07-21 04:01:12,239 - INFO - Initializing TwitterParser with debug_port: ws://127.0.0.1:57047/devtools/browser/ae8b4f38-2861-46ac-9b56-1e23fed1b64f
+2025-07-21 04:01:12,240 - INFO - 开始启动 Playwright...
+2025-07-21 04:01:12,986 - INFO - 开始连接到浏览器调试端口: ws://127.0.0.1:57047/devtools/browser/ae8b4f38-2861-46ac-9b56-1e23fed1b64f
+2025-07-21 04:01:13,365 - INFO - 成功连接到浏览器实例
+2025-07-21 04:01:13,366 - INFO - 找到 1 个浏览器上下文
+2025-07-21 04:01:13,366 - INFO - 在上下文中找到 4 个页面
+2025-07-21 04:01:13,366 - INFO - 使用现有页面，当前URL: https://x.com/elonmusk
+2025-07-21 04:01:13,366 - INFO - 设置页面超时时间: 30000ms
+2025-07-21 04:01:13,366 - INFO - 设置导航超时时间: 60000ms
+2025-07-21 04:01:13,366 - INFO - 人工行为模拟器初始化完成
+2025-07-21 04:01:13,366 - INFO - 成功连接到浏览器
+2025-07-21 04:01:13,366 - INFO - TwitterParser initialization completed
+2025-07-21 04:01:13,366 - INFO - ✅ TwitterParser初始化完成
+2025-07-21 04:01:13,366 - INFO - 🎯 开始测试抓取 @elonmusk 的 50 条推文...
+2025-07-21 04:01:13,384 - INFO - 尝试导航到 @elonmusk 的个人资料页面 (第1次)
+2025-07-21 04:01:13,724 - INFO - DOM内容加载完成
+2025-07-21 04:01:43,730 - WARNING - 等待加载状态失败: Timeout 30000ms exceeded.，继续尝试
+2025-07-21 04:01:45,740 - INFO - 成功导航到 @elonmusk 的个人资料页面
+2025-07-21 04:01:45,742 - INFO - ✅ 成功导航到 @elonmusk 的页面
+2025-07-21 04:01:45,742 - INFO - 📜 开始滚动加载推文，目标: 50 条
+2025-07-21 04:01:45,742 - ERROR - ❌ 测试过程中发生错误: TwitterParser.scroll_and_load_tweets() got an unexpected keyword argument 'target_tweets'
+2025-07-21 04:01:45,742 - ERROR - Traceback (most recent call last):
+  File "/Users/aron/twitter-daily-scraper/test_scroll_strategy.py", line 71, in test_scroll_strategy
+    tweets = await parser.scroll_and_load_tweets(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: TwitterParser.scroll_and_load_tweets() got an unexpected keyword argument 'target_tweets'
+
+2025-07-21 04:01:45,749 - INFO - 浏览器连接已关闭
+2025-07-21 04:01:45,749 - INFO - ✅ TwitterParser已关闭
+2025-07-21 04:01:45,749 - INFO - 正在停止 AdsPower 浏览器，用户ID: k11p9ypc
+2025-07-21 04:01:45,752 - DEBUG - Starting new HTTP connection (1): 127.0.0.1:1082
+2025-07-21 04:01:53,776 - DEBUG - http://127.0.0.1:1082 "GET http://local.adspower.net:50325/api/v1/browser/stop?user_id=k11p9ypc HTTP/1.1" 200 26
+2025-07-21 04:01:53,777 - INFO - 浏览器停止成功
+2025-07-21 04:01:53,778 - INFO - ✅ 浏览器已关闭

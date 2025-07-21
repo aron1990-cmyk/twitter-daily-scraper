@@ -1,0 +1,244 @@
+{
+  "metadata": {
+    "username": "elonmusk",
+    "scraped_at": "2025-07-21T03:33:37.016019",
+    "total_tweets": 8,
+    "scraping_duration": 0,
+    "status": "success"
+  },
+  "tweets": [
+    {
+      "username": "aelluswamy",
+      "content": "New geofence is up I just opened the Tesla Robotaxi app and the geofenced area in Austin, Texas has officially expanded",
+      "publish_time": "2025-07-14T10:54:57.000Z",
+      "link": "https://x.com/aelluswamy/status/1944712213044068640",
+      "likes": 9540,
+      "comments": 1199,
+      "retweets": 1748,
+      "media": {
+        "images": [
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/profile_images/1561153006891978754/hvZ3Tm0d_x96.jpg",
+            "description": "",
+            "original_url": "https://pbs.twimg.com/profile_images/1561153006891978754/hvZ3Tm0d_x96.jpg"
+          },
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/profile_images/1337607516008501250/6Ggc4S5n_bigger.png",
+            "description": "",
+            "original_url": "https://pbs.twimg.com/profile_images/1337607516008501250/6Ggc4S5n_bigger.png"
+          },
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/profile_images/1882967991362727936/bySD-Rwj_normal.jpg",
+            "description": "",
+            "original_url": "https://pbs.twimg.com/profile_images/1882967991362727936/bySD-Rwj_normal.jpg"
+          }
+        ],
+        "videos": [
+          {
+            "type": "video",
+            "poster": "https://pbs.twimg.com/amplify_video_thumb/1944687013728276480/img/5GTokDBpqEeWZld0.jpg",
+            "url": null,
+            "description": "视频内容"
+          }
+        ]
+      },
+      "post_type": "视频",
+      "source": "@elonmusk",
+      "source_type": "user_profile"
+    },
+    {
+      "username": "elonmusk",
+      "content": "Cool feature just dropped for \n@SuperGrok\n subscribers. \n\nTurn on Companions in settings.",
+      "publish_time": "2025-07-14T10:27:49.000Z",
+      "link": "https://x.com/elonmusk/status/1944705383874146513",
+      "likes": 52716,
+      "comments": 11359,
+      "retweets": 9311,
+      "media": {
+        "images": [
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/profile_images/1936002956333080576/kqqe2iWO_x96.jpg",
+            "description": "",
+            "original_url": "https://pbs.twimg.com/profile_images/1936002956333080576/kqqe2iWO_x96.jpg"
+          },
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs_bigger.jpg",
+            "description": "",
+            "original_url": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs_bigger.jpg"
+          }
+        ],
+        "videos": []
+      },
+      "post_type": "图文",
+      "source": "@elonmusk",
+      "source_type": "user_profile"
+    },
+    {
+      "username": "elonmusk",
+      "content": "I meant to tag \n@Grok",
+      "publish_time": "2025-07-14T10:52:03.000Z",
+      "link": "https://x.com/elonmusk/status/1944711485021982867",
+      "likes": 6462,
+      "comments": 863,
+      "retweets": 1363,
+      "media": {
+        "images": [
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/profile_images/1936002956333080576/kqqe2iWO_x96.jpg",
+            "description": "",
+            "original_url": "https://pbs.twimg.com/profile_images/1936002956333080576/kqqe2iWO_x96.jpg"
+          },
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs_bigger.jpg",
+            "description": "",
+            "original_url": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs_bigger.jpg"
+          }
+        ],
+        "videos": []
+      },
+      "post_type": "图文",
+      "source": "@elonmusk",
+      "source_type": "user_profile"
+    },
+    {
+      "username": "tetsuoai",
+      "content": "Change Grok4’s custom instructions to have it role-play any persona you want!",
+      "publish_time": "2025-07-14T00:51:43.000Z",
+      "link": "https://x.com/tetsuoai/status/1944560406519001418",
+      "likes": 3788,
+      "comments": 376,
+      "retweets": 1192,
+      "media": {
+        "images": [
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/media/Gvx3I_6XgAAyVEU?format=jpg&name=medium",
+            "description": "Afbeelding",
+            "original_url": "https://pbs.twimg.com/media/Gvx3I_6XgAAyVEU?format=jpg&name=medium"
+          }
+        ],
+        "videos": []
+      },
+      "post_type": "图文",
+      "source": "@elonmusk",
+      "source_type": "user_profile"
+    },
+    {
+      "username": "elonmusk",
+      "content": "This is pretty cool",
+      "publish_time": "2025-07-14T10:32:04.000Z",
+      "link": "https://x.com/elonmusk/status/1944706456550506910",
+      "likes": 6315,
+      "comments": 594,
+      "retweets": 1372,
+      "media": {
+        "images": [
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/profile_images/1936002956333080576/kqqe2iWO_x96.jpg",
+            "description": "",
+            "original_url": "https://pbs.twimg.com/profile_images/1936002956333080576/kqqe2iWO_x96.jpg"
+          },
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs_bigger.jpg",
+            "description": "",
+            "original_url": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs_bigger.jpg"
+          }
+        ],
+        "videos": []
+      },
+      "post_type": "图文",
+      "source": "@elonmusk",
+      "source_type": "user_profile"
+    },
+    {
+      "username": "elonmusk",
+      "content": "Elon Musk Elon Musk @elonmusk · 3,4K 3,4K 3,4K 7,6K 7,6K 7,6K 28K 28K 28K 14 mln. 14 mln. 14 mln.",
+      "publish_time": "2025-07-14T10:47:59.000Z",
+      "link": "https://x.com/elonmusk/status/1944710462165447104",
+      "likes": 28635,
+      "comments": 3495,
+      "retweets": 7613,
+      "media": {
+        "images": [
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/media/Gvz_29KbsAABI9d?format=jpg&name=large",
+            "description": "Afbeelding",
+            "original_url": "https://pbs.twimg.com/media/Gvz_29KbsAABI9d?format=jpg&name=large"
+          }
+        ],
+        "videos": []
+      },
+      "post_type": "图文",
+      "source": "@elonmusk",
+      "source_type": "user_profile"
+    },
+    {
+      "username": "elonmusk",
+      "content": "Also, you need to update your \n@Grok\n app",
+      "publish_time": "2025-07-14T10:47:38.000Z",
+      "link": "https://x.com/elonmusk/status/1944710374147944853",
+      "likes": 2815,
+      "comments": 331,
+      "retweets": 1177,
+      "media": {
+        "images": [
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/profile_images/1936002956333080576/kqqe2iWO_x96.jpg",
+            "description": "",
+            "original_url": "https://pbs.twimg.com/profile_images/1936002956333080576/kqqe2iWO_x96.jpg"
+          },
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs_bigger.jpg",
+            "description": "",
+            "original_url": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs_bigger.jpg"
+          }
+        ],
+        "videos": []
+      },
+      "post_type": "图文",
+      "source": "@elonmusk",
+      "source_type": "user_profile"
+    },
+    {
+      "username": "elonmusk",
+      "content": "Press the two bars in upper left of screen, then gear icon in bottom right of screen",
+      "publish_time": "2025-07-14T10:44:25.000Z",
+      "link": "https://x.com/elonmusk/status/1944709565070913965",
+      "likes": 2729,
+      "comments": 320,
+      "retweets": 1228,
+      "media": {
+        "images": [
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/profile_images/1936002956333080576/kqqe2iWO_x96.jpg",
+            "description": "",
+            "original_url": "https://pbs.twimg.com/profile_images/1936002956333080576/kqqe2iWO_x96.jpg"
+          },
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs_bigger.jpg",
+            "description": "",
+            "original_url": "https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs_bigger.jpg"
+          }
+        ],
+        "videos": []
+      },
+      "post_type": "图文",
+      "source": "@elonmusk",
+      "source_type": "user_profile"
+    }
+  ]
+}

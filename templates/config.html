@@ -798,6 +798,12 @@ function checkAdsPowerInstallation() {
     const statusText = document.getElementById('status-text');
     const installGuide = document.getElementById('install-guide');
     
+    // 错误处理：确保元素存在
+    if (!statusLoading || !statusText || !installGuide) {
+        console.error('AdsPower检测：必要的DOM元素未找到');
+        return;
+    }
+    
     // 显示加载状态
     statusLoading.style.display = 'inline-block';
     statusText.textContent = '正在检测AdsPower安装状态...';
@@ -822,16 +828,27 @@ function checkAdsPowerInstallation() {
     })
     .done(function(response) {
         statusLoading.style.display = 'none';
+        
+        // 错误处理：确保响应对象存在
+        if (!response) {
+            console.error('AdsPower检测：响应对象为空');
+            statusText.innerHTML = '<i class="fas fa-times-circle text-danger me-2"></i>检测失败：响应为空';
+            statusText.className = 'text-danger';
+            installGuide.style.display = 'block';
+            return;
+        }
+        
         if (response.success) {
             statusText.innerHTML = '<i class="fas fa-check-circle text-success me-2"></i>AdsPower已安装并正在运行';
             statusText.className = 'text-success';
             installGuide.style.display = 'none';
             
-            if (response.user_count > 0) {
+            if (response.user_count && response.user_count > 0) {
                 statusText.innerHTML += ` (检测到 ${response.user_count} 个用户配置)`;
             }
         } else {
-            statusText.innerHTML = '<i class="fas fa-times-circle text-warning me-2"></i>' + response.message;
+            const message = response.message || '未知错误';
+            statusText.innerHTML = '<i class="fas fa-times-circle text-warning me-2"></i>' + message;
             statusText.className = 'text-warning';
             installGuide.style.display = 'block';
         }
@@ -993,6 +1010,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // 监听输入变化
         hostInput.addEventListener('input', updateAdsPowerApiUrl);
         portInput.addEventListener('input', updateAdsPowerApiUrl);
+    }
+    
+    // 确保AdsPower状态文本正确初始化
+    const statusText = document.getElementById('status-text');
+    if (statusText && (!statusText.textContent || statusText.textContent === 'undefined')) {
+        statusText.textContent = '点击检测按钮检查AdsPower安装状态';
+        statusText.className = 'text-muted';
     }
 });
 

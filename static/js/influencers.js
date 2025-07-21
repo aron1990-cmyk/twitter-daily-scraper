@@ -137,7 +137,7 @@ function displayInfluencers(influencers) {
         return;
     }
     
-    let html = '';
+    let html = '<div class="row">';
     influencers.forEach(influencer => {
         const statusBadge = influencer.is_active ? 
             '<span class="badge bg-success">启用</span>' : 
@@ -197,6 +197,7 @@ function displayInfluencers(influencers) {
         `;
     });
     
+    html += '</div>';
     container.html(html);
     
     // 绑定复选框事件

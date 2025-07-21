@@ -7,10 +7,10 @@ Twitter 解析器
 import asyncio
 import logging
 import re
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Set
 from datetime import datetime
 from playwright.async_api import async_playwright, Browser, Page
-from config import BROWSER_CONFIG, TWITTER_TARGETS, FILTER_CONFIG
+# 配置将从调用方传入或使用默认配置
 from human_behavior_simulator import HumanBehaviorSimulator
 from performance_optimizer import EnhancedSearchOptimizer
 
@@ -23,6 +23,11 @@ class TwitterParser:
         self.search_optimizer = EnhancedSearchOptimizer()
         self.logger = logging.getLogger(__name__)
         self.config = None
+        
+        # 优化功能属性
+        self.seen_tweet_ids: Set[str] = set()
+        self.content_cache: Dict[str, str] = {}
+        self.optimization_enabled = True
     
     async def initialize(self, debug_port: str = None):
         """初始化TwitterParser
@@ -95,12 +100,14 @@ class TwitterParser:
                 self.logger.info("创建新的浏览器上下文和页面")
             
             # 设置页面默认超时时间
-            self.page.set_default_timeout(BROWSER_CONFIG['timeout'])
-            self.logger.info(f"设置页面超时时间: {BROWSER_CONFIG['timeout']}ms")
+            default_timeout = 30000
+            self.page.set_default_timeout(default_timeout)
+            self.logger.info(f"设置页面超时时间: {default_timeout}ms")
             
             # 设置页面导航超时时间
-            self.page.set_default_navigation_timeout(BROWSER_CONFIG['navigation_timeout'])
-            self.logger.info(f"设置导航超时时间: {BROWSER_CONFIG['navigation_timeout']}ms")
+            navigation_timeout = 60000
+            self.page.set_default_navigation_timeout(navigation_timeout)
+            self.logger.info(f"设置导航超时时间: {navigation_timeout}ms")
             
             # 初始化人工行为模拟器
             self.behavior_simulator = HumanBehaviorSimulator(self.page)
@@ -132,12 +139,12 @@ class TwitterParser:
                     self.logger.info(f"页面不在 x.com，开始导航... (第{attempt + 1}次尝试)")
                     
                     # 使用更长的超时时间
-                    await self.page.goto('https://x.com', timeout=BROWSER_CONFIG['navigation_timeout'])
+                    await self.page.goto('https://x.com', timeout=60000)
                     
                     # 分步等待加载
                     try:
                         await self.page.wait_for_load_state('domcontentloaded', timeout=30000)
-                        await self.page.wait_for_load_state('networkidle', timeout=BROWSER_CONFIG['load_state_timeout'])
+                        await self.page.wait_for_load_state('networkidle', timeout=30000)
                     except Exception as load_error:
                         self.logger.warning(f"等待加载状态失败: {load_error}，继续尝试")
                     
@@ -191,14 +198,14 @@ class TwitterParser:
                 self.logger.info(f"尝试导航到 @{username} 的个人资料页面 (第{attempt + 1}次)")
                 
                 # 使用更长的超时时间进行导航
-                await self.page.goto(profile_url, timeout=BROWSER_CONFIG['navigation_timeout'])
+                await self.page.goto(profile_url, timeout=60000)
                 
                 # 分步等待加载状态
                 try:
                     await self.page.wait_for_load_state('domcontentloaded', timeout=30000)
                     self.logger.info("DOM内容加载完成")
                     
-                    await self.page.wait_for_load_state('networkidle', timeout=BROWSER_CONFIG['load_state_timeout'])
+                    await self.page.wait_for_load_state('networkidle', timeout=30000)
                     self.logger.info("网络空闲状态达到")
                 except Exception as load_error:
                     self.logger.warning(f"等待加载状态失败: {load_error}，继续尝试")
@@ -207,7 +214,7 @@ class TwitterParser:
                 await self.ensure_page_focus()
                 
                 # 额外等待时间确保页面完全加载
-                await asyncio.sleep(BROWSER_CONFIG['wait_time'])
+                await asyncio.sleep(2)
                 
                 # 验证页面是否正确加载
                 current_url = self.page.url
@@ -253,7 +260,7 @@ class TwitterParser:
                 
                 # 导航到搜索页面
                 self.logger.info("正在导航到搜索页面...")
-                await self.page.goto(search_url, timeout=BROWSER_CONFIG['timeout'])
+                await self.page.goto(search_url, timeout=30000)
                 self.logger.info("导航完成，等待页面加载...")
                 
                 # 简化等待策略
@@ -337,6 +344,12 @@ class TwitterParser:
         Args:
             max_tweets: 最大加载推文数量
         """
+        if self.optimization_enabled:
+            self.logger.info(f"🔧 使用优化滚动策略，目标推文数: {max_tweets}")
+            result = await self.scroll_and_load_tweets_optimized(max_tweets)
+            self.logger.info(f"🔧 优化滚动策略完成，返回结果: {result}")
+            return result
+        
         try:
             # 确保页面焦点
             await self.ensure_page_focus()
@@ -459,6 +472,13 @@ class TwitterParser:
         Returns:
             推文数据字典
         """
+        # 如果启用了优化功能，使用优化版本
+        if self.optimization_enabled:
+            self.logger.info(f"🔧 调用优化版本解析方法，optimization_enabled={self.optimization_enabled}")
+            result = await self.parse_tweet_element_optimized(tweet_element)
+            self.logger.info(f"🔧 优化版本解析结果: {result is not None}")
+            return result
+        
         try:
             tweet_data = {}
             
@@ -498,21 +518,66 @@ class TwitterParser:
             try:
                 content_selectors = [
                     '[data-testid="tweetText"]',
+                    '[data-testid="tweetText"] span',
+                    'div[lang] span',
+                    'div[dir="auto"] span',
+                    'div[dir="ltr"] span',
+                    'div[dir="rtl"] span',
                     '[lang] span',
-                    'div[dir="auto"] span'
+                    'span[dir="auto"]',
+                    'div[data-testid="tweetText"] > span',
+                    'article div[lang] span',
+                    'article span[dir]'
                 ]
                 
-                content_element = None
+                content_text = ''
+                # 尝试多种方式提取内容
                 for selector in content_selectors:
                     try:
-                        content_element = await tweet_element.query_selector(selector)
-                        if content_element:
-                            content_text = await content_element.inner_text()
-                            if content_text and content_text.strip():
-                                tweet_data['content'] = content_text.strip()
+                        content_elements = await tweet_element.query_selector_all(selector)
+                        if content_elements:
+                            # 收集所有文本内容
+                            text_parts = []
+                            for elem in content_elements:
+                                text = await elem.inner_text()
+                                if text and text.strip():
+                                    text_parts.append(text.strip())
+                            
+                            if text_parts:
+                                content_text = ' '.join(text_parts)
                                 break
                     except Exception:
                         continue
+                
+                # 如果还是没有内容，尝试获取整个推文区域的文本
+                if not content_text:
+                    try:
+                        # 尝试从整个推文元素中提取文本，但排除用户名、时间等
+                        all_text = await tweet_element.inner_text()
+                        if all_text:
+                            # 简单过滤，移除明显的非内容文本
+                            lines = all_text.split('\n')
+                            filtered_lines = []
+                            for line in lines:
+                                line = line.strip()
+                                # 跳过空行、用户名、时间戳等
+                                if (line and 
+                                    not line.startswith('@') and 
+                                    not line.endswith('h') and 
+                                    not line.endswith('m') and 
+                                    not line.endswith('s') and
+                                    not line.isdigit() and
+                                    len(line) > 3):
+                                    filtered_lines.append(line)
+                            
+                            if filtered_lines:
+                                content_text = ' '.join(filtered_lines[:3])  # 取前3行作为内容
+                    except Exception:
+                        pass
+                
+                if content_text and content_text.strip():
+                    tweet_data['content'] = content_text.strip()
+                    
             except Exception as e:
                 self.logger.debug(f"提取推文内容失败: {e}")
             
@@ -635,10 +700,28 @@ class TwitterParser:
                 self.logger.debug(f"识别帖子类型失败: {e}")
                 tweet_data['post_type'] = '文字'
             
-            # 验证推文数据的有效性
-            if not tweet_data.get('content') and not tweet_data.get('username', '').replace('unknown', ''):
-                self.logger.debug("推文数据无效，跳过")
+            # 验证推文数据的有效性 - 进一步放宽验证条件
+            # 只要满足以下任一条件就认为是有效推文：
+            # 1. 有用户名
+            # 2. 有内容
+            # 3. 有链接
+            # 4. 有媒体内容
+            # 5. 有互动数据（点赞、评论、转发）
+            has_username = tweet_data.get('username', '') and tweet_data.get('username', '') != 'unknown'
+            has_content = tweet_data.get('content', '').strip()
+            has_link = tweet_data.get('link', '').strip()
+            has_media = (tweet_data.get('media', {}).get('images', []) or 
+                        tweet_data.get('media', {}).get('videos', []))
+            has_interactions = (tweet_data.get('likes', 0) > 0 or 
+                              tweet_data.get('comments', 0) > 0 or 
+                              tweet_data.get('retweets', 0) > 0)
+            
+            # 只要有任何一项有效信息就保留推文
+            if not (has_username or has_content or has_link or has_media or has_interactions):
+                self.logger.debug(f"推文数据无效，跳过 - 用户名: {tweet_data.get('username', 'None')}, 内容长度: {len(tweet_data.get('content', ''))}, 链接: {bool(tweet_data.get('link', ''))}, 媒体: {bool(has_media)}, 互动: {bool(has_interactions)}")
                 return None
+            
+            self.logger.debug(f"推文验证通过 - 用户名: {tweet_data.get('username', 'None')}, 内容长度: {len(tweet_data.get('content', ''))}, 链接: {bool(tweet_data.get('link', ''))}")
             
             return tweet_data
             
@@ -669,6 +752,7 @@ class TwitterParser:
             
             # 获取所有推文元素
             tweet_elements = await self.page.query_selector_all('[data-testid="tweet"]')
+            self.logger.info(f"找到 {len(tweet_elements)} 个推文元素")
             
             tweets_data = []
             
@@ -681,10 +765,13 @@ class TwitterParser:
                 if self.behavior_simulator and i % 3 == 0:  # 每3条推文模拟一次交互
                     await self.behavior_simulator.simulate_tweet_interaction(tweet_element)
                 
+                self.logger.debug(f"开始解析第 {i+1} 个推文元素")
                 tweet_data = await self.parse_tweet_element(tweet_element)
                 if tweet_data:
                     tweets_data.append(tweet_data)
                     self.logger.info(f"成功解析第 {i+1} 条推文: @{tweet_data['username']}")
+                else:
+                    self.logger.debug(f"第 {i+1} 个推文元素解析失败或返回None")
                 
                 # 模拟人工阅读间隔（极速模式）
                 if self.behavior_simulator:
@@ -1540,6 +1627,503 @@ class TwitterParser:
                 
         except (ValueError, AttributeError):
             return 0
+
+    # ==================== 优化功能方法 ====================
+    
+    def clean_tweet_content(self, content: str) -> str:
+        """优化的推文内容清理"""
+        if not content:
+            return ""
+        
+        # 缓存检查
+        if content in self.content_cache:
+            return self.content_cache[content]
+        
+        original_content = content
+        
+        # 去除多余的空白字符
+        content = re.sub(r'\s+', ' ', content.strip())
+        
+        # 去除重复的用户名模式 (如: "Elon Musk Elon Musk @elonmusk")
+        content = re.sub(r'(\w+\s+\w+)\s+\1', r'\1', content)
+        
+        # 去除重复的数字模式 (如: "4,8K 4,8K 4,8K")
+        content = re.sub(r'(\d+[,.]?\d*[KMB]?)\s+\1(\s+\1)*', r'\1', content)
+        
+        # 去除重复的符号模式
+        content = re.sub(r'(·\s*)+', '· ', content)
+        
+        # 去除末尾的统计数据模式
+        content = re.sub(r'\s*·\s*[\d,KMB.\s]+$', '', content)
+        
+        # 去除开头的用户名重复
+        content = re.sub(r'^(@?\w+\s+){2,}', '', content)
+        
+        # 去除多余的点和空格
+        content = re.sub(r'\s*·\s*$', '', content)
+        
+        # 去除连续的重复词汇
+        words = content.split()
+        cleaned_words = []
+        for i, word in enumerate(words):
+            if i == 0 or word != words[i-1]:
+                cleaned_words.append(word)
+        
+        cleaned_content = ' '.join(cleaned_words).strip()
+        
+        # 缓存结果
+        self.content_cache[original_content] = cleaned_content
+        
+        return cleaned_content
+    
+    def extract_tweet_id(self, tweet_link: str) -> str:
+        """从推文链接中提取ID"""
+        try:
+            if '/status/' in tweet_link:
+                return tweet_link.split('/status/')[-1].split('?')[0]
+            return ''
+        except Exception:
+            return ''
+    
+    def is_duplicate_tweet(self, tweet_link: str) -> bool:
+        """检查是否为重复推文"""
+        tweet_id = self.extract_tweet_id(tweet_link)
+        if tweet_id:
+            if tweet_id in self.seen_tweet_ids:
+                return True
+            self.seen_tweet_ids.add(tweet_id)
+        return False
+    
+    def parse_engagement_number(self, num_str: str) -> int:
+        """解析互动数字 (如: 1.2K -> 1200)"""
+        try:
+            if not num_str:
+                return 0
+            
+            num_str = num_str.replace(',', '').replace(' ', '')
+            
+            if num_str.endswith('K'):
+                return int(float(num_str[:-1]) * 1000)
+            elif num_str.endswith('M'):
+                return int(float(num_str[:-1]) * 1000000)
+            elif num_str.endswith('B'):
+                return int(float(num_str[:-1]) * 1000000000)
+            else:
+                return int(num_str)
+        except (ValueError, IndexError):
+            return 0
+    
+    async def scroll_and_load_tweets_optimized(self, target_tweets: int = 15, max_attempts: int = 20) -> Dict[str, Any]:
+        """优化的滚动策略"""
+        self.logger.info(f"🚀 开始优化滚动策略，目标: {target_tweets} 条推文")
+        
+        scroll_attempt = 0
+        stagnant_rounds = 0
+        last_unique_count = 0
+        
+        # 动态调整参数
+        base_scroll_distance = 800
+        base_wait_time = 1.5
+        
+        while scroll_attempt < max_attempts:
+            # 获取当前推文数量
+            try:
+                await self.page.wait_for_selector('[data-testid="tweet"]', timeout=5000)
+                current_elements = await self.page.query_selector_all('[data-testid="tweet"]')
+                current_unique_tweets = len(self.seen_tweet_ids)
+            except Exception:
+                current_elements = []
+                current_unique_tweets = 0
+            
+            self.logger.debug(f"📊 滚动尝试 {scroll_attempt + 1}/{max_attempts}，当前唯一推文: {current_unique_tweets}/{target_tweets}")
+            
+            # 检查是否达到目标
+            if current_unique_tweets >= target_tweets:
+                self.logger.info(f"🎯 达到目标推文数量: {current_unique_tweets}")
+                break
+            
+            # 检查停滞情况
+            if current_unique_tweets == last_unique_count:
+                stagnant_rounds += 1
+            else:
+                stagnant_rounds = 0
+            
+            last_unique_count = current_unique_tweets
+            
+            # 根据停滞情况调整策略
+            if stagnant_rounds >= 3:
+                # 激进模式：增加滚动距离，减少等待时间
+                scroll_distance = base_scroll_distance * 2
+                wait_time = base_wait_time * 0.7
+                self.logger.debug(f"🔥 激进模式：滚动距离 {scroll_distance}，等待时间 {wait_time:.1f}s")
+            elif stagnant_rounds >= 6:
+                # 超激进模式：大幅滚动
+                scroll_distance = base_scroll_distance * 3
+                wait_time = base_wait_time * 0.5
+                self.logger.debug(f"⚡ 超激进模式：滚动距离 {scroll_distance}，等待时间 {wait_time:.1f}s")
+            else:
+                # 正常模式
+                scroll_distance = base_scroll_distance
+                wait_time = base_wait_time
+            
+            # 执行滚动
+            try:
+                # 确保页面焦点
+                await self.page.evaluate('window.focus()')
+                
+                # 平滑滚动
+                current_scroll = await self.page.evaluate('window.pageYOffset')
+                await self.page.evaluate(f'''
+                    window.scrollTo({{
+                        top: {current_scroll + scroll_distance},
+                        behavior: 'smooth'
+                    }});
+                ''')
+                
+                # 等待滚动完成和内容加载
+                await asyncio.sleep(wait_time)
+                
+                # 检查新推文并更新seen_tweet_ids
+                await self.update_seen_tweets()
+                
+            except Exception as e:
+                self.logger.warning(f"滚动失败: {e}")
+                await asyncio.sleep(1)
+            
+            # 如果连续多轮无新内容，考虑刷新
+            if stagnant_rounds >= 8:
+                self.logger.info("🔄 长时间无新内容，尝试刷新页面")
+                try:
+                    await self.page.reload(wait_until='domcontentloaded')
+                    await asyncio.sleep(3)
+                    stagnant_rounds = 0
+                    # 重新收集已见过的推文ID
+                    await self.rebuild_seen_tweets()
+                except Exception as e:
+                    self.logger.warning(f"页面刷新失败: {e}")
+            
+            scroll_attempt += 1
+        
+        final_unique_tweets = len(self.seen_tweet_ids)
+        self.logger.info(f"📊 滚动策略完成: {final_unique_tweets} 条唯一推文，{scroll_attempt} 次滚动")
+        
+        return {
+            'final_tweet_count': final_unique_tweets,
+            'scroll_attempts': scroll_attempt,
+            'target_reached': final_unique_tweets >= target_tweets,
+            'efficiency': final_unique_tweets / max(scroll_attempt, 1)
+        }
+    
+    async def update_seen_tweets(self):
+        """更新已见推文ID集合"""
+        try:
+            current_elements = await self.page.query_selector_all('[data-testid="tweet"]')
+            
+            for element in current_elements:
+                try:
+                    link_element = await element.query_selector('a[href*="/status/"]')
+                    if link_element:
+                        href = await link_element.get_attribute('href')
+                        if href:
+                            tweet_id = self.extract_tweet_id(href)
+                            if tweet_id:
+                                self.seen_tweet_ids.add(tweet_id)
+                except Exception:
+                    continue
+        except Exception as e:
+            self.logger.debug(f"更新已见推文ID失败: {e}")
+    
+    async def rebuild_seen_tweets(self):
+        """重新构建已见推文ID集合"""
+        try:
+            self.seen_tweet_ids.clear()
+            await self.update_seen_tweets()
+            self.logger.debug(f"重建已见推文ID集合: {len(self.seen_tweet_ids)} 条")
+        except Exception as e:
+            self.logger.warning(f"重建已见推文ID失败: {e}")
+    
+    async def parse_tweet_element_optimized(self, element) -> Optional[Dict[str, Any]]:
+        """优化的推文元素解析"""
+        try:
+            self.logger.info("🔧 开始解析推文元素（优化版本）")
+            # 提取用户名
+            username = await self.extract_clean_username(element)
+            
+            # 提取内容
+            content = await self.extract_clean_content(element)
+            
+            # 提取链接
+            link = await self.extract_tweet_link(element)
+            
+            # 检查重复
+            if self.is_duplicate_tweet(link):
+                return None
+            
+            # 提取时间
+            publish_time = await self.extract_publish_time(element)
+            
+            # 提取互动数据
+            engagement = await self.extract_engagement_data(element)
+            
+            # 提取媒体内容
+            media = await self.extract_media_content(element)
+            
+            # 确定帖子类型
+            post_type = '纯文本'
+            if media['images']:
+                post_type = '图文'
+            elif media['videos']:
+                post_type = '视频'
+            
+            # 构建推文数据
+            tweet_data = {
+                'username': username,
+                'content': content,
+                'publish_time': publish_time,
+                'link': link,
+                'likes': engagement['likes'],
+                'comments': engagement['comments'],
+                'retweets': engagement['retweets'],
+                'media': media,
+                'post_type': post_type
+            }
+            
+            # 验证数据有效性 - 放宽验证条件
+            # 只要满足以下任一条件就认为是有效推文：
+            # 1. 有有效用户名
+            # 2. 有内容（即使是默认内容）
+            # 3. 有链接
+            # 4. 有媒体内容
+            # 5. 有互动数据
+            has_username = username and username != 'unknown'
+            has_content = content and content != 'No content available'
+            has_link = link and link.strip()
+            has_media = media['images'] or media['videos']
+            has_engagement = engagement['likes'] > 0 or engagement['comments'] > 0 or engagement['retweets'] > 0
+            
+            # 详细记录验证信息
+            self.logger.info(f"🔧 推文验证详情:")
+            self.logger.info(f"   - 用户名: '{username}' (有效: {has_username})")
+            self.logger.info(f"   - 内容: '{content[:50] if content else 'None'}...' (有效: {has_content})")
+            self.logger.info(f"   - 链接: '{link}' (有效: {has_link})")
+            self.logger.info(f"   - 媒体: {media} (有效: {has_media})")
+            self.logger.info(f"   - 互动: {engagement} (有效: {has_engagement})")
+            
+            # 只要有任何一项有效信息就保留推文
+            if has_username or has_content or has_link or has_media or has_engagement:
+                self.logger.info(f"🔧 推文验证通过 - 至少有一项有效信息")
+                return tweet_data
+            
+            self.logger.info(f"🔧 推文数据无效，跳过 - 所有验证项都失败")
+            return None
+            
+        except Exception as e:
+            self.logger.debug(f"解析推文元素失败: {e}")
+            return None
+    
+    async def extract_clean_username(self, element) -> str:
+        """提取干净的用户名"""
+        try:
+            # 尝试多种选择器
+            username_selectors = [
+                '[data-testid="User-Name"] [dir="ltr"]',
+                '[data-testid="User-Name"] span',
+                'a[href^="/"][role="link"] span',
+                '[dir="ltr"] span'
+            ]
+            
+            for selector in username_selectors:
+                username_element = await element.query_selector(selector)
+                if username_element:
+                    username = await username_element.text_content()
+                    username = username.strip()
+                    self.logger.debug(f"找到用户名原始文本: '{username}' (选择器: {selector})")
+                    # 清理用户名
+                    username = re.sub(r'^@', '', username)
+                    username = re.sub(r'\s.*', '', username)  # 只保留第一个词
+                    if username and not re.match(r'^\d+[KMB]?$', username):
+                        self.logger.debug(f"提取到有效用户名: '{username}'")
+                        return username
+            
+            # 从链接中提取用户名
+            link_element = await element.query_selector('a[href^="/"][role="link"]')
+            if link_element:
+                href = await link_element.get_attribute('href')
+                if href:
+                    self.logger.debug(f"找到链接: {href}")
+                    match = re.match(r'^/([^/]+)', href)
+                    if match:
+                        username = match.group(1)
+                        self.logger.debug(f"从链接提取用户名: '{username}'")
+                        return username
+            
+            self.logger.debug("未找到有效用户名，返回 'unknown'")
+            return 'unknown'
+            
+        except Exception as e:
+            self.logger.debug(f"提取用户名失败: {e}")
+            return 'unknown'
+    
+    async def extract_clean_content(self, element) -> str:
+        """提取干净的推文内容"""
+        try:
+            # 尝试多种内容选择器
+            content_selectors = [
+                '[data-testid="tweetText"]',
+                '[lang] span',
+                'div[dir="auto"] span'
+            ]
+            
+            content_parts = []
+            
+            for selector in content_selectors:
+                content_elements = await element.query_selector_all(selector)
+                self.logger.debug(f"选择器 '{selector}' 找到 {len(content_elements)} 个内容元素")
+                for content_element in content_elements:
+                    text = await content_element.text_content()
+                    text = text.strip()
+                    if text and text not in content_parts:
+                        self.logger.debug(f"找到内容片段: '{text[:50]}...'")
+                        content_parts.append(text)
+            
+            # 合并内容
+            raw_content = ' '.join(content_parts)
+            self.logger.debug(f"合并后的原始内容: '{raw_content[:100]}...'")
+            
+            # 清理内容
+            clean_content = self.clean_tweet_content(raw_content)
+            self.logger.debug(f"清理后的内容: '{clean_content[:100]}...'")
+            
+            result = clean_content if clean_content else 'No content available'
+            self.logger.debug(f"最终返回内容: '{result[:50]}...'")
+            return result
+            
+        except Exception as e:
+            self.logger.debug(f"提取推文内容失败: {e}")
+            return 'No content available'
+    
+    async def extract_tweet_link(self, element) -> str:
+        """提取推文链接"""
+        try:
+            link_element = await element.query_selector('a[href*="/status/"]')
+            if link_element:
+                href = await link_element.get_attribute('href')
+                if href:
+                    if href.startswith('/'):
+                        return f'https://x.com{href}'
+                    else:
+                        return href
+            return ''
+        except Exception:
+            return ''
+    
+    async def extract_publish_time(self, element) -> str:
+        """提取发布时间"""
+        try:
+            time_element = await element.query_selector('time')
+            if time_element:
+                datetime_attr = await time_element.get_attribute('datetime')
+                if datetime_attr:
+                    return datetime_attr
+            return ''
+        except Exception:
+            return ''
+    
+    async def extract_engagement_data(self, element) -> Dict[str, int]:
+        """提取互动数据"""
+        engagement = {'likes': 0, 'comments': 0, 'retweets': 0}
+        
+        try:
+            # 查找互动数据
+            engagement_selectors = {
+                'likes': ['[data-testid="like"]', '[aria-label*="like"]'],
+                'comments': ['[data-testid="reply"]', '[aria-label*="repl"]'],
+                'retweets': ['[data-testid="retweet"]', '[aria-label*="repost"]']
+            }
+            
+            for metric, selectors in engagement_selectors.items():
+                for selector in selectors:
+                    metric_element = await element.query_selector(selector)
+                    if metric_element:
+                        # 查找数字
+                        text = await metric_element.text_content()
+                        numbers = re.findall(r'[\d,]+[KMB]?', text)
+                        if numbers:
+                            engagement[metric] = self.parse_engagement_number(numbers[0])
+                            break
+            
+            return engagement
+            
+        except Exception as e:
+            self.logger.debug(f"提取互动数据失败: {e}")
+            return engagement
+    
+    async def extract_media_content(self, element) -> Dict[str, List[Dict]]:
+        """提取媒体内容"""
+        media = {'images': [], 'videos': []}
+        
+        try:
+            # 提取图片
+            img_elements = await element.query_selector_all('img[src*="pbs.twimg.com"]')
+            for img in img_elements:
+                src = await img.get_attribute('src')
+                alt = await img.get_attribute('alt') or 'Image'
+                if src:
+                    media['images'].append({
+                        'type': 'image',
+                        'url': src,
+                        'description': alt,
+                        'original_url': src
+                    })
+            
+            # 提取视频
+            video_elements = await element.query_selector_all('video, [data-testid="videoPlayer"]')
+            for video in video_elements:
+                poster = await video.get_attribute('poster')
+                if poster:
+                    media['videos'].append({
+                        'type': 'video',
+                        'poster': poster,
+                        'description': 'Video content'
+                    })
+            
+            return media
+            
+        except Exception as e:
+            self.logger.debug(f"提取媒体内容失败: {e}")
+            return media
+    
+    def get_optimization_summary(self) -> Dict[str, Any]:
+        """获取优化摘要"""
+        return {
+            'unique_tweets_processed': len(self.seen_tweet_ids),
+            'content_cache_size': len(self.content_cache),
+            'optimization_enabled': self.optimization_enabled,
+            'optimizations_applied': [
+                'intelligent_scroll_strategy',
+                'content_deduplication',
+                'enhanced_text_cleaning',
+                'improved_element_extraction',
+                'engagement_data_parsing',
+                'media_content_detection'
+            ]
+        }
+    
+    def enable_optimizations(self):
+        """启用优化功能"""
+        self.optimization_enabled = True
+        self.logger.info("✅ 优化功能已启用")
+    
+    def disable_optimizations(self):
+        """禁用优化功能"""
+        self.optimization_enabled = False
+        self.logger.info("❌ 优化功能已禁用")
+    
+    def clear_optimization_cache(self):
+        """清理优化缓存"""
+        self.seen_tweet_ids.clear()
+        self.content_cache.clear()
+        self.logger.info("🧹 优化缓存已清理")
 
     async def close(self):
         """

@@ -1,0 +1,84 @@
+{
+  "save_type": "final",
+  "timestamp": "2025-07-21T12:50:37.683168",
+  "total_tweets": 5,
+  "unique_tweets": 5,
+  "parsing_stats": {
+    "total_scrolls": 8,
+    "tweets_parsed": 5,
+    "duplicates_skipped": 0,
+    "parsing_errors": 0,
+    "incremental_saves": 1
+  },
+  "quality_metrics": {
+    "content_completeness": 1.0,
+    "username_completeness": 1.0,
+    "metrics_completeness": 1.0,
+    "parsing_success_rate": 1.0,
+    "duplicate_rate": 0.0,
+    "error_rate": 0.0,
+    "efficiency_per_scroll": 0.625
+  },
+  "all_tweets": [
+    {
+      "id": "1234567890123456789",
+      "username": "elonmusk",
+      "content": "Mars is looking good for settlement",
+      "timestamp": "2025-07-21T12:00:00Z",
+      "likes": 15420,
+      "retweets": 3240,
+      "replies": 890,
+      "parsed_at": "2025-07-21T12:50:33.265975",
+      "content_length": 35,
+      "has_metrics": true
+    },
+    {
+      "id": "1234567890123456790",
+      "username": "elonmusk",
+      "content": "Tesla production update: Q4 looking strong",
+      "timestamp": "2025-07-21T11:30:00Z",
+      "likes": 8930,
+      "retweets": 1560,
+      "replies": 445,
+      "parsed_at": "2025-07-21T12:50:33.367112",
+      "content_length": 42,
+      "has_metrics": true
+    },
+    {
+      "id": "1234567890123456791",
+      "username": "elonmusk",
+      "content": "Neuralink progress is accelerating",
+      "timestamp": "2025-07-21T11:00:00Z",
+      "likes": 12340,
+      "retweets": 2890,
+      "replies": 670,
+      "parsed_at": "2025-07-21T12:50:33.970351",
+      "content_length": 34,
+      "has_metrics": true
+    },
+    {
+      "id": "1234567890123456792",
+      "username": "elonmusk",
+      "content": "SpaceX Starship test flight scheduled for next month",
+      "timestamp": "2025-07-21T10:30:00Z",
+      "likes": 18750,
+      "retweets": 4320,
+      "replies": 1230,
+      "parsed_at": "2025-07-21T12:50:34.071690",
+      "content_length": 52,
+      "has_metrics": true
+    },
+    {
+      "id": "1234567890123456793",
+      "username": "elonmusk",
+      "content": "AI safety research is crucial for humanity's future",
+      "timestamp": "2025-07-21T10:00:00Z",
+      "likes": 9870,
+      "retweets": 2140,
+      "replies": 580,
+      "parsed_at": "2025-07-21T12:50:34.673671",
+      "content_length": 51,
+      "has_metrics": true
+    }
+  ]
+}

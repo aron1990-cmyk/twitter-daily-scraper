@@ -1,0 +1,210 @@
+{
+  "metadata": {
+    "username": "tesla_semi",
+    "scraped_at": "2025-07-21T03:16:04.944291",
+    "total_tweets": 8,
+    "scraping_duration": 0,
+    "status": "success"
+  },
+  "tweets": [
+    {
+      "username": "TaoTaoOps",
+      "content": "正确调节情绪的18种方式\n当工作压力大、情绪烦躁时，找到健康的情绪发泄方式非常重要。\n以下是18种方式，可以帮助你缓解压力，恢复平静：",
+      "publish_time": "2025-06-27T08:08:10.000Z",
+      "link": "https://x.com/TaoTaoOps/status/1938509649185280165",
+      "likes": 115,
+      "comments": 2,
+      "retweets": 34,
+      "media": {
+        "images": [
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/media/Gub4N15bEAEFf6F?format=jpg&name=medium",
+            "description": "图像",
+            "original_url": "https://pbs.twimg.com/media/Gub4N15bEAEFf6F?format=jpg&name=medium"
+          }
+        ],
+        "videos": []
+      },
+      "post_type": "图文",
+      "source": "@tesla_semi",
+      "source_type": "user_profile"
+    },
+    {
+      "username": "TaoTaoOps",
+      "content": "停止为100个AI工具付费。\n\n我找到一个平台可以提供所有工具：\nChatGPT、Claude、Midjourney、Gemini — 并排使用。\n无费用。无需切换标签。\n运作方式如下：",
+      "publish_time": "2025-06-18T02:28:19.000Z",
+      "link": "https://x.com/TaoTaoOps/status/1935162631318638886",
+      "likes": 109,
+      "comments": 4,
+      "retweets": 36,
+      "media": {
+        "images": [
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/ext_tw_video_thumb/1935162550771138565/pu/img/-ygXl4pAU14CT6N6.jpg",
+            "description": "",
+            "original_url": "https://pbs.twimg.com/ext_tw_video_thumb/1935162550771138565/pu/img/-ygXl4pAU14CT6N6.jpg"
+          }
+        ],
+        "videos": [
+          {
+            "type": "video",
+            "poster": "https://pbs.twimg.com/ext_tw_video_thumb/1935162550771138565/pu/img/-ygXl4pAU14CT6N6.jpg",
+            "url": null,
+            "description": "视频内容"
+          }
+        ]
+      },
+      "post_type": "视频",
+      "source": "@tesla_semi",
+      "source_type": "user_profile"
+    },
+    {
+      "username": "TaoTaoOps",
+      "publish_time": "2025-07-01T02:07:12.000Z",
+      "link": "https://x.com/TaoTaoOps/status/1939868360914895312",
+      "likes": 81,
+      "comments": 1,
+      "retweets": 12,
+      "media": {
+        "images": [
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/media/GuvL9NDX0AA8XH1?format=jpg&name=medium",
+            "description": "图像",
+            "original_url": "https://pbs.twimg.com/media/GuvL9NDX0AA8XH1?format=jpg&name=medium"
+          }
+        ],
+        "videos": []
+      },
+      "content": "",
+      "post_type": "图文",
+      "source": "@tesla_semi",
+      "source_type": "user_profile"
+    },
+    {
+      "username": "TaoTaoOps",
+      "content": "疯狂长脑子的种食物",
+      "publish_time": "2025-06-29T02:21:10.000Z",
+      "link": "https://x.com/TaoTaoOps/status/1939147098001416428",
+      "likes": 79,
+      "comments": 1,
+      "retweets": 12,
+      "media": {
+        "images": [
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/media/Guk7-XvXEAADWgv?format=jpg&name=medium",
+            "description": "图像",
+            "original_url": "https://pbs.twimg.com/media/Guk7-XvXEAADWgv?format=jpg&name=medium"
+          }
+        ],
+        "videos": []
+      },
+      "post_type": "图文",
+      "source": "@tesla_semi",
+      "source_type": "user_profile"
+    },
+    {
+      "username": "TaoTaoOps",
+      "content": "电商失败的六大原因",
+      "publish_time": "2025-07-09T01:48:06.000Z",
+      "link": "https://x.com/TaoTaoOps/status/1942762657511289174",
+      "likes": 69,
+      "comments": 1,
+      "retweets": 14,
+      "media": {
+        "images": [
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/media/GvYUUZOaYAMHH61?format=jpg&name=medium",
+            "description": "图像",
+            "original_url": "https://pbs.twimg.com/media/GvYUUZOaYAMHH61?format=jpg&name=medium"
+          }
+        ],
+        "videos": []
+      },
+      "post_type": "图文",
+      "source": "@tesla_semi",
+      "source_type": "user_profile"
+    },
+    {
+      "username": "TaoTaoOps",
+      "content": "干就完了！中国老板都出海做跨境TK",
+      "publish_time": "2025-06-19T01:54:04.000Z",
+      "link": "https://x.com/TaoTaoOps/status/1935516398639530219",
+      "likes": 65,
+      "comments": 1,
+      "retweets": 16,
+      "media": {
+        "images": [
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/media/GtxV5XxWwAAnfOX?format=jpg&name=medium",
+            "description": "图像",
+            "original_url": "https://pbs.twimg.com/media/GtxV5XxWwAAnfOX?format=jpg&name=medium"
+          }
+        ],
+        "videos": []
+      },
+      "post_type": "图文",
+      "source": "@tesla_semi",
+      "source_type": "user_profile"
+    },
+    {
+      "username": "TaoTaoOps",
+      "publish_time": "2025-07-01T02:07:13.000Z",
+      "link": "https://x.com/TaoTaoOps/status/1939868363041448070",
+      "likes": 65,
+      "comments": 1,
+      "retweets": 11,
+      "media": {
+        "images": [
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/media/GuvL9YTbYAA1DQv?format=jpg&name=medium",
+            "description": "图像",
+            "original_url": "https://pbs.twimg.com/media/GuvL9YTbYAA1DQv?format=jpg&name=medium"
+          }
+        ],
+        "videos": []
+      },
+      "content": "",
+      "post_type": "图文",
+      "source": "@tesla_semi",
+      "source_type": "user_profile"
+    },
+    {
+      "username": "TaoTaoOps",
+      "content": "Veo 3 太疯狂了。\n\n网络上AI自拍视频和博客正在疯狂涌现。\n\n这些都不是真实的。\n\n10个惊人的例子 + 一些提示和教程：\n\n1. 从前，有一个AI故事...",
+      "publish_time": "2025-06-21T05:59:16.000Z",
+      "link": "https://x.com/TaoTaoOps/status/1936302883160678545",
+      "likes": 62,
+      "comments": 1,
+      "retweets": 14,
+      "media": {
+        "images": [
+          {
+            "type": "image",
+            "url": "https://pbs.twimg.com/ext_tw_video_thumb/1936302814374096896/pu/img/cmj6ykN5paSKF8MT.jpg",
+            "description": "",
+            "original_url": "https://pbs.twimg.com/ext_tw_video_thumb/1936302814374096896/pu/img/cmj6ykN5paSKF8MT.jpg"
+          }
+        ],
+        "videos": [
+          {
+            "type": "video",
+            "poster": "https://pbs.twimg.com/ext_tw_video_thumb/1936302814374096896/pu/img/cmj6ykN5paSKF8MT.jpg",
+            "url": null,
+            "description": "视频内容"
+          }
+        ]
+      },
+      "post_type": "视频",
+      "has_detailed_content": false,
+      "source": "@tesla_semi",
+      "source_type": "user_profile"
+    }
+  ]
+}

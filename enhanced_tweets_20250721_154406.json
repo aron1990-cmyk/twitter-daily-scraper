@@ -1,0 +1,288 @@
+{
+  "target_count": 20,
+  "actual_count": 20,
+  "username": "elonmusk",
+  "scraped_at": "20250721_154406",
+  "tweets": [
+    {
+      "username": "Elon",
+      "content": "Constructing Valentine @xAI",
+      "publish_time": "2025-07-20T02:32:01.000Z",
+      "link": "https://x.com/elonmusk/status/1946759974522356064",
+      "likes": 25,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    },
+    {
+      "username": "Zack",
+      "content": "New Robotaxi app update out!\n\n-New arrow pointing towards your vehicle to make it easier to find\n-Auto Dark/Light modes\n-Design tweaks \n\nI’ve also noticed it shows if restaurants/places are open or closed now. Can’t wait to be back in Austin soon for more rides!",
+      "publish_time": "2025-07-21T07:25:16.000Z",
+      "link": "https://x.com/BLKMDL3/status/1947196160508416420",
+      "likes": 670,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    },
+    {
+      "username": "DogeDesigner",
+      "content": "Companions are free to try on the Grok App.\n\nDownload @Grok now!",
+      "publish_time": "2025-07-20T16:58:35.000Z",
+      "link": "https://x.com/cb_doge/status/1946978054292505032",
+      "likes": 11,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    },
+    {
+      "username": "Tesla",
+      "content": "And Model 3 Performance costs less than half as much",
+      "publish_time": "2025-07-20T20:32:07.000Z",
+      "link": "https://x.com/tesla_na/status/1947031789244916097",
+      "likes": 21,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    },
+    {
+      "username": "Bradford",
+      "content": "maybe I am a bit raw right now... this touched me as a profound moment.",
+      "publish_time": "2025-07-21T00:24:02.000Z",
+      "link": "https://x.com/bradsferguson/status/1947090152880288228",
+      "likes": 13,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    },
+    {
+      "username": "Elon",
+      "content": "If our retro-futuristic diner turns out well, which I think it will, @Tesla will establish these in major cities around the world, as well as at Supercharger sites on long distance routes. \n\nAn island of good food, good vibes & entertainment, all while Supercharging!",
+      "publish_time": "2025-07-21T07:08:28.000Z",
+      "link": "https://x.com/elonmusk/status/1947191931563565508",
+      "likes": 55,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    },
+    {
+      "username": "Tesla",
+      "content": "We’re Tesla\n\nWe make robots\n\nThey come in many shapes and forms",
+      "publish_time": "2025-07-20T22:12:48.000Z",
+      "link": "https://x.com/Tesla/status/1947057128595767613",
+      "likes": 12,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    },
+    {
+      "username": "DogeDesigner",
+      "content": "When in doubt, just ask Grok what the meme is about.",
+      "publish_time": "2025-07-21T06:50:05.000Z",
+      "link": "https://x.com/cb_doge/status/1947187307758415909",
+      "likes": 13,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    },
+    {
+      "username": "Pope",
+      "content": "This evening, 56 years after the Apollo 11 moon landing, I spoke with the astronaut Buzz Aldrin. Together we shared the memory of a historic feat, a testimony to human ingenuity, and we reflected on the mystery and greatness of Creation.",
+      "publish_time": "2025-07-20T20:15:00.000Z",
+      "link": "https://x.com/Pontifex/status/1947027482156085511",
+      "likes": 33,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    },
+    {
+      "username": "LilHumansBigImpact",
+      "content": "My heart is full watching kids take pictures with my Cybertruck",
+      "publish_time": "2025-07-21T02:56:32.000Z",
+      "link": "https://x.com/BigImpactHumans/status/1947128532037198223",
+      "likes": 16,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    },
+    {
+      "username": "Elon",
+      "content": "No content available",
+      "publish_time": "2025-07-21T06:22:14.000Z",
+      "link": "https://x.com/elonmusk/status/1947180295708672210",
+      "likes": 12,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    },
+    {
+      "username": "Tesla",
+      "content": "Every time I open the @robotaxi app I see this. \n\nElon Musk and Tesla have the best sense of humor",
+      "publish_time": "2025-07-21T06:17:40.000Z",
+      "link": "https://x.com/teslaownersSV/status/1947179146846843030",
+      "likes": 16,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    },
+    {
+      "username": "Tesla",
+      "content": "BREAKING: Grok is now the #1 app in Japan",
+      "publish_time": "2025-07-20T19:24:46.000Z",
+      "link": "https://x.com/teslaownersSV/status/1947014841002303727",
+      "likes": 21,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    },
+    {
+      "username": "Elon",
+      "content": "No content available",
+      "publish_time": "2025-07-21T06:19:46.000Z",
+      "link": "https://x.com/elonmusk/status/1947179677325652459",
+      "likes": 86,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    },
+    {
+      "username": "Elon",
+      "content": "Big boi",
+      "publish_time": "2025-07-21T05:21:05.000Z",
+      "link": "https://x.com/elonmusk/status/1947164907159654614",
+      "likes": 27,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    },
+    {
+      "username": "Zack",
+      "content": "1,000 miles in with the new Tesla Model Y!\n\nIt’s the greatest value vehicle on the planet. The suspension is buttery smooth, tons of storage, so efficient, FSD is incredible and the sound system ROCKS.\n\nIt’s amazing and it’s one of the best selling cars in the world for a reason.",
+      "publish_time": "2025-07-20T22:42:42.000Z",
+      "link": "https://x.com/BLKMDL3/status/1947064650333626727",
+      "likes": 76,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    },
+    {
+      "username": "X",
+      "content": "Alert: Grok got a new update.... \n\nNow you can get a snappy fast answers with Grok\n\nif you're still waiting for Grok response..... Just select for quick answer at the bottom and you'll have lightening fast answer.",
+      "publish_time": "2025-07-20T21:26:03.000Z",
+      "link": "https://x.com/amXFreeze/status/1947045363757482125",
+      "likes": 24,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    },
+    {
+      "username": "John",
+      "content": "Starship with humans for scale",
+      "publish_time": "2025-07-20T22:00:32.000Z",
+      "link": "https://x.com/johnkrausphotos/status/1947054042787762669",
+      "likes": 10,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    },
+    {
+      "username": "Rothmus",
+      "content": "No content available",
+      "publish_time": "2025-07-20T19:39:39.000Z",
+      "link": "https://x.com/Rothmus/status/1947018587811758569",
+      "likes": 10,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    },
+    {
+      "username": "Elon",
+      "content": "Your Tesla self-driving capability will see a step change improvement as we integrate upgrades for the Austin robotaxi build into the general production release",
+      "publish_time": "2025-07-20T21:59:16.000Z",
+      "link": "https://x.com/elonmusk/status/1947053722808230379",
+      "likes": 28,
+      "comments": 0,
+      "retweets": 0,
+      "media": {
+        "images": [],
+        "videos": []
+      },
+      "post_type": "纯文本"
+    }
+  ]
+}

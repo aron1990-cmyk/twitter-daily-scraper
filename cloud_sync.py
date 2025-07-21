@@ -269,15 +269,28 @@ class CloudSyncManager:
             是否同步成功
         """
         try:
+             # 设置请求头
+             headers = {
+                 'Authorization': f'Bearer {access_token}',
+                 'Content-Type': 'application/json'
+             }
+             
              # 获取表格字段信息以确定字段类型
              fields_url = f"{self.feishu_config['base_url']}/bitable/v1/apps/{spreadsheet_token}/tables/{table_id}/fields"
              fields_response = requests.get(fields_url, headers=headers)
              field_types = {}
+             available_fields = []
              if fields_response.status_code == 200:
                  fields_result = fields_response.json()
                  if fields_result.get('code') == 0:
                      fields_data = fields_result.get('data', {}).get('items', [])
                      field_types = {field.get('field_name'): field.get('type') for field in fields_data}
+                     available_fields = [field.get('field_name') for field in fields_data]
+                     self.logger.info(f"飞书表格可用字段: {available_fields}")
+                 else:
+                     self.logger.error(f"获取字段信息失败: {fields_result.get('msg')}")
+             else:
+                 self.logger.error(f"获取字段信息请求失败: {fields_response.status_code}")
              
              # 准备数据记录
              records = []
@@ -290,34 +303,35 @@ class CloudSyncManager:
                  publish_time_type = field_types.get('发布时间', 5)  # 默认为时间戳类型
                  create_time_type = field_types.get('创建时间', 1)   # 默认为文本类型
                  
-                 # 处理发布时间
-                 if publish_time_type == 5:  # 时间戳类型
-                     if isinstance(publish_time, str) and publish_time:
-                         try:
-                             from datetime import datetime
-                             dt = datetime.fromisoformat(publish_time.replace('Z', '+00:00'))
-                             publish_time = int(dt.timestamp() * 1000)
-                         except:
-                             publish_time = int(time.time() * 1000)
-                     elif isinstance(publish_time, (int, float)):
-                         if publish_time < 10000000000:  # 如果是秒时间戳，转换为毫秒
-                             publish_time = int(publish_time * 1000)
-                         else:
-                             publish_time = int(publish_time)
-                     else:
-                         publish_time = int(time.time() * 1000)
-                 else:  # 文本类型
-                     if isinstance(publish_time, str):
-                         publish_time = publish_time
-                     elif isinstance(publish_time, (int, float)):
+                 # 处理发布时间 - 统一转换为文本格式，避免时间戳转换问题
+                 if isinstance(publish_time, str) and publish_time:
+                     # 如果已经是字符串，尝试标准化格式
+                     try:
                          from datetime import datetime
+                         if 'T' in publish_time:  # ISO格式
+                             dt = datetime.fromisoformat(publish_time.replace('Z', '+00:00'))
+                             publish_time = dt.strftime('%Y-%m-%d %H:%M:%S')
+                         else:
+                             # 假设已经是标准格式
+                             publish_time = publish_time
+                     except:
+                         # 如果解析失败，保持原样
+                         publish_time = publish_time
+                 elif isinstance(publish_time, (int, float)) and publish_time > 0:
+                     # 数字时间戳转换为字符串
+                     from datetime import datetime
+                     try:
                          if publish_time > 10000000000:  # 毫秒时间戳
                              publish_time = datetime.fromtimestamp(publish_time / 1000).strftime('%Y-%m-%d %H:%M:%S')
                          else:  # 秒时间戳
                              publish_time = datetime.fromtimestamp(publish_time).strftime('%Y-%m-%d %H:%M:%S')
-                     else:
+                     except:
                          from datetime import datetime
                          publish_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                 else:
+                     # 默认使用当前时间
+                     from datetime import datetime
+                     publish_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                  
                  # 处理创建时间 - 统一转换为字符串格式
                  if isinstance(create_time, str) and create_time:
@@ -346,21 +360,39 @@ class CloudSyncManager:
                          return default
                  
                  # 构建记录数据，只包含飞书表格中存在的字段
-                 record_fields = {
-                     '推文原文内容': str(tweet.get('推文原文内容', '')),
+                 # 根据实际可用字段动态构建字段映射
+                 content_field = None
+                 for field in available_fields:
+                     if '推文' in field and '内容' in field:
+                         content_field = field
+                         break
+                 
+                 # 跳过发布时间字段，让飞书自己生成
+                 # 不再处理发布时间相关逻辑
+                 
+                 all_possible_fields = {
                      '作者（账号）': str(tweet.get('作者（账号）', '')),
                      '推文链接': str(tweet.get('推文链接', '')),
                      '话题标签（Hashtag）': str(tweet.get('话题标签（Hashtag）', '')),
                      '类型标签': str(tweet.get('类型标签', '')),
-                     '评论数': safe_int(tweet.get('评论数')),
-                     '转发数': safe_int(tweet.get('转发数')),
-                     '点赞数': safe_int(tweet.get('点赞数')),
-                     '发布时间': publish_time
+                     '评论': safe_int(tweet.get('评论数', 0) or tweet.get('评论', 0)),
+                     '转发': safe_int(tweet.get('转发数', 0) or tweet.get('转发', 0)),
+                     '点赞': safe_int(tweet.get('点赞数', 0) or tweet.get('点赞', 0))
                  }
                  
-                 # 只有当创建时间字段在飞书表格中存在时才添加
-                 if '创建时间' in field_types:
-                     record_fields['创建时间'] = create_time
+                 # 添加推文内容字段（使用实际的字段名）
+                 if content_field:
+                     all_possible_fields[content_field] = str(tweet.get('推文原文内容', '') or tweet.get('推文原 文内容', ''))
+                 
+                 # 只保留飞书表格中实际存在的字段
+                 record_fields = {}
+                 for field_name, field_value in all_possible_fields.items():
+                     if field_name in available_fields:
+                         record_fields[field_name] = field_value
+                     else:
+                         self.logger.warning(f"字段 '{field_name}' 在飞书表格中不存在，跳过。可用字段: {available_fields}")
+                 
+                 self.logger.info(f"实际使用的字段: {list(record_fields.keys())}")
                  
                  record = {'fields': record_fields}
                      

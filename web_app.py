@@ -10,6 +10,7 @@ import json
 import sqlite3
 import subprocess
 import tempfile
+import time
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
@@ -20,8 +21,65 @@ from dataclasses import asdict
 import re
 
 # 导入现有模块
-from config import TWITTER_TARGETS, FILTER_CONFIG, CLOUD_SYNC_CONFIG
 from page_structure_analyzer import PageStructureAnalyzer, IntelligentScraper
+
+# 默认配置定义（将从数据库加载覆盖）
+TWITTER_TARGETS = {
+    'accounts': [],
+    'keywords': []
+}
+
+FILTER_CONFIG = {
+    'min_likes': 50,
+    'min_comments': 10,
+    'min_retweets': 20,
+    'keywords_filter': [],
+    'max_tweets_per_target': 8,
+    'max_total_tweets': 200,
+    'min_content_length': 20,
+    'max_content_length': 1000,
+    'max_age_hours': 72,
+}
+
+OUTPUT_CONFIG = {
+    'data_dir': './data',
+    'excel_filename_format': 'twitter_daily_{date}.xlsx',
+    'sheet_name': 'Twitter数据',
+}
+
+BROWSER_CONFIG = {
+    'headless': False,
+    'timeout': 8000,
+    'wait_time': 0.3,
+    'scroll_pause_time': 0.3,
+    'navigation_timeout': 10000,
+    'load_state_timeout': 4000,
+    'fast_mode': True,
+    'skip_images': True,
+    'disable_animations': True,
+}
+
+LOG_CONFIG = {
+    'level': 'INFO',
+    'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    'filename': 'twitter_scraper.log'
+}
+
+CLOUD_SYNC_CONFIG = {
+    'google_sheets': {
+        'enabled': False,
+        'credentials_file': './credentials/google-credentials.json',
+        'spreadsheet_id': '',
+        'worksheet_name': 'Twitter数据',
+    },
+    'feishu': {
+        'enabled': False,
+        'app_id': '',
+        'app_secret': '',
+        'spreadsheet_token': '',
+        'sheet_id': '',
+    }
+}
 
 # 飞书配置信息
 FEISHU_CONFIG = {
@@ -46,6 +104,8 @@ ADS_POWER_CONFIG = {
 from models import TweetModel, ScrapingConfig
 from ads_browser_launcher import AdsPowerLauncher
 from twitter_parser import TwitterParser
+from enhanced_twitter_parser import MultiWindowEnhancedScraper
+from optimized_scraping_engine import OptimizedScrapingEngine
 from cloud_sync import CloudSyncManager
 from excel_writer import ExcelWriter
 
@@ -58,6 +118,17 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # 设置字符编码
 app.config['JSON_AS_ASCII'] = False
 
+# 配置日志
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+app.logger.setLevel(logging.INFO)
+
+# 减少werkzeug HTTP请求日志输出
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
+
 @app.after_request
 def after_request(response):
     """设置响应头，确保正确处理中文字符"""
@@ -69,7 +140,7 @@ db = SQLAlchemy(app)
 
 def load_config_from_database():
     """从数据库加载配置"""
-    global ADS_POWER_CONFIG, FEISHU_CONFIG
+    global ADS_POWER_CONFIG, FEISHU_CONFIG, TWITTER_TARGETS, FILTER_CONFIG, OUTPUT_CONFIG, BROWSER_CONFIG, LOG_CONFIG, CLOUD_SYNC_CONFIG
     
     try:
         configs = SystemConfig.query.all()
@@ -80,6 +151,8 @@ def load_config_from_database():
             ADS_POWER_CONFIG['local_api_url'] = config_dict['adspower_api_url']
         if 'adspower_user_id' in config_dict:
             ADS_POWER_CONFIG['user_id'] = config_dict['adspower_user_id']
+        if 'adspower_group_id' in config_dict:
+            ADS_POWER_CONFIG['group_id'] = config_dict['adspower_group_id']
         if 'adspower_multi_user_ids' in config_dict:
             multi_ids = config_dict['adspower_multi_user_ids']
             ADS_POWER_CONFIG['multi_user_ids'] = [uid.strip() for uid in multi_ids.split('\n') if uid.strip()] if multi_ids else []
@@ -87,12 +160,28 @@ def load_config_from_database():
             ADS_POWER_CONFIG['max_concurrent_tasks'] = int(config_dict['max_concurrent_tasks'])
         if 'task_timeout' in config_dict:
             ADS_POWER_CONFIG['task_timeout'] = int(config_dict['task_timeout'])
+        if 'request_interval' in config_dict:
+            ADS_POWER_CONFIG['request_interval'] = float(config_dict['request_interval'])
+        if 'user_rotation_enabled' in config_dict:
+            ADS_POWER_CONFIG['user_rotation_enabled'] = config_dict['user_rotation_enabled'].lower() == 'true'
+        if 'user_switch_interval' in config_dict:
+            ADS_POWER_CONFIG['user_switch_interval'] = int(config_dict['user_switch_interval'])
+        if 'api_retry_delay' in config_dict:
+            ADS_POWER_CONFIG['api_retry_delay'] = float(config_dict['api_retry_delay'])
         if 'browser_startup_delay' in config_dict:
-            ADS_POWER_CONFIG['browser_startup_delay'] = int(config_dict['browser_startup_delay'])
+            ADS_POWER_CONFIG['browser_startup_delay'] = float(config_dict['browser_startup_delay'])
+        if 'adspower_timeout' in config_dict:
+            ADS_POWER_CONFIG['timeout'] = int(config_dict['adspower_timeout'])
+        if 'adspower_retry_count' in config_dict:
+            ADS_POWER_CONFIG['retry_count'] = int(config_dict['adspower_retry_count'])
+        if 'adspower_retry_delay' in config_dict:
+            ADS_POWER_CONFIG['retry_delay'] = int(config_dict['adspower_retry_delay'])
         if 'adspower_headless' in config_dict:
             ADS_POWER_CONFIG['headless'] = config_dict['adspower_headless'].lower() == 'true'
         if 'adspower_health_check' in config_dict:
             ADS_POWER_CONFIG['health_check'] = config_dict['adspower_health_check'].lower() == 'true'
+        if 'adspower_window_visible' in config_dict:
+            ADS_POWER_CONFIG['window_visible'] = config_dict['adspower_window_visible'].lower() == 'true'
         
         # 加载飞书配置
         if 'feishu_app_id' in config_dict:
@@ -106,7 +195,7 @@ def load_config_from_database():
         if 'feishu_enabled' in config_dict:
             FEISHU_CONFIG['enabled'] = config_dict['feishu_enabled'].lower() == 'true'
         
-        pass
+        print("✅ 配置已从数据库加载完成")
         
     except Exception as e:
         print(f"⚠️ 配置加载失败: {e}")
@@ -126,6 +215,9 @@ def init_database():
         
         # 从数据库加载配置
         load_config_from_database()
+        
+        # 初始化任务管理器（在配置加载后）
+        init_task_manager()
 
 # 数据库模型
 class ScrapingTask(db.Model):
@@ -377,7 +469,7 @@ class ParallelTaskManager:
         self.running_tasks = {}  # {task_id: {'executor': executor, 'thread': thread}}
         self.background_processes = {}  # {task_id: {'process': process, 'user_id': user_id}}
         # 从配置文件读取可用的AdsPower用户ID池
-        from config import ADS_POWER_CONFIG
+        # 配置已在文件开头定义，无需导入
         self.config = ADS_POWER_CONFIG
         self.available_user_ids = ADS_POWER_CONFIG.get('multi_user_ids', [ADS_POWER_CONFIG['user_id']])
         self.user_id_pool = self.available_user_ids.copy()
@@ -725,14 +817,44 @@ class ScrapingTaskExecutor:
             
             # 启动浏览器
             print(f"[DEBUG] 正在启动AdsPower浏览器...")
-            browser_manager = AdsPowerLauncher()
+            app.logger.info(f"开始启动AdsPower浏览器，用户ID: {self.user_id}")
+            
+            browser_manager = AdsPowerLauncher(ADS_POWER_CONFIG)
             user_id = self.user_id  # 使用分配的用户ID
             
-            browser_info = browser_manager.start_browser(user_id)
-            if not browser_info:
-                raise Exception("浏览器启动失败")
-            
-            print(f"[DEBUG] 浏览器启动成功: {browser_info}")
+            try:
+                # 进行完整的健康检查和浏览器启动
+                app.logger.info("正在进行AdsPower健康检查...")
+                browser_info = browser_manager.start_browser(user_id, skip_health_check=False)
+                if not browser_info:
+                    raise Exception("浏览器启动失败：未返回浏览器信息")
+                
+                app.logger.info(f"浏览器启动成功: {browser_info}")
+                print(f"[DEBUG] 浏览器启动成功: {browser_info}")
+                
+            except Exception as e:
+                app.logger.error(f"AdsPower浏览器启动失败: {str(e)}")
+                
+                # 获取详细的健康报告
+                try:
+                    health_report = browser_manager.get_health_report()
+                    app.logger.error(f"系统健康报告: {health_report}")
+                    
+                    # 尝试自动修复
+                    app.logger.info("尝试自动修复系统问题...")
+                    if browser_manager.auto_optimize_system():
+                        app.logger.info("系统优化完成，重新尝试启动浏览器...")
+                        browser_info = browser_manager.start_browser(user_id, skip_health_check=True)
+                        if browser_info:
+                            app.logger.info("浏览器启动成功（修复后）")
+                        else:
+                            raise Exception("浏览器启动失败（修复后仍然失败）")
+                    else:
+                        raise Exception(f"AdsPower浏览器启动失败且自动修复失败: {str(e)}")
+                        
+                except Exception as repair_error:
+                    app.logger.error(f"自动修复过程中发生错误: {str(repair_error)}")
+                    raise Exception(f"AdsPower浏览器启动失败: {str(e)}。修复尝试也失败: {str(repair_error)}")
             
             debug_port = browser_info.get('ws', {}).get('puppeteer')
             print(f"[DEBUG] 调试端口: {debug_port}")
@@ -765,7 +887,8 @@ class ScrapingTaskExecutor:
                             tweets = await parser.scrape_user_keyword_tweets(
                                 username=account, 
                                 keyword=keyword, 
-                                max_tweets=task.max_tweets
+                                max_tweets=task.max_tweets,
+                                enable_enhanced=True
                             )
                             
                             # 过滤推文
@@ -787,8 +910,7 @@ class ScrapingTaskExecutor:
                         
                     try:
                         print(f"[DEBUG] 抓取博主 @{account} 的推文")
-                        await parser.navigate_to_profile(account)
-                        tweets = await parser.scrape_tweets(max_tweets=task.max_tweets)
+                        tweets = await parser.scrape_user_tweets(username=account, max_tweets=task.max_tweets, enable_enhanced=True)
                         
                         # 过滤推文
                         filtered_tweets = self._filter_tweets(tweets, task)
@@ -807,7 +929,7 @@ class ScrapingTaskExecutor:
                         
                     try:
                         print(f"[DEBUG] 全局搜索关键词 '{keyword}'")
-                        tweets = await parser.scrape_keyword_tweets(keyword, max_tweets=task.max_tweets)
+                        tweets = await parser.scrape_keyword_tweets(keyword, max_tweets=task.max_tweets, enable_enhanced=True)
                         filtered_tweets = self._filter_tweets(tweets, task)
                         all_tweets.extend(filtered_tweets)
                         
@@ -995,10 +1117,21 @@ class ScrapingTaskExecutor:
         """停止当前任务"""
         self.is_running = False
 
-# 全局并行任务管理器
-# 从配置文件读取最大并发任务数
-from config import ADS_POWER_CONFIG
-task_manager = ParallelTaskManager(max_concurrent_tasks=ADS_POWER_CONFIG.get('max_concurrent_tasks', 3))
+# 全局并行任务管理器（将在配置加载后初始化）
+task_manager = None
+optimized_scraper = None
+
+def init_task_manager():
+    """初始化任务管理器"""
+    global task_manager, optimized_scraper
+    max_concurrent = ADS_POWER_CONFIG.get('max_concurrent_tasks', 2)
+    task_manager = ParallelTaskManager(max_concurrent_tasks=max_concurrent)
+    
+    # 初始化优化抓取器
+    optimized_scraper = MultiWindowEnhancedScraper(max_workers=max_concurrent)
+    
+    print(f"✅ TaskManager已初始化，最大并发任务数: {max_concurrent}")
+    print(f"✅ OptimizedScraper已初始化，支持多窗口并发抓取")
 
 # 路由定义
 @app.route('/')
@@ -1097,14 +1230,77 @@ def create_task():
 @app.route('/data')
 def data():
     """数据查看页面"""
+    from datetime import datetime, date
+    from sqlalchemy import func
+    
     page = request.args.get('page', 1, type=int)
     per_page = 20
+    search = request.args.get('search', '')
+    task_id = request.args.get('task_id', type=int)
+    min_likes = request.args.get('min_likes', type=int)
+    min_retweets = request.args.get('min_retweets', type=int)
+    sort = request.args.get('sort', 'created_desc')
     
-    tweets = TweetData.query.order_by(TweetData.scraped_at.desc()).paginate(
+    # 构建查询
+    query = TweetData.query
+    
+    # 搜索过滤
+    if search:
+        query = query.filter(
+            db.or_(
+                TweetData.content.contains(search),
+                TweetData.username.contains(search)
+            )
+        )
+    
+    # 任务过滤
+    if task_id:
+        query = query.filter(TweetData.task_id == task_id)
+    
+    # 点赞数过滤
+    if min_likes is not None:
+        query = query.filter(TweetData.likes >= min_likes)
+    
+    # 转发数过滤
+    if min_retweets is not None:
+        query = query.filter(TweetData.retweets >= min_retweets)
+    
+    # 排序
+    if sort == 'created_asc':
+        query = query.order_by(TweetData.created_at.asc())
+    elif sort == 'likes_desc':
+        query = query.order_by(TweetData.likes.desc())
+    elif sort == 'retweets_desc':
+        query = query.filter(TweetData.retweets.isnot(None)).order_by(TweetData.retweets.desc())
+    else:  # created_desc
+        query = query.order_by(TweetData.scraped_at.desc())
+    
+    # 分页
+    tweets = query.paginate(
         page=page, per_page=per_page, error_out=False
     )
     
-    return render_template('data.html', tweets=tweets)
+    # 计算统计数据
+    today = date.today()
+    data_stats = {
+        'total_tweets': TweetData.query.count(),
+        'today_tweets': TweetData.query.filter(func.date(TweetData.scraped_at) == today).count(),
+        'avg_likes': db.session.query(func.avg(TweetData.likes)).filter(TweetData.likes.isnot(None)).scalar() or 0,
+        'avg_retweets': db.session.query(func.avg(TweetData.retweets)).filter(TweetData.retweets.isnot(None)).scalar() or 0
+    }
+    
+    # 格式化平均数
+    data_stats['avg_likes'] = round(data_stats['avg_likes'], 1)
+    data_stats['avg_retweets'] = round(data_stats['avg_retweets'], 1)
+    
+    # 获取所有任务用于筛选
+    tasks = ScrapingTask.query.order_by(ScrapingTask.created_at.desc()).all()
+    
+    return render_template('data.html', 
+                         tweets=tweets.items, 
+                         pagination=tweets, 
+                         data_stats=data_stats, 
+                         tasks=tasks)
 
 @app.route('/config')
 def config():
@@ -1135,6 +1331,12 @@ def config():
         config_data['adspower_api_host'] = 'local.adspower.net'
     if 'adspower_api_port' not in config_data:
         config_data['adspower_api_port'] = '50325'
+    
+    # 处理导出字段配置
+    if 'export_fields' in config_data:
+        config_data['export_fields'] = config_data['export_fields'].split(',') if config_data['export_fields'] else []
+    else:
+        config_data['export_fields'] = ['content', 'username', 'created_at', 'likes_count', 'retweets_count', 'hashtags']
     
     return render_template('config.html', config=config_data)
 
@@ -1308,7 +1510,8 @@ def update_config():
                 'export_excel': 'export_excel' in request.form,
                 'export_csv': 'export_csv' in request.form,
                 'export_json': 'export_json' in request.form,
-                'export_fields': ','.join(request.form.getlist('export_fields'))
+                'export_fields': ','.join(request.form.getlist('export_fields')),
+                'export_filename_template': request.form.get('export_filename_template', 'twitter_data_{date}')
             }
             
             for key, value in export_configs.items():
@@ -1337,6 +1540,86 @@ def update_config():
 def influencers():
     """博主管理页面"""
     return render_template('influencers.html')
+
+@app.route('/sync_feishu', methods=['POST'])
+def sync_feishu():
+    """同步数据到飞书（支持全部同步或按任务ID同步）"""
+    try:
+        # 获取请求参数
+        data = request.get_json() or {}
+        task_id = data.get('task_id')
+        
+        # 检查飞书配置
+        feishu_config = SystemConfig.query.filter_by(key='feishu_config').first()
+        if not feishu_config or not feishu_config.value:
+            return jsonify({'success': False, 'message': '飞书配置未设置'}), 400
+        
+        config = json.loads(feishu_config.value)
+        required_fields = ['app_id', 'app_secret', 'app_token', 'table_id']
+        if not all(config.get(field) for field in required_fields):
+            return jsonify({'success': False, 'message': '飞书配置不完整'}), 400
+        
+        # 构建查询
+        query = TweetData.query
+        if task_id:
+            query = query.filter(TweetData.task_id == task_id)
+        
+        # 获取未同步的推文数据
+        tweets = query.filter(TweetData.synced_to_feishu != True).all()
+        
+        if not tweets:
+            message = f'任务 {task_id} 没有需要同步的数据' if task_id else '没有需要同步的数据'
+            return jsonify({'success': True, 'message': message})
+        
+        # 初始化同步管理器
+        sync_manager = CloudSyncManager()
+        sync_manager.set_feishu_config(
+            app_id=config['app_id'],
+            app_secret=config['app_secret'],
+            app_token=config['app_token'],
+            table_id=config['table_id']
+        )
+        
+        # 格式化数据并同步
+        formatted_data = []
+        for tweet in tweets:
+            # 使用修复后的格式化函数
+            from enhanced_tweet_scraper import format_tweets_for_feishu
+            tweet_dict = {
+                'content': tweet.content,
+                'username': tweet.username,
+                'tweet_url': tweet.tweet_url,
+                'hashtags': tweet.hashtags,
+                'likes': tweet.likes,
+                'retweets': tweet.retweets,
+                'replies': tweet.replies,
+                'scraped_at': tweet.scraped_at
+            }
+            
+            # 格式化单条推文数据
+            formatted_tweet = format_tweets_for_feishu([tweet_dict])[0]
+            formatted_data.append(formatted_tweet)
+        
+        # 同步到飞书
+        success = sync_manager.sync_to_feishu(formatted_data)
+        
+        if success:
+            # 更新同步状态
+            for tweet in tweets:
+                tweet.synced_to_feishu = True
+            db.session.commit()
+            
+            message = f'成功同步 {len(tweets)} 条数据到飞书'
+            if task_id:
+                message += f'（任务 {task_id}）'
+            
+            return jsonify({'success': True, 'message': message})
+        else:
+            return jsonify({'success': False, 'message': '同步到飞书失败'}), 500
+            
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'同步失败: {str(e)}'}), 500
 
 # API路由
 @app.route('/api/tasks', methods=['GET'])
@@ -1384,27 +1667,82 @@ def api_create_task():
 @app.route('/api/tasks/<int:task_id>/start', methods=['POST'])
 def api_start_task(task_id):
     """启动任务"""
+    app.logger.info(f"收到启动任务请求: task_id={task_id}")
+    
     # 检查任务是否已在运行
     if task_manager.is_task_running(task_id):
-        return jsonify({'success': False, 'error': '该任务已在运行中'}), 400
+        error_msg = '该任务已在运行中'
+        app.logger.warning(f"任务启动失败 - {error_msg}: task_id={task_id}")
+        return jsonify({'success': False, 'error': error_msg}), 400
     
     # 检查是否可以启动新任务
     if not task_manager.can_start_task():
         status = task_manager.get_task_status()
+        # 提供详细的失败原因
+        error_details = {
+            'running_count': status['running_count'],
+            'max_concurrent': status['max_concurrent'],
+            'available_slots': status['available_slots'],
+            'available_browsers': status['available_browsers'],
+            'current_tasks': status.get('current_tasks', []),
+            'user_id_pool': len(task_manager.user_id_pool),
+            'available_user_ids': task_manager.available_user_ids
+        }
+        
+        if status['running_count'] >= status['max_concurrent']:
+            error_msg = f'已达到最大并发任务数限制({status["max_concurrent"]})，当前运行任务数: {status["running_count"]}'
+        elif len(task_manager.user_id_pool) == 0:
+            error_msg = f'无可用的浏览器用户ID，可用用户ID池为空。配置的用户ID: {task_manager.available_user_ids}'
+        else:
+            error_msg = f'无法启动任务，原因未知。运行任务数: {status["running_count"]}/{status["max_concurrent"]}，可用浏览器: {len(task_manager.user_id_pool)}'
+        
+        app.logger.error(f"任务启动失败 - {error_msg}: task_id={task_id}, details={error_details}")
+        
         return jsonify({
             'success': False, 
-            'error': f'已达到最大并发数({status["max_concurrent"]})或无可用浏览器资源'
+            'error': error_msg,
+            'details': error_details
         }), 400
     
     try:
+        app.logger.info(f"开始启动任务: task_id={task_id}")
         success, message = task_manager.start_task(task_id)
         if success:
+            app.logger.info(f"任务启动成功: task_id={task_id}, message={message}")
             return jsonify({'success': True, 'message': message})
         else:
-            return jsonify({'success': False, 'error': message}), 400
+            # 获取更详细的状态信息
+            status = task_manager.get_task_status()
+            error_details = {
+                'running_count': status['running_count'],
+                'max_concurrent': status['max_concurrent'],
+                'available_slots': status['available_slots'],
+                'available_browsers': status['available_browsers'],
+                'user_id_pool': len(task_manager.user_id_pool),
+                'available_user_ids': task_manager.available_user_ids,
+                'original_message': message
+            }
+            app.logger.error(f"任务启动失败: task_id={task_id}, message={message}, details={error_details}")
+            return jsonify({
+                'success': False, 
+                'error': f'任务启动失败: {message}',
+                'details': error_details
+            }), 400
         
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        # 获取详细的异常信息
+        import traceback
+        error_details = {
+            'exception_type': type(e).__name__,
+            'exception_message': str(e),
+            'traceback': traceback.format_exc()
+        }
+        app.logger.error(f"任务启动异常: task_id={task_id}, exception={str(e)}, traceback={traceback.format_exc()}")
+        return jsonify({
+            'success': False, 
+            'error': f'任务启动异常: {str(e)}',
+            'details': error_details
+        }), 500
 
 @app.route('/api/tasks/<int:task_id>/stop', methods=['POST'])
 def api_stop_task(task_id):
@@ -1428,9 +1766,28 @@ def api_restart_task(task_id):
     # 检查是否可以启动新任务
     if not task_manager.can_start_task():
         status = task_manager.get_task_status()
+        # 提供详细的失败原因
+        error_details = {
+            'running_count': status['running_count'],
+            'max_concurrent': status['max_concurrent'],
+            'available_slots': status['available_slots'],
+            'available_browsers': status['available_browsers'],
+            'current_tasks': status.get('current_tasks', []),
+            'user_id_pool': len(task_manager.user_id_pool),
+            'available_user_ids': task_manager.available_user_ids
+        }
+        
+        if status['running_count'] >= status['max_concurrent']:
+            error_msg = f'已达到最大并发任务数限制({status["max_concurrent"]})，当前运行任务数: {status["running_count"]}'
+        elif len(task_manager.user_id_pool) == 0:
+            error_msg = f'无可用的浏览器用户ID，可用用户ID池为空。配置的用户ID: {task_manager.available_user_ids}'
+        else:
+            error_msg = f'无法重新启动任务，原因未知。运行任务数: {status["running_count"]}/{status["max_concurrent"]}，可用浏览器: {len(task_manager.user_id_pool)}'
+        
         return jsonify({
             'success': False, 
-            'error': f'已达到最大并发数({status["max_concurrent"]})或无可用浏览器资源'
+            'error': error_msg,
+            'details': error_details
         }), 400
     
     try:
@@ -1454,10 +1811,36 @@ def api_restart_task(task_id):
         if success:
             return jsonify({'success': True, 'message': '任务已重新启动'})
         else:
-            return jsonify({'success': False, 'error': f'重新启动失败: {message}'}), 400
+            # 获取更详细的状态信息
+            status = task_manager.get_task_status()
+            error_details = {
+                'running_count': status['running_count'],
+                'max_concurrent': status['max_concurrent'],
+                'available_slots': status['available_slots'],
+                'available_browsers': status['available_browsers'],
+                'user_id_pool': len(task_manager.user_id_pool),
+                'available_user_ids': task_manager.available_user_ids,
+                'original_message': message
+            }
+            return jsonify({
+                'success': False, 
+                'error': f'重新启动失败: {message}',
+                'details': error_details
+            }), 400
         
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        # 获取详细的异常信息
+        import traceback
+        error_details = {
+            'exception_type': type(e).__name__,
+            'exception_message': str(e),
+            'traceback': traceback.format_exc()
+        }
+        return jsonify({
+            'success': False, 
+            'error': f'重新启动异常: {str(e)}',
+            'details': error_details
+        }), 500
 
 @app.route('/api/tasks/<int:task_id>', methods=['GET'])
 def api_get_task(task_id):
@@ -1497,9 +1880,116 @@ def api_delete_task(task_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/data/export')
+def api_export_data():
+    """导出数据为Excel文件"""
+    try:
+        from datetime import datetime
+        import io
+        import pandas as pd
+        from flask import send_file
+        
+        # 获取筛选参数
+        search = request.args.get('search', '')
+        task_id = request.args.get('task_id', type=int)
+        min_likes = request.args.get('min_likes', type=int)
+        min_retweets = request.args.get('min_retweets', type=int)
+        
+        # 构建查询（与data页面相同的筛选逻辑）
+        query = TweetData.query
+        
+        # 搜索过滤
+        if search:
+            query = query.filter(
+                db.or_(
+                    TweetData.content.contains(search),
+                    TweetData.username.contains(search)
+                )
+            )
+        
+        # 任务过滤
+        if task_id:
+            query = query.filter(TweetData.task_id == task_id)
+        
+        # 点赞数过滤
+        if min_likes is not None:
+            query = query.filter(TweetData.likes >= min_likes)
+        
+        # 转发数过滤
+        if min_retweets is not None:
+            query = query.filter(TweetData.retweets >= min_retweets)
+        
+        # 按抓取时间排序
+        tweets = query.order_by(TweetData.scraped_at.desc()).all()
+        
+        if not tweets:
+            return jsonify({'success': False, 'error': '没有数据可导出'}), 400
+        
+        # 获取导出配置
+        export_fields_config = SystemConfig.query.filter_by(key='export_fields').first()
+        if export_fields_config and export_fields_config.value:
+            selected_fields = export_fields_config.value.split(',')
+        else:
+            # 默认导出字段
+            selected_fields = ['content', 'username', 'created_at', 'likes_count', 'retweets_count', 'hashtags']
+        
+        # 准备导出数据
+        export_data = []
+        for tweet in tweets:
+            row = {}
+            if 'content' in selected_fields:
+                row['推文内容'] = tweet.content
+            if 'username' in selected_fields:
+                row['用户名'] = tweet.username
+            if 'created_at' in selected_fields:
+                row['发布时间'] = tweet.created_at.strftime('%Y-%m-%d %H:%M:%S') if tweet.created_at else ''
+            if 'likes_count' in selected_fields:
+                row['点赞数'] = tweet.likes_count or 0
+            if 'retweets_count' in selected_fields:
+                row['转发数'] = tweet.retweets_count or 0
+            if 'hashtags' in selected_fields:
+                row['话题标签'] = tweet.hashtags or ''
+            
+            # 添加其他字段
+            row['抓取时间'] = tweet.scraped_at.strftime('%Y-%m-%d %H:%M:%S')
+            if tweet.task:
+                row['任务名称'] = tweet.task.name
+            
+            export_data.append(row)
+        
+        # 创建Excel文件
+        df = pd.DataFrame(export_data)
+        
+        # 生成文件名
+        filename_template = SystemConfig.query.filter_by(key='export_filename_template').first()
+        if filename_template and filename_template.value:
+            filename = filename_template.value.format(
+                date=datetime.now().strftime('%Y%m%d'),
+                time=datetime.now().strftime('%H%M%S'),
+                task_name='all_data'
+            )
+        else:
+            filename = f'twitter_data_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
+        
+        # 创建内存中的Excel文件
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='推文数据', index=False)
+        output.seek(0)
+        
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'{filename}.xlsx'
+        )
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/data/export/<int:task_id>')
-def api_export_data(task_id):
-    """导出任务数据"""
+def api_export_task_data(task_id):
+    """导出特定任务数据"""
     try:
         tweets = TweetData.query.filter_by(task_id=task_id).all()
         
@@ -1931,7 +2421,7 @@ def api_analyze_page_structure():
             return jsonify({'success': False, 'error': '请提供目标URL'}), 400
         
         # 启动浏览器
-        browser_manager = AdsPowerLauncher()
+        browser_manager = AdsPowerLauncher(ADS_POWER_CONFIG)
         user_id = ADS_POWER_CONFIG['user_id']  # 从配置获取
         
         browser_info = browser_manager.start_browser(user_id)
@@ -1986,7 +2476,7 @@ def api_start_intelligent_scraping():
         task_id = f"intelligent_scraping_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
         
         # 启动浏览器
-        browser_manager = AdsPowerLauncher()
+        browser_manager = AdsPowerLauncher(ADS_POWER_CONFIG)
         user_id = ADS_POWER_CONFIG['user_id']  # 从配置获取
         
         browser_info = browser_manager.start_browser(user_id)
@@ -2079,6 +2569,88 @@ def api_get_scraping_progress(task_id):
     except Exception as e:
         return jsonify({'success': False, 'error': f'获取进度失败: {str(e)}'}), 500
 
+@app.route('/api/start-optimized-scraping', methods=['POST'])
+def api_start_optimized_scraping():
+    """启动优化抓取API - 支持多窗口并发和实时数据保存"""
+    try:
+        data = request.get_json()
+        target_accounts = data.get('target_accounts', [])
+        target_keywords = data.get('target_keywords', [])
+        max_tweets = data.get('max_tweets', 20)
+        max_windows = data.get('max_windows', 2)
+        
+        if not target_accounts and not target_keywords:
+            return jsonify({
+                'success': False, 
+                'error': '请至少提供一个目标账号或关键词'
+            }), 400
+        
+        # 使用优化抓取器启动任务
+        task_id = f"optimized_{int(datetime.now().timestamp())}"
+        
+        def run_optimized_scraping():
+            try:
+                with app.app_context():
+                    # 创建任务记录
+                    task = ScrapingTask(
+                        name=f"优化抓取任务_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                        target_accounts=json.dumps(target_accounts),
+                        target_keywords=json.dumps(target_keywords),
+                        max_tweets=max_tweets,
+                        status='running',
+                        started_at=datetime.utcnow()
+                    )
+                    db.session.add(task)
+                    db.session.commit()
+                    
+                    # 启动优化抓取
+                    results = optimized_scraper.scrape_multiple_accounts(
+                        accounts=target_accounts,
+                        keywords=target_keywords,
+                        max_tweets_per_account=max_tweets,
+                        max_windows=max_windows,
+                        task_id=task.id
+                    )
+                    
+                    # 更新任务状态
+                    task.status = 'completed'
+                    task.completed_at = datetime.utcnow()
+                    task.result_count = len(results)
+                    db.session.commit()
+                    
+                    print(f"✅ 优化抓取任务完成，共抓取 {len(results)} 条推文")
+                    
+            except Exception as e:
+                print(f"❌ 优化抓取任务失败: {e}")
+                with app.app_context():
+                    task = ScrapingTask.query.filter_by(name__like=f"%{task_id}%").first()
+                    if task:
+                        task.status = 'failed'
+                        task.error_message = str(e)
+                        task.completed_at = datetime.utcnow()
+                        db.session.commit()
+        
+        # 在后台线程中运行
+        thread = threading.Thread(target=run_optimized_scraping)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'message': '优化抓取任务已启动',
+            'task_id': task_id,
+            'accounts': target_accounts,
+            'keywords': target_keywords,
+            'max_tweets': max_tweets,
+            'max_windows': max_windows
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'启动优化抓取失败: {str(e)}'
+        }), 500
+
 @app.route('/api/start-enhanced-scraping', methods=['POST'])
 def api_start_enhanced_scraping():
     """启动增强推文抓取API"""
@@ -2088,12 +2660,17 @@ def api_start_enhanced_scraping():
         target_keywords = data.get('target_keywords', [])
         max_tweets = data.get('max_tweets', 20)
         enable_details = data.get('enable_details', True)
+        task_name = data.get('task_name', f'增强抓取_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}')
         
         if not target_accounts and not target_keywords:
             return jsonify({'success': False, 'error': '请至少指定一个目标账号或关键词'}), 400
         
         # 生成任务ID
         task_id = f"enhanced_scraping_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+        
+        # 使用用户输入的任务名称或默认名称
+        if not task_name.strip():
+            task_name = f'增强抓取_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}'
         
         # 初始化任务状态
         enhanced_scraping_tasks[task_id] = {
@@ -2113,11 +2690,12 @@ def api_start_enhanced_scraping():
         
         # 在新线程中运行增强抓取
         def run_enhanced_scraping():
+            import time  # 确保time模块在函数内部可用
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
                 # 启动浏览器
-                browser_manager = AdsPowerLauncher()
+                browser_manager = AdsPowerLauncher(ADS_POWER_CONFIG)
                 user_id = ADS_POWER_CONFIG['user_id']  # 从配置获取
                 
                 browser_info = browser_manager.start_browser(user_id)
@@ -2126,8 +2704,20 @@ def api_start_enhanced_scraping():
                 
                 debug_port = browser_info.get('ws', {}).get('puppeteer')
                 
-                # 创建Twitter解析器
-                parser = TwitterParser(debug_port)
+                # 创建增强Twitter解析器
+                from enhanced_twitter_parser import EnhancedTwitterParser
+                from optimized_scraping_engine import OptimizedScrapingEngine
+                
+                # 创建抓取引擎
+                scraping_engine = OptimizedScrapingEngine(max_workers=4)
+                scraping_engine.start_engine()  # 启动抓取引擎
+                
+                # 创建增强解析器
+                window_id = f"window_{user_id}_{int(time.time())}"
+                parser = EnhancedTwitterParser(user_id, window_id, scraping_engine)
+                
+                # 初始化解析器（连接到浏览器）
+                loop.run_until_complete(parser.initialize_with_debug_port(debug_port))
                 
                 collected_tweets = []
                 details_scraped = 0
@@ -2144,10 +2734,10 @@ def api_start_enhanced_scraping():
                         # 导航到用户页面并获取用户信息
                         loop.run_until_complete(parser.navigate_to_profile(account))
                         
-                        # 抓取用户推文
+                        # 使用增强抓取方法（每次滚动后立即抓取和保存）
                         user_tweets = loop.run_until_complete(
-                            parser.scrape_user_tweets(
-                                account,
+                            parser.enhanced_scrape_user_tweets(
+                                username=account,
                                 max_tweets=min(max_tweets - len(collected_tweets), 10),
                                 enable_enhanced=enable_details
                             )
@@ -2198,10 +2788,12 @@ def api_start_enhanced_scraping():
                         break
                     
                     try:
+                        # 使用增强关键词抓取方法（每次滚动后立即抓取和保存）
                         keyword_tweets = loop.run_until_complete(
-                            parser.scrape_keyword_tweets(
-                                keyword,
-                                max_tweets=min(max_tweets - len(collected_tweets), 10)
+                            parser.enhanced_scrape_keyword_tweets(
+                                keyword=keyword,
+                                max_tweets=min(max_tweets - len(collected_tweets), 10),
+                                enable_enhanced=enable_details
                             )
                         )
                         
@@ -2246,7 +2838,7 @@ def api_start_enhanced_scraping():
                 if collected_tweets:
                     # 创建新任务记录
                     task = ScrapingTask(
-                        name=f"增强抓取_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}",
+                        name=task_name,
                         target_accounts=json.dumps(target_accounts),
                         target_keywords=json.dumps(target_keywords),
                         max_tweets=max_tweets,
@@ -2276,6 +2868,11 @@ def api_start_enhanced_scraping():
                     'error': str(e)
                 })
             finally:
+                # 停止抓取引擎
+                try:
+                    scraping_engine.stop_engine()
+                except:
+                    pass
                 loop.close()
         
         # 启动抓取线程
@@ -2601,6 +3198,15 @@ def init_db():
         
         # 从数据库加载配置
         load_config_from_database()
+        
+        # 初始化任务管理器（在配置加载后）
+        init_task_manager()
+
+@app.route('/debug-adspower')
+def debug_adspower():
+    """AdsPower调试页面"""
+    with open('debug_adspower.html', 'r', encoding='utf-8') as f:
+        return f.read()
 
 if __name__ == '__main__':
     # 初始化数据库

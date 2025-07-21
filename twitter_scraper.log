@@ -456,3 +456,86 @@
 2025-07-17 20:50:04,868 - TwitterScraper - INFO - 系统监控已停止
 2025-07-17 20:50:04,869 - TwitterScraper - INFO - 账户状态已保存
 2025-07-17 20:50:04,869 - TwitterScraper - INFO - 资源清理完成
+2025-07-20 23:58:03,139 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-20 23:58:03,140 - TwitterScraper - ERROR - 配置错误: 未配置任何抓取目标（用户或关键词）
+2025-07-20 23:58:13,147 - TwitterScraper - INFO - 系统监控已停止
+2025-07-20 23:58:13,147 - TwitterScraper - INFO - 账户状态已保存
+2025-07-20 23:58:13,147 - TwitterScraper - INFO - 资源清理完成
+2025-07-21 12:28:18,706 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-21 12:28:18,706 - TwitterScraper - INFO - ==================================================
+2025-07-21 12:28:18,706 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-21 12:28:18,707 - TwitterScraper - INFO - 开始时间: 2025-07-21 12:28:18
+2025-07-21 12:28:18,707 - TwitterScraper - INFO - ==================================================
+2025-07-21 12:28:18,707 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-21 12:28:18,707 - TwitterScraper - ERROR - 浏览器初始化失败: 用户ID不能为空，请在配置文件中设置或作为参数传入
+2025-07-21 12:28:18,707 - TwitterScraper - ERROR - 抓取任务执行失败: 浏览器初始化失败
+2025-07-21 12:28:28,717 - TwitterScraper - INFO - 系统监控已停止
+2025-07-21 12:28:28,717 - TwitterScraper - INFO - 账户状态已保存
+2025-07-21 12:28:28,717 - TwitterScraper - INFO - 资源清理完成
+2025-07-21 12:28:41,770 - TwitterScraper - INFO - 接收到信号 2，准备停止任务...
+2025-07-21 12:28:42,935 - TwitterScraper - INFO - 接收到信号 2，准备停止任务...
+2025-07-21 12:28:43,153 - TwitterScraper - INFO - 接收到信号 2，准备停止任务...
+2025-07-21 12:28:58,719 - TwitterScraper - INFO - ==================================================
+2025-07-21 12:28:58,719 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-21 12:28:58,719 - TwitterScraper - INFO - 开始时间: 2025-07-21 12:28:58
+2025-07-21 12:28:58,719 - TwitterScraper - INFO - ==================================================
+2025-07-21 12:28:58,719 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-21 12:28:58,719 - TwitterScraper - ERROR - 浏览器初始化失败: 用户ID不能为空，请在配置文件中设置或作为参数传入
+2025-07-21 12:28:58,719 - TwitterScraper - ERROR - 抓取任务执行失败: 浏览器初始化失败
+2025-07-21 12:29:03,724 - TwitterScraper - INFO - 系统监控已停止
+2025-07-21 12:29:03,725 - TwitterScraper - INFO - 账户状态已保存
+2025-07-21 12:29:03,725 - TwitterScraper - INFO - 资源清理完成
+2025-07-21 12:30:03,727 - TwitterScraper - INFO - ==================================================
+2025-07-21 12:30:03,728 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-21 12:30:03,728 - TwitterScraper - INFO - 开始时间: 2025-07-21 12:30:03
+2025-07-21 12:30:03,729 - TwitterScraper - INFO - ==================================================
+2025-07-21 12:30:03,729 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-21 12:30:03,729 - TwitterScraper - ERROR - 浏览器初始化失败: 用户ID不能为空，请在配置文件中设置或作为参数传入
+2025-07-21 12:30:03,729 - TwitterScraper - ERROR - 抓取任务执行失败: 浏览器初始化失败
+2025-07-21 12:30:03,729 - TwitterScraper - INFO - 系统监控已停止
+2025-07-21 12:30:03,729 - TwitterScraper - INFO - 账户状态已保存
+2025-07-21 12:30:03,729 - TwitterScraper - INFO - 资源清理完成
+2025-07-21 12:30:03,729 - TwitterScraper - ERROR - 任务执行失败: 'ExceptionHandler' object has no attribute 'handle_exception'
+2025-07-21 12:30:03,729 - TwitterScraper - INFO - 系统监控已停止
+2025-07-21 12:30:03,729 - TwitterScraper - INFO - 账户状态已保存
+2025-07-21 12:30:03,729 - TwitterScraper - INFO - 资源清理完成
+2025-07-21 12:30:42,432 - TwitterScraper - INFO - TwitterDailyScraper 初始化完成
+2025-07-21 12:30:42,433 - TwitterScraper - INFO - ==================================================
+2025-07-21 12:30:42,433 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-21 12:30:42,433 - TwitterScraper - INFO - 开始时间: 2025-07-21 12:30:42
+2025-07-21 12:30:42,433 - TwitterScraper - INFO - ==================================================
+2025-07-21 12:30:42,433 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-21 12:30:42,433 - TwitterScraper - ERROR - 浏览器初始化失败: 用户ID不能为空，请在配置文件中设置或作为参数传入
+2025-07-21 12:30:42,433 - TwitterScraper - ERROR - 抓取任务执行失败: 浏览器初始化失败
+2025-07-21 12:30:52,445 - TwitterScraper - INFO - 系统监控已停止
+2025-07-21 12:30:52,445 - TwitterScraper - INFO - 账户状态已保存
+2025-07-21 12:30:52,445 - TwitterScraper - INFO - 资源清理完成
+2025-07-21 12:31:21,179 - TwitterScraper - INFO - 接收到信号 15，准备停止任务...
+2025-07-21 12:31:22,446 - TwitterScraper - INFO - ==================================================
+2025-07-21 12:31:22,447 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-21 12:31:22,447 - TwitterScraper - INFO - 开始时间: 2025-07-21 12:31:22
+2025-07-21 12:31:22,447 - TwitterScraper - INFO - ==================================================
+2025-07-21 12:31:22,447 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-21 12:31:22,447 - TwitterScraper - ERROR - 浏览器初始化失败: 用户ID不能为空，请在配置文件中设置或作为参数传入
+2025-07-21 12:31:22,447 - TwitterScraper - ERROR - 抓取任务执行失败: 浏览器初始化失败
+2025-07-21 12:31:27,200 - TwitterScraper - INFO - 接收到信号 2，准备停止任务...
+2025-07-21 12:31:27,452 - TwitterScraper - INFO - 系统监控已停止
+2025-07-21 12:31:27,452 - TwitterScraper - INFO - 账户状态已保存
+2025-07-21 12:31:27,453 - TwitterScraper - INFO - 资源清理完成
+2025-07-21 12:31:28,368 - TwitterScraper - INFO - 接收到信号 2，准备停止任务...
+2025-07-21 12:31:28,586 - TwitterScraper - INFO - 接收到信号 2，准备停止任务...
+2025-07-21 12:32:07,401 - TwitterScraper - INFO - 接收到信号 15，准备停止任务...
+2025-07-21 12:32:27,454 - TwitterScraper - INFO - ==================================================
+2025-07-21 12:32:27,454 - TwitterScraper - INFO - Twitter 日报采集任务开始
+2025-07-21 12:32:27,454 - TwitterScraper - INFO - 开始时间: 2025-07-21 12:32:27
+2025-07-21 12:32:27,454 - TwitterScraper - INFO - ==================================================
+2025-07-21 12:32:27,454 - TwitterScraper - INFO - 开始初始化 AdsPower 浏览器...
+2025-07-21 12:32:27,454 - TwitterScraper - ERROR - 浏览器初始化失败: 用户ID不能为空，请在配置文件中设置或作为参数传入
+2025-07-21 12:32:27,455 - TwitterScraper - ERROR - 抓取任务执行失败: 浏览器初始化失败
+2025-07-21 12:32:27,455 - TwitterScraper - INFO - 系统监控已停止
+2025-07-21 12:32:27,455 - TwitterScraper - INFO - 账户状态已保存
+2025-07-21 12:32:27,455 - TwitterScraper - INFO - 资源清理完成
+2025-07-21 12:32:27,456 - TwitterScraper - ERROR - 任务执行失败: 'ExceptionHandler' object has no attribute 'handle_exception'
+2025-07-21 12:32:27,456 - TwitterScraper - INFO - 系统监控已停止
+2025-07-21 12:32:27,456 - TwitterScraper - INFO - 账户状态已保存
+2025-07-21 12:32:27,456 - TwitterScraper - INFO - 资源清理完成

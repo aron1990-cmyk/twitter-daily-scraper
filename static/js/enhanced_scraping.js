@@ -44,6 +44,7 @@ function startEnhancedScraping() {
     
     const maxTweets = parseInt(document.getElementById('maxTweets').value) || 20;
     const enableDetails = document.getElementById('enableDetails').checked;
+    const taskName = document.getElementById('taskName').value.trim();
     
     // 验证输入
     if (targetAccounts.length === 0 && targetKeywords.length === 0) {
@@ -56,7 +57,8 @@ function startEnhancedScraping() {
         target_accounts: targetAccounts,
         target_keywords: targetKeywords,
         max_tweets: maxTweets,
-        enable_details: enableDetails
+        enable_details: enableDetails,
+        task_name: taskName
     };
     
     // 显示加载状态
@@ -105,7 +107,7 @@ function startProgressMonitoring() {
         if (currentTaskId) {
             updateProgress();
         }
-    }, 2000); // 每2秒更新一次
+    }, 10000); // 每10秒更新一次（减少服务器负载）
     
     // 立即更新一次
     updateProgress();

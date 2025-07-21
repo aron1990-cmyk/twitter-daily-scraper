@@ -1,0 +1,58 @@
+2025-07-21 14:54:38,393 - __main__ - INFO - 🎯 开始完整工作流测试
+2025-07-21 14:54:38,393 - __main__ - INFO - 🚀 开始抓取 100 条推文...
+2025-07-21 14:54:38,393 - ads_browser_launcher - INFO - 启用快速模式，浏览器参数: ['--blink-settings=imagesEnabled=false', '--disable-images', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-features=TranslateUI', '--disable-ipc-flooding-protection', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu', '--disable-web-security', '--disable-features=VizDisplayCompositor']
+2025-07-21 14:54:38,393 - ads_browser_launcher - INFO - 正在启动 AdsPower 浏览器，用户ID: k11p9ypc
+2025-07-21 14:54:42,025 - ads_browser_launcher - INFO - 浏览器启动成功，调试端口: ws://127.0.0.1:62028/devtools/browser/b3e9a0ec-7e55-4b6a-be42-691007f96c89
+2025-07-21 14:54:42,025 - twitter_parser - INFO - Initializing TwitterParser with debug_port: ws://127.0.0.1:62028/devtools/browser/b3e9a0ec-7e55-4b6a-be42-691007f96c89
+2025-07-21 14:54:42,025 - twitter_parser - INFO - 开始启动 Playwright...
+2025-07-21 14:54:42,748 - twitter_parser - INFO - 开始连接到浏览器调试端口: ws://127.0.0.1:62028/devtools/browser/b3e9a0ec-7e55-4b6a-be42-691007f96c89
+2025-07-21 14:54:43,706 - twitter_parser - INFO - 成功连接到浏览器实例
+2025-07-21 14:54:43,707 - twitter_parser - INFO - 找到 1 个浏览器上下文
+2025-07-21 14:54:43,707 - twitter_parser - INFO - 在上下文中找到 9 个页面
+2025-07-21 14:54:43,707 - twitter_parser - INFO - 使用现有页面，当前URL: https://x.com/elonmusk
+2025-07-21 14:54:43,707 - twitter_parser - INFO - 设置页面超时时间: 30000ms
+2025-07-21 14:54:43,707 - twitter_parser - INFO - 设置导航超时时间: 60000ms
+2025-07-21 14:54:43,707 - twitter_parser - INFO - 人工行为模拟器初始化完成
+2025-07-21 14:54:43,707 - twitter_parser - INFO - 成功连接到浏览器
+2025-07-21 14:54:43,707 - twitter_parser - INFO - TwitterParser initialization completed
+2025-07-21 14:54:43,707 - __main__ - INFO - ✅ 浏览器连接成功
+2025-07-21 14:54:43,831 - twitter_parser - INFO - 尝试导航到 @elonmusk 的个人资料页面 (第1次)
+2025-07-21 14:54:44,046 - twitter_parser - INFO - DOM内容加载完成
+2025-07-21 14:55:14,054 - twitter_parser - WARNING - 等待加载状态失败: Timeout 30000ms exceeded.，继续尝试
+2025-07-21 14:55:16,067 - twitter_parser - INFO - 成功导航到 @elonmusk 的个人资料页面
+2025-07-21 14:55:16,067 - __main__ - INFO - ✅ 导航成功
+2025-07-21 14:55:16,067 - __main__ - INFO - 优化功能状态: True
+2025-07-21 14:55:16,072 - twitter_parser - INFO - 🔧 使用优化滚动策略，目标推文数: 100
+2025-07-21 14:55:16,072 - twitter_parser - INFO - 🚀 开始优化滚动策略，目标: 100 条推文
+2025-07-21 14:55:47,759 - twitter_parser - INFO - 📊 滚动策略完成: 29 条唯一推文，20 次滚动
+2025-07-21 14:55:47,759 - twitter_parser - INFO - 🔧 优化滚动策略完成，返回结果: {'final_tweet_count': 29, 'scroll_attempts': 20, 'target_reached': False, 'efficiency': 1.45}
+2025-07-21 14:55:47,763 - twitter_parser - INFO - 找到 6 个推文元素
+2025-07-21 14:55:47,765 - twitter_parser - INFO - 🔧 调用优化版本解析方法，optimization_enabled=True
+2025-07-21 14:55:47,809 - twitter_parser - INFO - 🔧 优化版本解析结果: False
+2025-07-21 14:55:47,860 - twitter_parser - INFO - 🔧 调用优化版本解析方法，optimization_enabled=True
+2025-07-21 14:55:47,882 - twitter_parser - INFO - 🔧 优化版本解析结果: False
+2025-07-21 14:55:47,933 - twitter_parser - INFO - 🔧 调用优化版本解析方法，optimization_enabled=True
+2025-07-21 14:55:47,965 - twitter_parser - INFO - 🔧 优化版本解析结果: False
+2025-07-21 14:55:48,016 - twitter_parser - INFO - 🔧 调用优化版本解析方法，optimization_enabled=True
+2025-07-21 14:55:48,040 - twitter_parser - INFO - 🔧 优化版本解析结果: False
+2025-07-21 14:55:48,091 - twitter_parser - INFO - 🔧 调用优化版本解析方法，optimization_enabled=True
+2025-07-21 14:55:48,140 - twitter_parser - INFO - 🔧 优化版本解析结果: False
+2025-07-21 14:55:48,192 - twitter_parser - INFO - 🔧 调用优化版本解析方法，optimization_enabled=True
+2025-07-21 14:55:48,236 - twitter_parser - INFO - 🔧 优化版本解析结果: False
+2025-07-21 14:55:48,287 - twitter_parser - INFO - 总共抓取到 0 条推文
+2025-07-21 14:55:48,287 - __main__ - ERROR - 抓取推文失败
+2025-07-21 14:55:48,296 - twitter_parser - INFO - 浏览器连接已关闭
+2025-07-21 14:55:48,296 - ads_browser_launcher - INFO - 正在停止 AdsPower 浏览器，用户ID: k11p9ypc
+2025-07-21 14:55:56,344 - ads_browser_launcher - INFO - 浏览器停止成功
+2025-07-21 14:55:56,344 - __main__ - INFO - 🧹 资源清理完成
+2025-07-21 14:55:56,345 - __main__ - INFO - 📄 测试结果已保存到: complete_workflow_test_20250721_145556.json
+
+============================================================
+📊 完整工作流测试摘要
+============================================================
+目标推文数: 100
+抓取结果: ❌ 失败 (0 条)
+数据库保存: ❌ 失败 (0 条)
+飞书同步: ❌ 失败 (0 条)
+整体状态: ❌ 失败
+============================================================

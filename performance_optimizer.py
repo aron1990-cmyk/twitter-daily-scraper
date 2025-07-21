@@ -234,10 +234,13 @@ class EnhancedSearchOptimizer:
         # 计算滚动效率
         efficiency = current_tweets / max(scroll_attempts, 1)
         
+        # 根据目标推文数量动态调整最大滚动次数
+        base_max_scrolls = max(target_tweets * 2, 100)  # 至少100次滚动
+        
         strategy = {
             'scroll_distance': 1500,  # 默认滚动距离
             'wait_time': 0.3,         # 默认等待时间
-            'max_scrolls': 20,        # 最大滚动次数
+            'max_scrolls': base_max_scrolls,  # 动态最大滚动次数
             'should_continue': True,
             'aggressive_mode': False   # 激进模式
         }
@@ -246,18 +249,23 @@ class EnhancedSearchOptimizer:
         if efficiency < 0.5:  # 效率低，启用激进模式
             strategy['scroll_distance'] = 2500  # 大幅增加滚动距离
             strategy['wait_time'] = 0.8         # 增加等待时间
-            strategy['max_scrolls'] = 50        # 大幅增加最大滚动次数
+            strategy['max_scrolls'] = base_max_scrolls * 2  # 进一步增加滚动次数
             strategy['aggressive_mode'] = True
         elif efficiency > 2.0:  # 效率高
             strategy['scroll_distance'] = 1000  # 减少滚动距离
             strategy['wait_time'] = 0.2         # 减少等待时间
+            strategy['max_scrolls'] = base_max_scrolls  # 保持基础滚动次数
+        elif efficiency < 1.0:  # 中等偏低效率
+            strategy['scroll_distance'] = 2000  # 适度增加滚动距离
+            strategy['wait_time'] = 0.5         # 适度增加等待时间
+            strategy['max_scrolls'] = int(base_max_scrolls * 1.5)  # 增加滚动次数
         
         # 检查是否应该停止滚动
         if scroll_attempts > strategy['max_scrolls']:
             strategy['should_continue'] = False
         
-        # 如果已达到目标数量的80%，可以考虑停止
-        if current_tweets >= target_tweets * 0.8:
+        # 只有在达到目标数量的95%时才考虑停止（而不是80%）
+        if current_tweets >= target_tweets * 0.95:
             strategy['should_continue'] = False
         
         return strategy

@@ -251,6 +251,32 @@ class TweetFilter:
         if 'keywords_filter' in kwargs:
             self.keywords_filter = kwargs['keywords_filter']
             self.logger.info(f"更新关键词筛选: {self.keywords_filter}")
+    
+    def should_include_tweet(self, tweet: Dict[str, Any]) -> bool:
+        """
+        判断推文是否应该被包含（简化版筛选方法）
+        
+        Args:
+            tweet: 推文数据字典
+            
+        Returns:
+            是否应该包含该推文
+        """
+        try:
+            # 检查推文有效性
+            if not self.is_valid_tweet(tweet):
+                return False
+            
+            # 检查互动数阈值或关键词
+            engagement_passed = self.check_engagement_threshold(tweet)
+            keyword_passed = self.check_keyword_filter(tweet)
+            
+            # 满足任一条件即通过
+            return engagement_passed or keyword_passed
+            
+        except Exception as e:
+            self.logger.warning(f"筛选推文时出错: {e}")
+            return False
 
 # 使用示例
 if __name__ == "__main__":

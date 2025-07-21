@@ -1,0 +1,17 @@
+{
+  "timestamp": "2025-07-21T13:04:08.667178",
+  "target_tweets": 100,
+  "scraping": {
+    "success": false,
+    "tweet_count": 0
+  },
+  "database_save": {
+    "success": false,
+    "saved_count": 0
+  },
+  "feishu_sync": {
+    "success": false,
+    "synced_count": 0
+  },
+  "overall_success": false
+}

@@ -9,7 +9,40 @@ import requests
 import time
 import subprocess
 import psutil
-from config import ADS_POWER_CONFIG
+import sys
+import os
+
+# 添加当前目录到路径
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# 从数据库获取配置
+def get_adspower_config():
+    """从数据库获取AdsPower配置"""
+    try:
+        from web_app import app, SystemConfig
+        with app.app_context():
+            configs = SystemConfig.query.all()
+            config_dict = {cfg.key: cfg.value for cfg in configs}
+            
+            # 构建AdsPower配置
+            api_host = config_dict.get('adspower_api_host', 'local.adspower.net')
+            api_port = config_dict.get('adspower_api_port', '50325')
+            api_url = config_dict.get('adspower_api_url', f'http://{api_host}:{api_port}')
+            
+            return {
+                'local_api_url': api_url,
+                'user_id': config_dict.get('adspower_user_id', ''),
+                'group_id': config_dict.get('adspower_group_id', '')
+            }
+    except Exception as e:
+        print(f"⚠️ 无法从数据库获取配置，使用默认配置: {e}")
+        return {
+            'local_api_url': 'http://local.adspower.net:50325',
+            'user_id': '',
+            'group_id': ''
+        }
+
+ADS_POWER_CONFIG = get_adspower_config()
 
 def check_adspower_process():
     """检查AdsPower进程是否运行"""

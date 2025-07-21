@@ -86,7 +86,8 @@ class WindowManager:
                 # 抓取用户推文
                 user_tweets = await self.parser.scrape_user_tweets(
                     account, 
-                    FILTER_CONFIG['max_tweets_per_target']
+                    FILTER_CONFIG['max_tweets_per_target'],
+                    enable_enhanced=True
                 )
                 
                 tweets.extend(user_tweets)
@@ -118,7 +119,8 @@ class WindowManager:
                 # 搜索关键词推文
                 keyword_tweets = await self.parser.scrape_keyword_tweets(
                     keyword, 
-                    FILTER_CONFIG['max_tweets_per_target']
+                    FILTER_CONFIG['max_tweets_per_target'],
+                    enable_enhanced=True
                 )
                 
                 tweets.extend(keyword_tweets)

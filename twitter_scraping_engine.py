@@ -14,6 +14,11 @@ from dataclasses import dataclass, field
 
 from ads_browser_launcher import AdsPowerLauncher
 from twitter_parser import TwitterParser
+from enhanced_twitter_parser import EnhancedTwitterParser, MultiWindowEnhancedScraper
+from optimized_scraping_engine import OptimizedScrapingEngine
+from data_storage import DataStorage
+from cloud_sync import CloudSyncManager
+from config import ADS_POWER_CONFIG, CLOUD_SYNC_CONFIG
 from exceptions import ScrapingException, TwitterScrapingError
 
 
@@ -82,9 +87,11 @@ class AccountState:
 
 
 class TwitterScrapingEngine:
-    """Twitter抓取引擎 - 首次抓取逻辑核心"""
+    """Twitter抓取引擎 - 首次抓取逻辑核心
+    集成优化抓取引擎，支持多线程和实时抓取
+    """
     
-    def __init__(self, user_id: str = None):
+    def __init__(self, user_id: str = None, enable_optimized: bool = True, max_workers: int = 4):
         self.user_id = user_id
         self.launcher = AdsPowerLauncher()
         self.parser: Optional[TwitterParser] = None
@@ -98,6 +105,19 @@ class TwitterScrapingEngine:
         
         # 状态跟踪
         self.account_states: Dict[str, AccountState] = {}
+        
+        # 数据存储和云同步
+        self.data_storage = DataStorage()
+        self.cloud_sync = CloudSyncManager(CLOUD_SYNC_CONFIG)
+        
+        # 优化抓取引擎
+        self.enable_optimized = enable_optimized
+        if enable_optimized:
+            self.optimized_scraper = MultiWindowEnhancedScraper(max_workers=max_workers)
+            self.logger.info(f"已启用优化抓取引擎，最大工作线程: {max_workers}")
+        else:
+            self.optimized_scraper = None
+            self.logger.info("使用传统抓取模式")
         
     async def initialize_browser(self) -> bool:
         """初始化浏览器环境"""
@@ -147,11 +167,87 @@ class TwitterScrapingEngine:
         
         self.logger.info(f"开始首次批量抓取，目标用户数: {len(usernames)}")
         
+        # 如果启用优化模式且用户数量较多，使用优化抓取引擎
+        if self.enable_optimized and len(usernames) > 1:
+            return await self._optimized_batch_scrape_first_time(usernames)
+        
+        # 传统单线程抓取模式
+        return await self._traditional_batch_scrape_first_time(usernames)
+    
+    async def _optimized_batch_scrape_first_time(self, usernames: List[str]) -> ScrapingResult:
+        """优化的首次批量抓取流程"""
+        result = ScrapingResult()
+        result.total_users = len(usernames)
+        
+        try:
+            self.logger.info(f"使用优化模式进行首次批量抓取 {len(usernames)} 个用户")
+            
+            # 为每个用户创建抓取配置
+            scraping_configs = []
+            for username in usernames:
+                scraping_configs.append({
+                    'target_type': 'user',
+                    'target_value': username,
+                    'max_tweets': self.max_tweets_per_user,
+                    'enable_enhanced': False  # 首次抓取使用基础模式
+                })
+            
+            # 执行并发抓取
+            scraping_results = await self.optimized_scraper.scrape_multiple_targets(scraping_configs)
+            
+            # 处理结果
+            all_tweets = []
+            for window_id, tweets in scraping_results.items():
+                if tweets:
+                    all_tweets.extend(tweets)
+                    # 从推文中提取用户名并更新状态
+                    for tweet in tweets:
+                        username = tweet.get('username')
+                        if username:
+                            self._update_account_state(
+                                username=username,
+                                status="success",
+                                last_fetched_id=tweet.get('tweet_id'),
+                                total_tweets=len([t for t in tweets if t.get('username') == username])
+                            )
+                            result.add_success(username, len([t for t in tweets if t.get('username') == username]))
+            
+            # 保存数据
+            if all_tweets:
+                self.data_storage.save_tweets(all_tweets)
+                
+                # 同步到云端
+                try:
+                    await self.cloud_sync.sync_tweets(all_tweets)
+                    self.logger.info("数据已同步到云端")
+                except Exception as e:
+                    self.logger.warning(f"云端同步失败: {e}")
+            
+            result.finalize()
+            self.logger.info(f"优化批量抓取完成，成功: {result.successful_users}/{result.total_users}, "
+                            f"总推文: {result.total_tweets}, 耗时: {result.duration:.1f}秒")
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"优化批量抓取失败: {e}")
+            result.finalize()
+            return result
+    
+    async def _traditional_batch_scrape_first_time(self, usernames: List[str]) -> ScrapingResult:
+        """传统的首次批量抓取流程"""
+        result = ScrapingResult()
+        result.total_users = len(usernames)
+        
+        self.logger.info(f"使用传统模式进行首次批量抓取，目标用户数: {len(usernames)}")
+        
         # 初始化浏览器
         if not await self.initialize_browser():
             self.logger.error("浏览器初始化失败，终止抓取")
             result.finalize()
             return result
+        
+        all_tweets = []
         
         # 遍历用户列表
         for i, username in enumerate(usernames, 1):
@@ -168,6 +264,7 @@ class TwitterScrapingEngine:
                 tweets = await self._scrape_single_user(username)
                 
                 if tweets:
+                    all_tweets.extend(tweets)
                     # 更新账号状态为成功
                     self._update_account_state(
                         username=username,
@@ -214,8 +311,19 @@ class TwitterScrapingEngine:
                 self.logger.debug(f"等待 {delay:.1f} 秒后继续...")
                 await asyncio.sleep(delay)
         
+        # 保存数据
+        if all_tweets:
+            self.data_storage.save_tweets(all_tweets)
+            
+            # 同步到云端
+            try:
+                await self.cloud_sync.sync_tweets(all_tweets)
+                self.logger.info("数据已同步到云端")
+            except Exception as e:
+                self.logger.warning(f"云端同步失败: {e}")
+        
         result.finalize()
-        self.logger.info(f"批量抓取完成，成功: {result.successful_users}/{result.total_users}, "
+        self.logger.info(f"传统批量抓取完成，成功: {result.successful_users}/{result.total_users}, "
                         f"总推文: {result.total_tweets}, 耗时: {result.duration:.1f}秒")
         
         return result

@@ -98,7 +98,7 @@
 
 <!-- 快速操作 -->
 <div class="row mb-4">
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">
@@ -139,7 +139,54 @@
         </div>
     </div>
     
-    <div class="col-md-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-rocket me-2"></i>
+                    优化抓取
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="optimized_accounts" class="form-label">目标账号</label>
+                    <input type="text" class="form-control" id="optimized_accounts" 
+                           placeholder="输入Twitter用户名，用逗号分隔">
+                </div>
+                <div class="mb-3">
+                    <label for="optimized_keywords" class="form-label">关键词</label>
+                    <input type="text" class="form-control" id="optimized_keywords" 
+                           placeholder="输入关键词，用逗号分隔">
+                </div>
+                <div class="row">
+                    <div class="col-6">
+                        <label for="optimized_max_tweets" class="form-label">推文数量</label>
+                        <input type="number" class="form-control" id="optimized_max_tweets" 
+                               value="20" min="1" max="100">
+                    </div>
+                    <div class="col-6">
+                        <label for="optimized_max_windows" class="form-label">窗口数</label>
+                        <input type="number" class="form-control" id="optimized_max_windows" 
+                               value="2" min="1" max="4">
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="button" class="btn btn-success w-100" onclick="startOptimizedScraping()">
+                        <i class="fas fa-bolt me-2"></i>
+                        启动优化抓取
+                    </button>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        支持多窗口并发，实时保存数据
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">
@@ -201,7 +248,7 @@
         </div>
     </div>
     
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">
@@ -508,23 +555,38 @@ async function addInfluencer() {
 async function loadInfluencerOptions() {
     try {
         const response = await fetch('/api/influencers?per_page=100');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const result = await response.json();
         
-        if (result.success) {
+        if (result.success && result.data && result.data.influencers) {
             const select = document.getElementById('selectedInfluencers');
-            select.innerHTML = '';
-            
-            result.data.influencers.forEach(influencer => {
-                if (influencer.is_active) {
-                    const option = document.createElement('option');
-                    option.value = influencer.id;
-                    option.textContent = `${influencer.name} (@${influencer.username}) - ${influencer.category}`;
-                    select.appendChild(option);
-                }
-            });
+            if (select) {
+                select.innerHTML = '';
+                
+                result.data.influencers.forEach(influencer => {
+                    if (influencer.is_active) {
+                        const option = document.createElement('option');
+                        option.value = influencer.id;
+                        option.textContent = `${influencer.name} (@${influencer.username}) - ${influencer.category}`;
+                        select.appendChild(option);
+                    }
+                });
+            }
+        } else {
+            console.error('API返回数据格式错误:', result);
+            throw new Error(result.error || '数据格式错误');
         }
     } catch (error) {
         console.error('加载博主选项失败:', error);
+        // 显示用户友好的错误信息
+        const select = document.getElementById('selectedInfluencers');
+        if (select) {
+            select.innerHTML = '<option value="">加载失败，请刷新重试</option>';
+        }
     }
 }
 
@@ -547,22 +609,31 @@ async function loadInfluencerList(page = 1, search = '', category = '') {
         if (category) params.append('category', category);
         
         const response = await fetch(`/api/influencers?${params}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const result = await response.json();
         
-        if (result.success) {
+        if (result.success && result.data) {
             displayInfluencerList(result.data);
             updateInfluencerPagination(result.data);
         } else {
-            throw new Error(result.error);
+            throw new Error(result.error || '数据格式错误');
         }
     } catch (error) {
         console.error('加载博主列表失败:', error);
-        document.getElementById('influencerListContainer').innerHTML = `
-            <div class="text-center py-4 text-danger">
-                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-                <p>加载失败: ${error.message}</p>
-            </div>
-        `;
+        const container = document.getElementById('influencerListContainer');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center py-4 text-danger">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                    <p>加载失败: ${error.message || 'undefined'}</p>
+                    <button class="btn btn-outline-primary btn-sm mt-2" onclick="loadInfluencerList()">重试</button>
+                </div>
+            `;
+        }
     }
 }
 
@@ -670,9 +741,14 @@ async function editInfluencer(influencerId) {
     try {
         // 获取博主信息
         const response = await fetch(`/api/influencers?per_page=100`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const result = await response.json();
         
-        if (result.success) {
+        if (result.success && result.data && result.data.influencers) {
             const influencer = result.data.influencers.find(inf => inf.id === influencerId);
             if (influencer) {
                 // 填充编辑表单
@@ -685,11 +761,15 @@ async function editInfluencer(influencerId) {
                 // 显示编辑模态框
                 const modal = new bootstrap.Modal(document.getElementById('editInfluencerModal'));
                 modal.show();
+            } else {
+                throw new Error('未找到指定的博主');
             }
+        } else {
+            throw new Error(result.error || '获取博主信息失败');
         }
     } catch (error) {
         console.error('获取博主信息失败:', error);
-        alert('获取博主信息失败');
+        alert('获取博主信息失败: ' + (error.message || 'undefined'));
     }
 }
 
@@ -767,7 +847,40 @@ async function deleteInfluencer(influencerId) {
 
 // 抓取单个博主
 async function scrapeInfluencer(influencerId) {
-    alert('单个博主抓取功能开发中...');
+    if (!confirm('确定要开始抓取这个博主的推文吗？')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/influencers/batch-scrape', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                influencer_ids: [influencerId],
+                max_tweets: 50,
+                min_likes: 0,
+                min_retweets: 0,
+                min_comments: 0
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('抓取任务已启动！请在任务管理页面查看进度。');
+        } else {
+            alert('启动抓取任务失败: ' + result.error);
+        }
+    } catch (error) {
+        console.error('抓取博主失败:', error);
+        alert('抓取博主失败: ' + (error.message || 'undefined'));
+    }
 }
 
 // 抓取选中的博主
@@ -781,11 +894,109 @@ async function startInfluencerScraping() {
     
     const selectedIds = Array.from(selectedOptions).map(option => parseInt(option.value));
     
-    // 这里可以实现批量抓取博主的功能
-    alert(`将抓取 ${selectedIds.length} 个博主的内容，功能开发中...`);
+    if (!confirm(`确定要开始抓取选中的 ${selectedIds.length} 个博主的推文吗？`)) {
+        return;
+    }
     
-    // TODO: 实现批量抓取逻辑
-    console.log('选中的博主ID:', selectedIds);
+    try {
+        const response = await fetch('/api/influencers/batch-scrape', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                influencer_ids: selectedIds,
+                max_tweets: 50,
+                min_likes: 0,
+                min_retweets: 0,
+                min_comments: 0
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(`批量抓取任务已启动！将抓取 ${selectedIds.length} 个博主的内容，请在任务管理页面查看进度。`);
+        } else {
+            alert('启动批量抓取任务失败: ' + result.error);
+        }
+    } catch (error) {
+        console.error('批量抓取博主失败:', error);
+        alert('批量抓取博主失败: ' + (error.message || 'undefined'));
+    }
+}
+
+// 启动优化抓取
+async function startOptimizedScraping() {
+    const targetAccounts = document.getElementById('optimizedTargetAccounts').value.trim();
+    const keywords = document.getElementById('optimizedKeywords').value.trim();
+    const maxTweets = parseInt(document.getElementById('optimizedMaxTweets').value) || 100;
+    const maxWindows = parseInt(document.getElementById('optimizedMaxWindows').value) || 3;
+    
+    // 验证输入
+    if (!targetAccounts && !keywords) {
+        alert('目标账号和关键词至少需要填写一个！');
+        return;
+    }
+    
+    if (maxWindows < 1 || maxWindows > 10) {
+        alert('窗口数量必须在1-10之间！');
+        return;
+    }
+    
+    if (!confirm(`确定要启动优化抓取吗？\n目标账号: ${targetAccounts || '无'}\n关键词: ${keywords || '无'}\n最大推文数: ${maxTweets}\n窗口数: ${maxWindows}`)) {
+        return;
+    }
+    
+    const button = document.querySelector('#optimizedScrapingCard button');
+    const originalText = button.textContent;
+    
+    try {
+        // 显示加载状态
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>启动中...';
+        
+        const response = await fetch('/api/start-optimized-scraping', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                target_accounts: targetAccounts,
+                keywords: keywords,
+                max_tweets: maxTweets,
+                max_windows: maxWindows
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('优化抓取任务已启动！\n任务ID: ' + result.task_id + '\n请在任务管理页面查看进度。');
+            // 清空表单
+            document.getElementById('optimizedTargetAccounts').value = '';
+            document.getElementById('optimizedKeywords').value = '';
+            document.getElementById('optimizedMaxTweets').value = '100';
+            document.getElementById('optimizedMaxWindows').value = '3';
+        } else {
+            alert('启动优化抓取任务失败: ' + result.error);
+        }
+    } catch (error) {
+        console.error('启动优化抓取失败:', error);
+        alert('启动优化抓取失败: ' + (error.message || 'undefined'));
+    } finally {
+        // 恢复按钮状态
+        button.disabled = false;
+        button.textContent = originalText;
+    }
 }
 
 // 表单提交处理

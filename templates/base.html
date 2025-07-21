@@ -372,8 +372,8 @@
             });
         }
         
-        // 每5秒更新一次状态
-        setInterval(updateStatus, 5000);
+        // 每30秒更新一次状态（减少服务器负载）
+        setInterval(updateStatus, 30000);
         
         // 页面加载完成后执行
         $(document).ready(function() {

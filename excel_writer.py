@@ -11,13 +11,21 @@ from typing import List, Dict, Any, Optional
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
-from config import OUTPUT_CONFIG
+# 配置将从调用方传入或使用默认配置
 
 class ExcelWriter:
-    def __init__(self):
-        self.data_dir = OUTPUT_CONFIG['data_dir']
-        self.filename_format = OUTPUT_CONFIG['excel_filename_format']
-        self.sheet_name = OUTPUT_CONFIG['sheet_name']
+    def __init__(self, config=None):
+        # 使用默认配置
+        if config is None:
+            config = {
+                'data_dir': 'data',
+                'excel_filename_format': 'twitter_daily_{date}.xlsx',
+                'sheet_name': 'Twitter数据'
+            }
+        
+        self.data_dir = config.get('data_dir', 'data')
+        self.filename_format = config.get('excel_filename_format', 'twitter_daily_{date}.xlsx')
+        self.sheet_name = config.get('sheet_name', 'Twitter数据')
         self.logger = logging.getLogger(__name__)
         
         # 确保数据目录存在

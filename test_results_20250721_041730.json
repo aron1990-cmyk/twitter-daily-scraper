@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-07-21T04:17:30.227334",
+  "test_scenario": "user_profile_scraping",
+  "target_user": "elonmusk",
+  "target_tweets": 15,
+  "final_tweet_count": 9,
+  "parsed_tweets": 9,
+  "failed_parses": 0,
+  "filtered_tweets": 0,
+  "scroll_attempts": 8,
+  "success_rate": 100.0,
+  "sample_tweets": [],
+  "search_test": {
+    "keyword": "AI",
+    "results_count": 13,
+    "status": "success"
+  }
+}

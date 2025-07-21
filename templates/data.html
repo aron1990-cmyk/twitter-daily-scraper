@@ -12,10 +12,10 @@
                 数据查看
             </h2>
             <div class="btn-group" role="group">
-                <a href="{{ url_for('api_export_data') }}" class="btn btn-success">
+                <button onclick="exportData()" class="btn btn-success">
                     <i class="fas fa-file-excel me-2"></i>
                     导出Excel
-                </a>
+                </button>
                 <button onclick="syncToFeishu()" class="btn btn-info">
                     <i class="fas fa-cloud-upload-alt me-2"></i>
                     同步飞书
@@ -332,16 +332,60 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
+function exportData() {
+    // 获取当前筛选参数
+    const params = new URLSearchParams();
+    
+    const search = document.getElementById('search').value;
+    if (search) params.append('search', search);
+    
+    const taskId = document.getElementById('task_id').value;
+    if (taskId) params.append('task_id', taskId);
+    
+    const minLikes = document.getElementById('min_likes').value;
+    if (minLikes) params.append('min_likes', minLikes);
+    
+    const minRetweets = document.getElementById('min_retweets').value;
+    if (minRetweets) params.append('min_retweets', minRetweets);
+    
+    // 构建导出URL
+    const exportUrl = '/api/data/export' + (params.toString() ? '?' + params.toString() : '');
+    
+    // 创建隐藏的下载链接
+    const link = document.createElement('a');
+    link.href = exportUrl;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showAlert('正在准备导出文件...', 'info');
+}
+
 function syncToFeishu() {
     const button = event.target;
     const originalText = showLoading(button);
     
-    $.post('/sync_feishu')
+    // 获取当前选择的任务ID
+    const taskId = document.getElementById('task_id').value;
+    
+    // 构建请求数据
+    const requestData = {};
+    if (taskId) {
+        requestData.task_id = parseInt(taskId);
+    }
+    
+    $.ajax({
+        url: '/sync_feishu',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(requestData)
+    })
         .done(function(response) {
-            showAlert('数据已成功同步到飞书文档！', 'success');
+            showAlert(response.message || '数据已成功同步到飞书文档！', 'success');
         })
         .fail(function(xhr) {
-            const error = xhr.responseJSON ? xhr.responseJSON.error : '同步失败';
+            const error = xhr.responseJSON ? xhr.responseJSON.message : '同步失败';
             showAlert('同步失败: ' + error, 'danger');
         })
         .always(function() {

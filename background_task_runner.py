@@ -35,7 +35,7 @@ def setup_logging():
     )
     return logging.getLogger(__name__)
 
-@resilient_task_execution(max_retries=3, checkpoint_interval=10)
+@resilient_task_execution()
 async def execute_scraping_task(task_id: int, user_id: str):
     """执行抓取任务的核心逻辑"""
     logger = logging.getLogger(__name__)
@@ -59,10 +59,44 @@ async def execute_scraping_task(task_id: int, user_id: str):
             target_keywords = json.loads(task.target_keywords or '[]')
             
             # 启动浏览器
-            browser_manager = AdsPowerLauncher()
-            browser_info = browser_manager.start_browser(user_id)
-            if not browser_info:
-                raise Exception("浏览器启动失败")
+            logger.info(f"开始启动AdsPower浏览器，用户ID: {user_id}")
+            
+            # 导入配置
+            from web_app import ADS_POWER_CONFIG
+            browser_manager = AdsPowerLauncher(ADS_POWER_CONFIG)
+            
+            try:
+                # 进行完整的健康检查和浏览器启动
+                logger.info("正在进行AdsPower健康检查...")
+                browser_info = browser_manager.start_browser(user_id, skip_health_check=False)
+                if not browser_info:
+                    raise Exception("浏览器启动失败：未返回浏览器信息")
+                
+                logger.info(f"浏览器启动成功: {browser_info}")
+                
+            except Exception as e:
+                logger.error(f"AdsPower浏览器启动失败: {str(e)}")
+                
+                # 获取详细的健康报告
+                try:
+                    health_report = browser_manager.get_health_report()
+                    logger.error(f"系统健康报告: {health_report}")
+                    
+                    # 尝试自动修复
+                    logger.info("尝试自动修复系统问题...")
+                    if browser_manager.auto_optimize_system():
+                        logger.info("系统优化完成，重新尝试启动浏览器...")
+                        browser_info = browser_manager.start_browser(user_id, skip_health_check=True)
+                        if browser_info:
+                            logger.info("浏览器启动成功（修复后）")
+                        else:
+                            raise Exception("浏览器启动失败（修复后仍然失败）")
+                    else:
+                        raise Exception(f"AdsPower浏览器启动失败且自动修复失败: {str(e)}")
+                        
+                except Exception as repair_error:
+                    logger.error(f"自动修复过程中发生错误: {str(repair_error)}")
+                    raise Exception(f"AdsPower浏览器启动失败: {str(e)}。修复尝试也失败: {str(repair_error)}")
             
             debug_port = browser_info.get('ws', {}).get('puppeteer')
             

@@ -36,7 +36,9 @@ import time
 
 class TwitterDailyScraper:
     def __init__(self):
-        self.launcher = AdsPowerLauncher()
+        # 从数据库加载AdsPower配置
+        adspower_config = self._load_adspower_config_from_db()
+        self.launcher = AdsPowerLauncher(adspower_config)
         self.parser = None
         self.filter_engine = TweetFilter()
         self.excel_writer = ExcelWriter()
@@ -71,6 +73,56 @@ class TwitterDailyScraper:
         signal.signal(signal.SIGTERM, self._signal_handler)
         
         self.logger.info("TwitterDailyScraper 初始化完成")
+    
+    def _load_adspower_config_from_db(self) -> Dict[str, Any]:
+        """
+        从数据库加载AdsPower配置
+        
+        Returns:
+            AdsPower配置字典
+        """
+        try:
+            import sqlite3
+            conn = sqlite3.connect('instance/twitter_scraper.db')
+            cursor = conn.cursor()
+            
+            # 查询AdsPower相关配置
+            cursor.execute("SELECT key, value FROM system_config WHERE key LIKE '%adspower%'")
+            configs = cursor.fetchall()
+            
+            config_dict = {}
+            for key, value in configs:
+                if key == 'adspower_api_host':
+                    api_host = value
+                elif key == 'adspower_api_port':
+                    api_port = value
+                elif key == 'adspower_user_id':
+                    config_dict['user_id'] = value
+                elif key == 'adspower_group_id':
+                    config_dict['group_id'] = value
+            
+            # 构建完整的API URL
+            if 'api_host' in locals() and 'api_port' in locals():
+                config_dict['local_api_url'] = f"http://{api_host}:{api_port}"
+            else:
+                config_dict['local_api_url'] = 'http://local.adspower.net:50325'
+            
+            conn.close()
+            
+            # 如果没有用户ID，使用默认值
+            if 'user_id' not in config_dict or not config_dict['user_id']:
+                config_dict['user_id'] = 'k11p9ypc'
+            
+            self.logger.info(f"从数据库加载AdsPower配置: {config_dict}")
+            return config_dict
+            
+        except Exception as e:
+            self.logger.warning(f"从数据库加载AdsPower配置失败: {e}，使用默认配置")
+            return {
+                'local_api_url': 'http://local.adspower.net:50325',
+                'user_id': 'k11p9ypc',
+                'group_id': ''
+            }
     
     def _load_accounts_config(self) -> List[Dict[str, Any]]:
         """
@@ -187,7 +239,7 @@ class TwitterDailyScraper:
             try:
                 self.logger.info(f"开始抓取用户 @{username} 的推文...")
                 
-                tweets = await self.parser.scrape_user_tweets(username, max_tweets_per_user)
+                tweets = await self.parser.scrape_user_tweets(username, max_tweets_per_user, enable_enhanced=True)
                 all_tweets.extend(tweets)
                 
                 self.logger.info(f"用户 @{username} 抓取完成，获得 {len(tweets)} 条推文")
@@ -225,7 +277,7 @@ class TwitterDailyScraper:
                 keyword_tweets = []
                 for query in enhanced_queries[:3]:  # 限制查询数量避免过度请求
                     try:
-                        tweets = await self.parser.scrape_keyword_tweets(query, max_tweets_per_keyword // len(enhanced_queries[:3]))
+                        tweets = await self.parser.scrape_keyword_tweets(query, max_tweets_per_keyword // len(enhanced_queries[:3]), enable_enhanced=True)
                         keyword_tweets.extend(tweets)
                         
                         # 短暂延迟
@@ -236,7 +288,7 @@ class TwitterDailyScraper:
                 
                 # 如果增强查询没有足够结果，使用原始关键词
                 if len(keyword_tweets) < max_tweets_per_keyword // 2:
-                    original_tweets = await self.parser.scrape_keyword_tweets(keyword, max_tweets_per_keyword)
+                    original_tweets = await self.parser.scrape_keyword_tweets(keyword, max_tweets_per_keyword, enable_enhanced=True)
                     keyword_tweets.extend(original_tweets)
                 
                 all_tweets.extend(keyword_tweets)
@@ -277,7 +329,7 @@ class TwitterDailyScraper:
         self.logger.info(f"接收到信号 {signum}，准备停止任务...")
         self.should_stop = True
     
-    @resilient_task_execution(max_retries=3, checkpoint_key="scraping_task")
+    @resilient_task_execution()
     async def run_scraping_task(self, user_id: str = None) -> str:
         """
         执行完整的抓取任务（支持断点续传和弹性执行）

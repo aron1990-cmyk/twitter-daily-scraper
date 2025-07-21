@@ -1,0 +1,26 @@
+{
+  "app_id": "your_feishu_app_id",
+  "app_secret": "your_feishu_app_secret",
+  "spreadsheet_token": "your_spreadsheet_token",
+  "table_id": "your_table_id",
+  "enabled": true,
+  "description": {
+    "app_id": "飞书应用的App ID",
+    "app_secret": "飞书应用的App Secret",
+    "spreadsheet_token": "飞书多维表格的token（从URL中获取）",
+    "table_id": "多维表格中具体表的ID（可选，不填则使用第一个表）"
+  },
+  "setup_instructions": {
+    "1": "登录飞书开放平台 https://open.feishu.cn/",
+    "2": "创建企业自建应用",
+    "3": "获取App ID和App Secret",
+    "4": "在权限管理中添加以下权限：",
+    "permissions": [
+      "bitable:app",
+      "bitable:app:readonly",
+      "bitable:app:readwrite"
+    ],
+    "5": "创建多维表格并获取spreadsheet_token",
+    "6": "将应用添加到多维表格的协作者中"
+  }
+}
