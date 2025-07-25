@@ -50,7 +50,7 @@
 
 <!-- 系统状态统计 -->
 <div class="row mb-4">
-    <div class="col-md-3">
+    <div class="col-md-2">
         <div class="card text-center">
             <div class="card-body">
                 <div class="stats-icon text-primary mb-2">
@@ -61,18 +61,40 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
         <div class="card text-center">
             <div class="card-body">
                 <div class="stats-icon text-success mb-2">
                     <i class="fas fa-play-circle"></i>
                 </div>
-                <h3 class="text-success">{{ stats.running_tasks }}</h3>
+                <h3 class="text-success" id="runningTasksCount">{{ stats.running_tasks }}</h3>
                 <p class="text-muted mb-0">运行中任务</p>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="stats-icon text-warning mb-2">
+                    <i class="fas fa-hourglass-half"></i>
+                </div>
+                <h3 class="text-warning" id="queuedTasksCount">0</h3>
+                <p class="text-muted mb-0">排队任务</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="stats-icon text-info mb-2">
+                    <i class="fas fa-server"></i>
+                </div>
+                <h3 class="text-info" id="availableSlotsCount">0</h3>
+                <p class="text-muted mb-0">可用槽位</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
         <div class="card text-center">
             <div class="card-body">
                 <div class="stats-icon text-info mb-2">
@@ -83,7 +105,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
         <div class="card text-center">
             <div class="card-body">
                 <div class="stats-icon text-warning mb-2">
@@ -91,6 +113,33 @@
                 </div>
                 <h3 class="text-warning">{{ stats.today_tweets }}</h3>
                 <p class="text-muted mb-0">今日新增</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 队列状态信息 -->
+<div class="row mb-4" id="queueStatusRow" style="display: none;">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h5 class="card-title mb-1">
+                            <i class="fas fa-list-ol text-warning me-2"></i>
+                            任务队列状态
+                        </h5>
+                        <p class="card-text mb-0" id="queueStatusText">队列为空</p>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted" id="queueEstimatedTime"></small>
+                        <br>
+                        <button class="btn btn-sm btn-outline-danger" id="clearQueueBtn" onclick="clearQueue()" style="display: none;">
+                            <i class="fas fa-trash me-1"></i>
+                            清空队列
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -139,6 +188,8 @@
         </div>
     </div>
     
+    <!-- 优化抓取功能 - 暂时注释，功能保留但不在首页显示 -->
+    <!-- 
     <div class="col-md-3">
         <div class="card">
             <div class="card-header">
@@ -185,7 +236,10 @@
             </div>
         </div>
     </div>
+    -->
     
+    <!-- 博主管理功能 - 暂时注释，功能保留但不在首页显示 -->
+    <!-- 
     <div class="col-md-3">
         <div class="card">
             <div class="card-header">
@@ -247,6 +301,7 @@
             </div>
         </div>
     </div>
+    -->
     
     <div class="col-md-3">
         <div class="card">
@@ -349,6 +404,8 @@
                             </a>
                         </div>
                     </div>
+                    <!-- 高级数据导出功能 - 暂时注释，功能保留但不在首页显示 -->
+                    <!-- 
                     <div class="col-md-6">
                         <h6>数据导出</h6>
                         <div class="d-flex gap-2 flex-wrap">
@@ -360,6 +417,7 @@
                             </button>
                         </div>
                     </div>
+                    -->
                 </div>
             </div>
         </div>
@@ -482,6 +540,8 @@ $(document).ready(function() {
     loadInfluencerOptions();
 });
 
+// 数据导出相关函数 - 暂时注释，功能保留但不在首页使用
+/*
 function exportData() {
     // 跳转到数据页面进行导出
     window.location.href = '{{ url_for("data") }}';
@@ -503,9 +563,10 @@ function syncToFeishu() {
             hideLoading(button, originalText);
         });
 }
+*/
 
-// 博主管理相关函数
-
+// 博主管理相关函数 - 暂时注释，功能保留但不在首页使用
+/*
 // 添加博主
 async function addInfluencer() {
     const url = document.getElementById('influencerUrl').value.trim();
@@ -694,7 +755,8 @@ function displayInfluencerList(data) {
     container.innerHTML = html;
 }
 
-// 更新分页
+// 更新分页 - 暂时注释，功能保留但不在首页使用
+/*
 function updateInfluencerPagination(data) {
     const pagination = document.getElementById('influencerPagination');
     const paginationList = document.getElementById('paginationList');
@@ -772,8 +834,10 @@ async function editInfluencer(influencerId) {
         alert('获取博主信息失败: ' + (error.message || 'undefined'));
     }
 }
+*/
 
-// 更新博主信息
+// 更新博主信息 - 暂时注释，功能保留但不在首页使用
+/*
 async function updateInfluencer() {
     const influencerId = document.getElementById('editInfluencerId').value;
     const name = document.getElementById('editInfluencerName').value.trim();
@@ -882,8 +946,10 @@ async function scrapeInfluencer(influencerId) {
         alert('抓取博主失败: ' + (error.message || 'undefined'));
     }
 }
+*/
 
-// 抓取选中的博主
+// 抓取选中的博主 - 暂时注释，功能保留但不在首页使用
+/*
 async function startInfluencerScraping() {
     const selectedOptions = document.getElementById('selectedInfluencers').selectedOptions;
     
@@ -929,8 +995,11 @@ async function startInfluencerScraping() {
         alert('批量抓取博主失败: ' + (error.message || 'undefined'));
     }
 }
+*/
+*/
 
-// 启动优化抓取
+// 启动优化抓取 - 暂时注释，功能保留但不在首页使用
+/*
 async function startOptimizedScraping() {
     const targetAccounts = document.getElementById('optimizedTargetAccounts').value.trim();
     const keywords = document.getElementById('optimizedKeywords').value.trim();
@@ -998,6 +1067,104 @@ async function startOptimizedScraping() {
         button.textContent = originalText;
     }
 }
+*/
+
+// 更新队列状态
+function updateQueueStatus() {
+    $.get('/api/queue/status')
+        .done(function(response) {
+            if (response.success) {
+                const data = response.data;
+                const queueLength = data.queue_length;
+                const estimatedWaitTime = data.estimated_wait_time;
+                const queuePositionInfo = data.queue_position_info;
+                const concurrentInfo = data.concurrent_info;
+                
+                // 更新队列数量显示
+                $('#queuedTasksCount').text(queueLength);
+                
+                // 更新队列状态信息
+                if (queueLength > 0) {
+                    $('#queueStatusRow').show();
+                    $('#queueStatusText').text(`${queuePositionInfo} - ${concurrentInfo}`);
+                    $('#clearQueueBtn').show();
+                    
+                    if (estimatedWaitTime > 0) {
+                        const minutes = Math.ceil(estimatedWaitTime / 60);
+                        $('#queueEstimatedTime').text(`预计等待时间: ${minutes} 分钟`);
+                    } else {
+                        $('#queueEstimatedTime').text('');
+                    }
+                } else {
+                    $('#queueStatusRow').hide();
+                    $('#clearQueueBtn').hide();
+                }
+            }
+        })
+        .fail(function(xhr) {
+            console.error('获取队列状态失败:', xhr.responseText);
+        });
+}
+
+// 更新任务管理器状态
+function updateTaskManagerStatus() {
+    $.get('/api/task-manager/status')
+        .done(function(response) {
+            if (response.success) {
+                const data = response.data;
+                $('#runningTasksCount').text(data.active_tasks || 0);
+                $('#availableSlotsCount').text(data.available_slots || 0);
+                $('#queuedTasksCount').text(data.queue_size || 0);
+                
+                // 更新队列状态显示
+                if (data.is_queue_active) {
+                    $('#queueStatusRow').show();
+                    $('#queueStatusText').text(`队列中有 ${data.queue_size} 个任务等待执行`);
+                    $('#clearQueueBtn').show();
+                } else {
+                    $('#queueStatusRow').hide();
+                    $('#clearQueueBtn').hide();
+                }
+            }
+        })
+        .fail(function(xhr) {
+            console.error('获取任务管理器状态失败:', xhr.responseText);
+        });
+}
+
+// 清空队列
+function clearQueue() {
+    if (!confirm('确定要清空任务队列吗？这将取消所有排队中的任务。')) {
+        return;
+    }
+    
+    $.post('/api/queue/clear')
+        .done(function(response) {
+            if (response.success) {
+                alert('任务队列已清空');
+                updateQueueStatus();
+                updateTaskManagerStatus();
+            } else {
+                alert('清空队列失败: ' + response.error);
+            }
+        })
+        .fail(function(xhr) {
+            alert('清空队列失败: ' + xhr.responseText);
+        });
+}
+
+// 页面加载完成后启动定时更新
+$(document).ready(function() {
+    // 初始加载状态
+    updateQueueStatus();
+    updateTaskManagerStatus();
+    
+    // 每5秒更新一次状态
+    setInterval(function() {
+        updateQueueStatus();
+        updateTaskManagerStatus();
+    }, 5000);
+});
 
 // 表单提交处理
 $('form').on('submit', function(e) {

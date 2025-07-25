@@ -55,6 +55,45 @@
     </div>
 </div>
 
+<!-- 队列状态和失败任务统计 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-danger">{{ task_stats.failed }}</h4>
+                <p class="text-muted mb-0">失败</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-secondary">{{ task_stats.queued }}</h4>
+                <p class="text-muted mb-0">排队中</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div id="queueAlert" class="alert alert-info d-none" role="alert">
+                    <i class="fas fa-clock me-2"></i>
+                    <strong>任务窗口已满，当前任务进入排队队列，等待执行。</strong>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted">队列状态</small>
+                        <div id="queueStatus">正在加载...</div>
+                    </div>
+                    <button id="clearQueueBtn" class="btn btn-outline-danger btn-sm d-none" onclick="clearQueue()">
+                        <i class="fas fa-trash me-1"></i>清空队列
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- 筛选和搜索 -->
 <div class="row mb-4">
     <div class="col-12">
@@ -74,6 +113,7 @@
                             <option value="running" {{ 'selected' if request.args.get('status') == 'running' }}>运行中</option>
                             <option value="completed" {{ 'selected' if request.args.get('status') == 'completed' }}>已完成</option>
                             <option value="failed" {{ 'selected' if request.args.get('status') == 'failed' }}>失败</option>
+                            <option value="queued" {{ 'selected' if request.args.get('status') == 'queued' }}>排队中</option>
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -129,6 +169,9 @@
                                         {% if task.description %}
                                             <br><small class="text-muted">{{ task.description }}</small>
                                         {% endif %}
+                                        {% if task.notes %}
+                                            <br><small class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>{{ task.notes }}</small>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         {% if task.keywords %}
@@ -157,6 +200,8 @@
                                             <span class="status-badge status-completed">已完成</span>
                                         {% elif task.status == 'failed' %}
                                             <span class="status-badge status-failed">失败</span>
+                                        {% elif task.status == 'queued' %}
+                                            <span class="status-badge status-queued">排队中</span>
                                         {% endif %}
                                     </td>
                                     <td>
@@ -457,12 +502,16 @@ function viewTask(taskId) {
 // 页面加载完成后执行
 $(document).ready(function() {
     updateStatus();
+    updateQueueStatus();
     
     // 设置进度条宽度
     $('.progress-bar').each(function() {
         const progress = $(this).data('progress');
         $(this).css('width', progress + '%');
     });
+    
+    // 定期更新队列状态
+    setInterval(updateQueueStatus, 5000);
 });
 
 // 自动刷新运行中的任务状态
@@ -486,5 +535,57 @@ $('#createTaskModal form').on('submit', function(e) {
     const submitBtn = $(this).find('button[type="submit"]');
     showLoading(submitBtn[0]);
 });
+
+// 更新队列状态
+function updateQueueStatus() {
+    $.get('/api/queue/status')
+        .done(function(response) {
+            if (response.success) {
+                const data = response.data;
+                const queueLength = data.queue_length;
+                const availableSlots = data.available_slots;
+                const isQueueFull = data.is_queue_full;
+                
+                // 更新队列状态显示
+                if (queueLength > 0) {
+                    $('#queueStatus').html(`<strong class="text-warning">${queueLength} 个任务排队等待</strong>`);
+                    $('#clearQueueBtn').removeClass('d-none');
+                } else {
+                    $('#queueStatus').html('<span class="text-muted">队列为空</span>');
+                    $('#clearQueueBtn').addClass('d-none');
+                }
+                
+                // 显示/隐藏队列满提示
+                if (isQueueFull && queueLength > 0) {
+                    $('#queueAlert').removeClass('d-none');
+                } else {
+                    $('#queueAlert').addClass('d-none');
+                }
+            }
+        })
+        .fail(function() {
+            $('#queueStatus').html('<span class="text-danger">获取队列状态失败</span>');
+        });
+}
+
+// 清空队列
+function clearQueue() {
+    if (confirm('确定要清空任务队列吗？队列中的任务将重置为等待状态。')) {
+        $.post('/api/queue/clear')
+            .done(function(response) {
+                if (response.success) {
+                    showAlert('任务队列已清空', 'success');
+                    updateQueueStatus();
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showAlert('清空队列失败: ' + response.error, 'danger');
+                }
+            })
+            .fail(function(xhr) {
+                const error = xhr.responseJSON ? xhr.responseJSON.error : '清空队列失败';
+                showAlert('清空队列失败: ' + error, 'danger');
+            });
+    }
+}
 </script>
 {% endblock %}

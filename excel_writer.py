@@ -190,6 +190,10 @@ class ExcelWriter:
         # 生成文件名
         if not filename:
             filename = self.generate_filename()
+        else:
+            # 如果传入了filename，确保它在data目录下
+            if not os.path.dirname(filename):
+                filename = os.path.join(self.data_dir, filename)
         
         self.logger.info(f"开始写入 {len(tweets)} 条推文数据到 Excel: {filename}")
         
@@ -340,6 +344,10 @@ class ExcelWriter:
         # 生成文件名
         if not filename:
             filename = self.generate_filename()
+        else:
+            # 如果传入了filename，确保它在data目录下
+            if not os.path.dirname(filename):
+                filename = os.path.join(self.data_dir, filename)
         
         self.logger.info(f"开始写入 {len(tweets)} 条推文数据和统计信息到 Excel: {filename}")
         

@@ -1,136 +1,172 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+测试修复后的飞书同步功能
+"""
 
-import sqlite3
+import os
+import sys
 import json
-from enhanced_tweet_scraper import EnhancedTwitterScraper, load_feishu_config_from_file
+from datetime import datetime
+
+# 添加项目根目录到Python路径
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from cloud_sync import CloudSyncManager
+from web_app import app, db, TweetData, ScrapingTask, SystemConfig, FEISHU_CONFIG, load_config_from_database
 
 def test_fixed_feishu_sync():
     """测试修复后的飞书同步功能"""
-    print("🔧 测试修复后的飞书同步功能...")
+    print("🔧 测试修复后的飞书同步功能")
+    print("=" * 60)
     
-    # 加载飞书配置
-    feishu_config = load_feishu_config_from_file()
-    if not feishu_config:
-        print("❌ 无法加载飞书配置")
-        return
-    
-    print(f"✅ 飞书配置加载成功，启用状态: {feishu_config.get('enabled')}")
-    
-    # 检查数据库状态
-    conn = sqlite3.connect('twitter_scraper.db')
-    cursor = conn.cursor()
-    
-    # 统计推文数据
-    cursor.execute("""
-        SELECT 
-            COUNT(*) as total,
-            COUNT(CASE WHEN publish_time IS NOT NULL AND publish_time != '' THEN 1 END) as has_publish_time,
-            COUNT(CASE WHEN scraped_at IS NOT NULL THEN 1 END) as has_scraped_at,
-            COUNT(CASE WHEN synced_to_feishu = 1 THEN 1 END) as synced
-        FROM tweet_data
-    """)
-    
-    stats = cursor.fetchone()
-    total, has_publish_time, has_scraped_at, synced = stats
-    
-    print(f"\n📊 数据库统计:")
-    print(f"  总推文数: {total}")
-    print(f"  有发布时间: {has_publish_time} ({has_publish_time/total*100:.1f}%)")
-    print(f"  有抓取时间: {has_scraped_at} ({has_scraped_at/total*100:.1f}%)")
-    print(f"  已同步: {synced} ({synced/total*100:.1f}%)")
-    
-    # 获取样例数据测试格式化
-    cursor.execute("""
-        SELECT username, content, publish_time, likes, comments, retweets, link, hashtags, scraped_at
-        FROM tweet_data 
-        ORDER BY id DESC 
-        LIMIT 3
-    """)
-    
-    sample_tweets = cursor.fetchall()
-    conn.close()
-    
-    # 测试格式化功能
-    print("\n🧪 测试修复后的格式化功能...")
-    scraper = EnhancedTwitterScraper()
-    
-    # 构建测试数据
-    test_tweets = []
-    for username, content, publish_time, likes, comments, retweets, link, hashtags, scraped_at in sample_tweets:
-        tweet_dict = {
-            'username': username,
-            'content': content,
-            'publish_time': publish_time,
-            'likes': likes,
-            'comments': comments,
-            'retweets': retweets,
-            'link': link,
-            'hashtags': hashtags.split(',') if hashtags else [],
-            'scraped_at': scraped_at
-        }
-        test_tweets.append(tweet_dict)
-    
-    formatted_tweets = scraper.format_tweets_for_feishu(test_tweets)
-    
-    print("\n📝 格式化结果分析:")
-    for i, (original, formatted) in enumerate(zip(test_tweets, formatted_tweets), 1):
-        print(f"\n  推文 {i}:")
-        print(f"    原始发布时间: {original.get('publish_time') or '❌ 无'}")
-        print(f"    原始抓取时间: {original.get('scraped_at') or '❌ 无'}")
-        print(f"    格式化后发布时间: {formatted.get('发布时间') or '❌ 无'}")
-        print(f"    格式化后创建时间: {formatted.get('创建时间') or '❌ 无'}")
+    with app.app_context():
+        # 加载数据库配置
+        load_config_from_database()
         
-        # 检查修复效果
-        if not original.get('publish_time') and formatted.get('发布时间'):
-            print(f"    ✅ 修复成功：使用抓取时间作为发布时间")
-        elif original.get('publish_time') and formatted.get('发布时间'):
-            print(f"    ✅ 正常：使用原始发布时间")
-        else:
-            print(f"    ❌ 仍有问题：发布时间为空")
-    
-    # 如果配置有效，执行实际同步测试
-    is_placeholder = (
-        feishu_config.get('app_id') == 'your_feishu_app_id' or
-        feishu_config.get('spreadsheet_token') == 'your_spreadsheet_token'
-    )
-    
-    if not is_placeholder and feishu_config.get('enabled'):
-        print("\n🚀 执行实际飞书同步测试...")
+        # 1. 获取Campaign任务的推文数据
+        print("\n1. 获取Campaign任务的推文数据:")
+        campaign_task = ScrapingTask.query.filter(
+            ScrapingTask.name.like('%Campaign%')
+        ).order_by(ScrapingTask.id.desc()).first()
         
-        # 重置同步状态
-        conn = sqlite3.connect('twitter_scraper.db')
-        cursor = conn.cursor()
-        cursor.execute("UPDATE tweet_data SET synced_to_feishu = 0")
-        conn.commit()
-        conn.close()
-        
-        print("✅ 已重置所有推文的同步状态")
-        
-        # 执行同步
-        success = scraper.sync_to_feishu(feishu_config)
-        
-        if success:
-            print("✅ 飞书同步成功！")
+        if not campaign_task:
+            print("   ❌ 未找到Campaign相关任务")
+            return
             
-            # 检查同步结果
-            conn = sqlite3.connect('twitter_scraper.db')
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM tweet_data WHERE synced_to_feishu = 1")
-            synced_count = cursor.fetchone()[0]
-            conn.close()
+        tweets = TweetData.query.filter_by(task_id=campaign_task.id).limit(2).all()
+        print(f"   - 任务ID: {campaign_task.id}")
+        print(f"   - 推文数量: {len(tweets)}")
+        
+        if not tweets:
+            print("   ❌ 该任务没有推文数据")
+            return
+        
+        # 2. 使用修复后的字段映射准备数据
+        print("\n2. 使用修复后的字段映射准备数据:")
+        data = []
+        
+        for tweet in tweets:
+            # 处理发布时间
+            publish_time = ''
+            if tweet.publish_time:
+                try:
+                    if isinstance(tweet.publish_time, str):
+                        from dateutil import parser
+                        dt = parser.parse(tweet.publish_time)
+                        publish_time = int(dt.timestamp() * 1000)
+                    else:
+                        publish_time = int(tweet.publish_time.timestamp() * 1000)
+                except:
+                    publish_time = ''
             
-            print(f"📊 同步结果: {synced_count} 条推文已同步到飞书")
-        else:
-            print("❌ 飞书同步失败")
-    else:
-        print("\n⚠️ 跳过实际同步测试（配置为占位符或未启用）")
-    
-    print("\n🎯 修复总结:")
-    print("  ✅ 已修复 format_tweets_for_feishu 函数")
-    print("  ✅ 当 publish_time 为空时，自动使用 scraped_at 作为回退")
-    print("  ✅ 这将解决飞书中时间字段显示异常的问题")
-    print("  📝 建议：重新同步所有数据以应用修复")
+            # 使用修复后的字段映射（与web_app.py中的一致）
+            tweet_data = {
+                '推文原文内容': tweet.content,
+                '发布时间': publish_time,
+                '作者（账号）': tweet.username,
+                '推文链接': tweet.link or '',
+                '话题标签（Hashtag）': ', '.join(json.loads(tweet.hashtags) if tweet.hashtags else []),
+                '类型标签': tweet.content_type or 'general',
+                '评论': 0,  # Twitter API限制，暂时设为0
+                '点赞': tweet.likes,
+                '转发': tweet.retweets,
+                '创建时间': int(tweet.scraped_at.timestamp() * 1000)
+            }
+            
+            data.append(tweet_data)
+            
+            print(f"   - 推文 {tweet.id} 数据:")
+            for key, value in tweet_data.items():
+                if key == '推文原文内容':
+                    print(f"     {key}: '{str(value)[:50]}...'")
+                else:
+                    print(f"     {key}: {repr(value)}")
+            print()
+        
+        # 3. 初始化CloudSyncManager并测试同步
+        print("\n3. 测试飞书同步:")
+        try:
+            # 使用正确的飞书配置初始化CloudSyncManager
+            feishu_config = {
+                'feishu': {
+                    'app_id': FEISHU_CONFIG['app_id'],
+                    'app_secret': FEISHU_CONFIG['app_secret'],
+                    'base_url': 'https://open.feishu.cn/open-apis'
+                }
+            }
+            sync_manager = CloudSyncManager(feishu_config)
+            print("   ✅ CloudSyncManager 初始化成功")
+            
+            # 获取访问令牌
+            access_token = sync_manager.get_feishu_access_token()
+            if not access_token:
+                print("   ❌ 获取访问令牌失败")
+                return
+            print(f"   ✅ 成功获取访问令牌: {access_token[:10]}...")
+            
+            # 获取飞书表格字段信息
+            import requests
+            headers = {
+                'Authorization': f'Bearer {access_token}',
+                'Content-Type': 'application/json'
+            }
+            
+            fields_url = f"https://open.feishu.cn/open-apis/bitable/v1/apps/{FEISHU_CONFIG['spreadsheet_token']}/tables/{FEISHU_CONFIG['table_id']}/fields"
+            fields_response = requests.get(fields_url, headers=headers)
+            
+            if fields_response.status_code == 200:
+                fields_result = fields_response.json()
+                if fields_result.get('code') == 0:
+                    fields_data = fields_result.get('data', {}).get('items', [])
+                    available_fields = [field.get('field_name') for field in fields_data]
+                    print(f"   ✅ 飞书表格字段: {available_fields}")
+                    
+                    # 检查字段匹配情况
+                    data_fields = list(data[0].keys()) if data else []
+                    print(f"   - 数据字段: {data_fields}")
+                    
+                    matched_fields = []
+                    unmatched_fields = []
+                    
+                    for field in data_fields:
+                        if field in available_fields:
+                            matched_fields.append(field)
+                        else:
+                            unmatched_fields.append(field)
+                    
+                    print(f"   ✅ 匹配字段: {matched_fields}")
+                    if unmatched_fields:
+                        print(f"   ⚠️ 不匹配字段: {unmatched_fields}")
+                    else:
+                        print("   ✅ 所有字段都匹配！")
+                    
+                    # 执行实际同步测试
+                    print("\n4. 执行飞书同步测试:")
+                    success = sync_manager.sync_to_feishu(
+                        data,
+                        FEISHU_CONFIG['spreadsheet_token'],
+                        FEISHU_CONFIG['table_id']
+                    )
+                    
+                    if success:
+                        print("   ✅ 飞书同步测试成功！")
+                        print(f"   - 成功同步 {len(data)} 条数据")
+                    else:
+                        print("   ❌ 飞书同步测试失败")
+                    
+                else:
+                    print(f"   ❌ 获取字段信息失败: {fields_result.get('msg')}")
+            else:
+                print(f"   ❌ 请求字段信息失败: HTTP {fields_response.status_code}")
+            
+        except Exception as e:
+            print(f"   ❌ 飞书同步测试失败: {e}")
+            import traceback
+            print(f"   - 错误详情: {traceback.format_exc()}")
+        
+        print("\n" + "=" * 60)
+        print("🔧 修复后的飞书同步功能测试完成")
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     test_fixed_feishu_sync()

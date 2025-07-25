@@ -1,0 +1,5 @@
+{
+  "task_id": 24,
+  "error": "'ScrapingTask' object has no attribute 'task_type'",
+  "failed_at": "2025-07-23T08:42:25.019601"
+}

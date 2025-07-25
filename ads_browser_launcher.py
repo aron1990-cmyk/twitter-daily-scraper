@@ -20,12 +20,16 @@ class AdsPowerLauncher:
             config = {
                 'local_api_url': 'http://local.adspower.net:50325',
                 'user_id': '',
-                'group_id': ''
+                'group_id': '',
+                'api_status': '',
+                'api_key': ''
             }
         
         self.api_url = config.get('local_api_url', 'http://local.adspower.net:50325')
         self.user_id = config.get('user_id', '')
         self.group_id = config.get('group_id', '')
+        self.api_status = config.get('api_status', '')
+        self.api_key = config.get('api_key', '')
         self.browser_info = None
         self.logger = logging.getLogger(__name__)
         self.max_cpu_threshold = 80.0  # CPU使用率阈值
@@ -120,8 +124,14 @@ class AdsPowerLauncher:
             
             self.logger.info(f"正在启动 AdsPower 浏览器，用户ID: {target_user_id}")
             
+            # 准备请求头
+            headers = {}
+            if self.api_key:
+                headers['Authorization'] = f'Bearer {self.api_key}'
+            
             # 发送启动请求
-            response = requests.get(start_url, params=params, timeout=30)
+            response = requests.get(start_url, params=params, headers=headers, timeout=30)
+            self.logger.info(f"AdsPower API Response: {response.text}")
             response.raise_for_status()
             
             result = response.json()
@@ -187,7 +197,12 @@ class AdsPowerLauncher:
             
             self.logger.info(f"正在停止 AdsPower 浏览器，用户ID: {target_user_id}")
             
-            response = requests.get(stop_url, params=params)
+            # 准备请求头
+            headers = {}
+            if self.api_key:
+                headers['Authorization'] = f'Bearer {self.api_key}'
+            
+            response = requests.get(stop_url, params=params, headers=headers)
             response.raise_for_status()
             
             result = response.json()

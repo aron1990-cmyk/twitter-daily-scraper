@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block title %}推文详情 - Twitter抓取管理系统{% endblock %}
+
+{% block content %}
+<!-- 返回按钮 -->
+<div class="row mb-3">
+    <div class="col-12">
+        <a href="{{ url_for('data') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>
+            返回数据列表
+        </a>
+    </div>
+</div>
+
+<!-- 推文详情卡片 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fab fa-twitter me-2 text-primary"></i>
+                        推文详情
+                    </h5>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-h"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            {% if tweet.link %}
+                                <li><a class="dropdown-item" href="{{ tweet.link }}" target="_blank">
+                                    <i class="fas fa-external-link-alt me-2"></i>查看原推文
+                                </a></li>
+                            {% endif %}
+                            <li><a class="dropdown-item" href="#" onclick="copyTweetContent()">
+                                <i class="fas fa-copy me-2"></i>复制内容
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="deleteTweet('{{ tweet.id }}')">
+                                <i class="fas fa-trash me-2"></i>删除
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- 用户信息 -->
+                <div class="d-flex align-items-start mb-4">
+                    <div class="flex-shrink-0">
+                        {% if tweet.user_avatar %}
+                            <img src="{{ tweet.user_avatar }}" alt="{{ tweet.username }}" 
+                                 class="rounded-circle" width="60" height="60">
+                        {% else %}
+                            <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center" 
+                                 style="width: 60px; height: 60px; color: white; font-size: 24px;">
+                                <i class="fas fa-user"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h4 class="mb-1">
+                            <strong>{{ tweet.user_display_name or tweet.username }}</strong>
+                            <small class="text-muted">@{{ tweet.username }}</small>
+                        </h4>
+                        <div class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            {% if tweet.publish_time %}
+                                {{ tweet.publish_time }}
+                            {% else %}
+                                {{ tweet.scraped_at.strftime('%Y-%m-%d %H:%M:%S') if tweet.scraped_at else '未知时间' }}
+                            {% endif %}
+                        </div>
+                        {% if tweet.task %}
+                            <div class="mt-2">
+                                <span class="badge bg-secondary">{{ tweet.task.name }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- 推文内容 -->
+                <div class="mb-4">
+                    <div class="tweet-content" style="font-size: 1.1em; line-height: 1.6;">
+                        <p class="mb-3">{{ tweet.content }}</p>
+                        
+                        {% if tweet.full_content and tweet.full_content != tweet.content %}
+                            <div class="alert alert-light">
+                                <h6 class="alert-heading">完整内容：</h6>
+                                <p class="mb-0">{{ tweet.full_content }}</p>
+                            </div>
+                        {% endif %}
+                        
+                        {% if tweet.hashtags %}
+                            <div class="mb-3">
+                                {% set hashtag_list = tweet.hashtags.split(',') if tweet.hashtags else [] %}
+                                {% for hashtag in hashtag_list %}
+                                    <span class="badge bg-light text-primary me-2 mb-1" style="font-size: 0.9em;">
+                                        #{{ hashtag.strip() }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        
+                        {% if tweet.content_type %}
+                            <div class="mb-3">
+                                <span class="badge bg-info">{{ tweet.content_type }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- 互动数据统计 -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card bg-light text-center">
+                            <div class="card-body py-3">
+                                <div class="d-flex align-items-center justify-content-center">
+                                    <i class="fas fa-heart text-danger me-2" style="font-size: 1.5em;"></i>
+                                    <div>
+                                        <h4 class="mb-0 text-danger">{{ tweet.likes or 0 }}</h4>
+                                        <small class="text-muted">点赞数</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light text-center">
+                            <div class="card-body py-3">
+                                <div class="d-flex align-items-center justify-content-center">
+                                    <i class="fas fa-retweet text-success me-2" style="font-size: 1.5em;"></i>
+                                    <div>
+                                        <h4 class="mb-0 text-success">{{ tweet.retweets or 0 }}</h4>
+                                        <small class="text-muted">转发数</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light text-center">
+                            <div class="card-body py-3">
+                                <div class="d-flex align-items-center justify-content-center">
+                                    <i class="fas fa-comment text-info me-2" style="font-size: 1.5em;"></i>
+                                    <div>
+                                        <h4 class="mb-0 text-info">{{ tweet.comments or 0 }}</h4>
+                                        <small class="text-muted">评论数</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 多媒体内容 -->
+                {% if tweet.media_content %}
+                    {% set media_data = tweet.media_content | from_json %}
+                    {% if media_data and (media_data.images or media_data.videos) %}
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3">多媒体内容</h6>
+                            {% if media_data.images %}
+                                <div class="row">
+                                    {% for image in media_data.images %}
+                                        <div class="col-md-6 mb-3">
+                                            <img src="{{ image }}" class="img-fluid rounded" alt="推文图片">
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            {% if media_data.videos %}
+                                <div class="row">
+                                    {% for video in media_data.videos %}
+                                        <div class="col-md-6 mb-3">
+                                            <video controls class="w-100 rounded">
+                                                <source src="{{ video }}" type="video/mp4">
+                                                您的浏览器不支持视频播放。
+                                            </video>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endif %}
+
+                <!-- 推文线程 -->
+                {% if tweet.thread_tweets %}
+                    {% set thread_data = tweet.thread_tweets | from_json %}
+                    {% if thread_data %}
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3">推文线程</h6>
+                            <div class="list-group">
+                                {% for thread_tweet in thread_data %}
+                                    <div class="list-group-item">
+                                        <p class="mb-1">{{ thread_tweet.content }}</p>
+                                        <small class="text-muted">
+                                            <i class="fas fa-heart me-1"></i>{{ thread_tweet.likes or 0 }}
+                                            <i class="fas fa-retweet ms-2 me-1"></i>{{ thread_tweet.retweets or 0 }}
+                                            <i class="fas fa-comment ms-2 me-1"></i>{{ thread_tweet.comments or 0 }}
+                                        </small>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endif %}
+
+                <!-- 技术信息 -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">抓取信息</h6>
+                                <table class="table table-sm table-borderless mb-0">
+                                    <tr>
+                                        <td><strong>抓取时间：</strong></td>
+                                        <td>{{ tweet.scraped_at.strftime('%Y-%m-%d %H:%M:%S') if tweet.scraped_at else '未知' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>推文ID：</strong></td>
+                                        <td>{{ tweet.id }}</td>
+                                    </tr>
+                                    {% if tweet.link %}
+                                        <tr>
+                                            <td><strong>原始链接：</strong></td>
+                                            <td><a href="{{ tweet.link }}" target="_blank" class="text-decoration-none">查看原推文</a></td>
+                                        </tr>
+                                    {% endif %}
+                                    <tr>
+                                        <td><strong>同步状态：</strong></td>
+                                        <td>
+                                            {% if tweet.synced_to_feishu %}
+                                                <span class="badge bg-success">已同步</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">未同步</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">互动比率</h6>
+                                <div class="mb-2">
+                                    <small class="text-muted">点赞率</small>
+                                    <div class="progress" style="height: 8px;">
+                                        {% set total_engagement = (tweet.likes or 0) + (tweet.retweets or 0) + (tweet.comments or 0) %}
+                                        {% set like_ratio = ((tweet.likes or 0) / total_engagement * 100) if total_engagement > 0 else 0 %}
+                                        <div class="progress-bar bg-danger" style="width: {{ like_ratio }}%"></div>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <small class="text-muted">转发率</small>
+                                    <div class="progress" style="height: 8px;">
+                                        {% set retweet_ratio = ((tweet.retweets or 0) / total_engagement * 100) if total_engagement > 0 else 0 %}
+                                        <div class="progress-bar bg-success" style="width: {{ retweet_ratio }}%"></div>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <small class="text-muted">评论率</small>
+                                    <div class="progress" style="height: 8px;">
+                                        {% set comment_ratio = ((tweet.comments or 0) / total_engagement * 100) if total_engagement > 0 else 0 %}
+                                        <div class="progress-bar bg-info" style="width: {{ comment_ratio }}%"></div>
+                                    </div>
+                                </div>
+                                <small class="text-muted">总互动数：{{ total_engagement }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyTweetContent() {
+    const content = `{{ tweet.content | replace('"', '\\"') | replace('\n', '\\n') }}`;
+    navigator.clipboard.writeText(content).then(function() {
+        showAlert('推文内容已复制到剪贴板', 'success');
+    }).catch(function() {
+        showAlert('复制失败', 'danger');
+    });
+}
+
+function deleteTweet(tweetId) {
+    if (confirm('确定要删除这条推文吗？此操作不可恢复！')) {
+        $.ajax({
+            url: `/data/${tweetId}`,
+            type: 'DELETE'
+        })
+        .done(function(response) {
+            showAlert('推文已删除！', 'success');
+            setTimeout(() => window.location.href = '{{ url_for("data") }}', 1000);
+        })
+        .fail(function(xhr) {
+            const error = xhr.responseJSON ? xhr.responseJSON.error : '删除失败';
+            showAlert('删除失败: ' + error, 'danger');
+        });
+    }
+}
+</script>
+{% endblock %}

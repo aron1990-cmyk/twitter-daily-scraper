@@ -180,9 +180,9 @@
             display: inline-block;
             width: 20px;
             height: 20px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
+            border: 3px solid rgba(29, 161, 242, 0.3);
             border-radius: 50%;
-            border-top-color: #fff;
+            border-top-color: #1da1f2;
             animation: spin 1s ease-in-out infinite;
         }
         
@@ -283,16 +283,18 @@
                             <i class="fas fa-users me-1"></i>博主管理
                         </a>
                     </li>
-                    <li class="nav-item">
+                    <!-- 页面分析器功能已注释，功能保留但不在导航栏显示 -->
+                    <!-- <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('page_analyzer') }}">
                             <i class="fas fa-search-plus me-1"></i>页面分析器
                         </a>
-                    </li>
-                    <li class="nav-item">
+                    </li> -->
+                    <!-- 增强抓取功能已注释，功能保留但不在导航栏显示 -->
+                    <!-- <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('enhanced_scraping') }}">
                             <i class="fas fa-rocket me-1"></i>增强抓取
                         </a>
-                    </li>
+                    </li> -->
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('config') }}">
                             <i class="fas fa-cog me-1"></i>系统配置

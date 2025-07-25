@@ -85,6 +85,18 @@
 </div>
 {% endif %}
 
+{% if task.notes %}
+<div class="row mt-3">
+    <div class="col-12">
+        <h6 class="text-muted mb-2">任务提醒</h6>
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            {{ task.notes|replace('\n', '<br>')|safe }}
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% if recent_tweets %}
 <div class="row mt-4">
     <div class="col-12">

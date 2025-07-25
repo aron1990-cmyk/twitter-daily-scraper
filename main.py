@@ -91,6 +91,9 @@ class TwitterDailyScraper:
             configs = cursor.fetchall()
             
             config_dict = {}
+            api_host = None
+            api_port = None
+            
             for key, value in configs:
                 if key == 'adspower_api_host':
                     api_host = value
@@ -100,9 +103,13 @@ class TwitterDailyScraper:
                     config_dict['user_id'] = value
                 elif key == 'adspower_group_id':
                     config_dict['group_id'] = value
+                elif key == 'adspower_api_status':
+                    config_dict['api_status'] = value
+                elif key == 'adspower_api_key':
+                    config_dict['api_key'] = value
             
             # 构建完整的API URL
-            if 'api_host' in locals() and 'api_port' in locals():
+            if api_host and api_port:
                 config_dict['local_api_url'] = f"http://{api_host}:{api_port}"
             else:
                 config_dict['local_api_url'] = 'http://local.adspower.net:50325'

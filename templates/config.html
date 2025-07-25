@@ -18,38 +18,38 @@
 <div class="row">
     <div class="col-12">
         <ul class="nav nav-tabs" id="configTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="general-tab" data-bs-toggle="tab" 
+            <li class="nav-item" role="presentation" id="general_nav_item">
+                <button class="nav-link active" name="general_tab" id="general-tab" data-bs-toggle="tab" 
                         data-bs-target="#general" type="button" role="tab">
                     <i class="fas fa-sliders-h me-2"></i>基础设置
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="scraping-tab" data-bs-toggle="tab" 
+            <li class="nav-item" role="presentation" id="scraping_nav_item">
+                <button class="nav-link" name="scraping_tab" id="scraping-tab" data-bs-toggle="tab" 
                         data-bs-target="#scraping" type="button" role="tab">
                     <i class="fas fa-spider me-2"></i>抓取配置
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="adspower-tab" data-bs-toggle="tab" 
+            <li class="nav-item" role="presentation" id="adspower_nav_item">
+                <button class="nav-link" name="adspower_tab" id="adspower-tab" data-bs-toggle="tab" 
                         data-bs-target="#adspower" type="button" role="tab">
                     <i class="fas fa-window-maximize me-2"></i>AdsPower配置
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="feishu-tab" data-bs-toggle="tab" 
+            <li class="nav-item" role="presentation" id="feishu_nav_item">
+                <button class="nav-link" name="feishu_tab" id="feishu-tab" data-bs-toggle="tab" 
                         data-bs-target="#feishu" type="button" role="tab">
                     <i class="fas fa-cloud me-2"></i>飞书配置
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="export-tab" data-bs-toggle="tab" 
+            <li class="nav-item" role="presentation" id="export_nav_item">
+                <button class="nav-link" name="export_tab" id="export-tab" data-bs-toggle="tab" 
                         data-bs-target="#export" type="button" role="tab">
                     <i class="fas fa-download me-2"></i>导出设置
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="system-tab" data-bs-toggle="tab" 
+            <li class="nav-item" role="presentation" id="system_nav_item">
+                <button class="nav-link" name="system_tab" id="system-tab" data-bs-toggle="tab" 
                         data-bs-target="#system" type="button" role="tab">
                     <i class="fas fa-server me-2"></i>系统信息
                 </button>
@@ -59,15 +59,15 @@
         <div class="tab-content" id="configTabsContent">
             <!-- 基础设置 -->
             <div class="tab-pane fade show active" id="general" role="tabpanel">
-                <div class="card mt-3">
-                    <div class="card-header">
+                <div class="card mt-3" id="general_config_card">
+                    <div class="card-header" id="general_config_header">
                         <h5 class="mb-0">
                             <i class="fas fa-sliders-h me-2"></i>
                             基础设置
                         </h5>
                     </div>
-                    <div class="card-body">
-                        <form action="{{ url_for('update_config') }}" method="POST">
+                    <div class="card-body" id="general_config_body">
+                        <form action="{{ url_for('update_config') }}" method="POST" id="general_config_form">
                             <input type="hidden" name="config_type" value="general">
                             
                             <div class="row">
@@ -87,25 +87,12 @@
                                 </div>
                             </div>
                             
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="max_concurrent_tasks" class="form-label">最大并发任务数</label>
-                                        <input type="number" class="form-control" id="max_concurrent_tasks" 
-                                               name="max_concurrent_tasks" value="{{ config.max_concurrent_tasks or 3 }}" 
-                                               min="1" max="10">
-                                        <div class="form-text">同时运行的最大任务数量</div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="data_retention_days" class="form-label">数据保留天数</label>
-                                        <input type="number" class="form-control" id="data_retention_days" 
-                                               name="data_retention_days" value="{{ config.data_retention_days or 30 }}" 
-                                               min="1" max="365">
-                                        <div class="form-text">超过此天数的数据将被自动清理</div>
-                                    </div>
-                                </div>
+                            <div class="mb-3">
+                                <label for="data_retention_days" class="form-label">数据保留天数</label>
+                                <input type="number" class="form-control" id="data_retention_days" 
+                                       name="data_retention_days" value="{{ config.data_retention_days or 30 }}" 
+                                       min="1" max="365" style="max-width: 300px;">
+                                <div class="form-text">超过此天数的数据将被自动清理</div>
                             </div>
                             
                             <div class="mb-3">
@@ -119,7 +106,7 @@
                                 <div class="form-text">每日自动备份数据库</div>
                             </div>
                             
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" name="save_basic_settings" class="btn btn-primary">
                                 <i class="fas fa-save me-2"></i>
                                 保存设置
                             </button>
@@ -130,15 +117,15 @@
             
             <!-- 抓取配置 -->
             <div class="tab-pane fade" id="scraping" role="tabpanel">
-                <div class="card mt-3">
-                    <div class="card-header">
+                <div class="card mt-3" id="scraping_config_card">
+                    <div class="card-header" id="scraping_config_header">
                         <h5 class="mb-0">
                             <i class="fas fa-spider me-2"></i>
                             抓取配置
                         </h5>
                     </div>
-                    <div class="card-body">
-                        <form action="{{ url_for('update_config') }}" method="POST">
+                    <div class="card-body" id="scraping_config_body">
+                        <form action="{{ url_for('update_config') }}" method="POST" id="scraping_config_form">
                             <input type="hidden" name="config_type" value="scraping">
                             
                             <div class="row">
@@ -197,7 +184,7 @@
                                 </div>
                             </div>
                             
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" name="save_export_settings" class="btn btn-primary">
                                 <i class="fas fa-save me-2"></i>
                                 保存设置
                             </button>
@@ -208,8 +195,8 @@
             
             <!-- AdsPower配置 -->
             <div class="tab-pane fade" id="adspower" role="tabpanel">
-                <div class="card mt-3">
-                    <div class="card-header">
+                <div class="card mt-3" id="adspower_config_card">
+                    <div class="card-header" id="adspower_config_header">
                         <h5 class="mb-0">
                             <i class="fas fa-window-maximize me-2"></i>
                             AdsPower配置
@@ -224,9 +211,9 @@
                                     AdsPower安装检测
                                 </h6>
                             </div>
-                            <div class="card-body">
-                                <div class="row align-items-center">
-                                    <div class="col-md-8">
+                            <div class="card-body" id="adspower_detection_body">
+                                <div class="row align-items-center" id="adspower_detection_row">
+                                    <div class="col-md-8" id="adspower_status_col">
                                         <div id="adspower-status" class="d-flex align-items-center">
                                             <div class="spinner-border spinner-border-sm me-2" role="status" id="status-loading" style="display: none;">
                                                 <span class="visually-hidden">检测中...</span>
@@ -244,7 +231,7 @@
                                                     <li>启动AdsPower并创建浏览器配置文件</li>
                                                     <li>返回此页面配置用户ID</li>
                                                 </ol>
-                                                <a href="https://www.adspower.net/share/hftJaRHMQl1r7jw" target="_blank" class="btn btn-warning">
+                                                <a href="https://www.adspower.net/share/hftJaRHMQl1r7jw" target="_blank" name="download_adspower" class="btn btn-warning">
                                                     <i class="fas fa-external-link-alt me-2"></i>
                                                     注册并下载AdsPower
                                                 </a>
@@ -252,10 +239,14 @@
                                         </div>
                                     </div>
                                     <div class="col-md-4 text-end">
-                                        <button type="button" class="btn btn-outline-primary" onclick="checkAdsPowerInstallation()">
-                                            <i class="fas fa-search me-2"></i>
-                                            检测安装状态
-                                        </button>
+                                        <button type="button" name="check_adspower_installation" class="btn btn-outline-primary" onclick="checkAdsPowerInstallation()">
+                                    <i class="fas fa-search me-2"></i>
+                                    检测安装状态
+                                </button>
+                                <button type="button" name="test_open_adspower" class="btn btn-outline-secondary ms-2" onclick="testOpenAdsPower()">
+                                    <i class="fas fa-bug me-2"></i>
+                                    测试打开AdsPower
+                                </button>
                                     </div>
                                 </div>
                             </div>
@@ -271,16 +262,16 @@
                             <input type="hidden" name="config_type" value="adspower">
                             
                             <div class="row">
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="mb-3">
                                         <label for="adspower_api_host" class="form-label">API主机地址</label>
                                         <input type="text" class="form-control" id="adspower_api_host" name="adspower_api_host" 
-                                               value="{{ config.adspower_api_host or 'local.adspower.net' }}" 
-                                               placeholder="local.adspower.net">
+                                               value="{{ config.adspower_api_host or 'localhost' }}" 
+                                               placeholder="localhost">
                                         <div class="form-text">AdsPower API的主机地址</div>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="mb-3">
                                         <label for="adspower_api_port" class="form-label">API端口</label>
                                         <input type="number" class="form-control" id="adspower_api_port" name="adspower_api_port" 
@@ -289,7 +280,30 @@
                                         <div class="form-text">AdsPower API的端口号</div>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label for="adspower_api_status" class="form-label">接口状态</label>
+                                        <select class="form-control" id="adspower_api_status" name="adspower_api_status">
+                                            <option value="" {{ 'selected' if not config.adspower_api_status }}>请选择</option>
+                                            <option value="开启" {{ 'selected' if config.adspower_api_status == '开启' }}>开启</option>
+                                            <option value="关闭" {{ 'selected' if config.adspower_api_status == '关闭' }}>关闭</option>
+                                        </select>
+                                        <div class="form-text">AdsPower API接口状态</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label for="adspower_api_key" class="form-label">API Key</label>
+                                        <input type="text" class="form-control" id="adspower_api_key" name="adspower_api_key" 
+                                               value="{{ config.adspower_api_key or '' }}" 
+                                               placeholder="输入API Key">
+                                        <div class="form-text">AdsPower API密钥</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-12">
                                     <div class="mb-3">
                                         <label for="adspower_user_id" class="form-label">主要用户ID</label>
                                         <input type="text" class="form-control" id="adspower_user_id" name="adspower_user_id" 
@@ -418,12 +432,12 @@
                                 </ul>
                             </div>
                             
-                            <div class="d-flex gap-2">
-                                <button type="submit" class="btn btn-primary">
+                            <div class="d-flex gap-2" id="adspower_action_buttons">
+                                <button type="submit" name="save_adspower_config" class="btn btn-primary">
                                     <i class="fas fa-save me-2"></i>
                                     保存配置
                                 </button>
-                                <button type="button" class="btn btn-outline-info" onclick="testAdsPowerConnection()">
+                                <button type="button" name="test_adspower_connection" class="btn btn-outline-info" onclick="testAdsPowerConnection()">
                                     <i class="fas fa-plug me-2"></i>
                                     测试连接
                                 </button>
@@ -435,15 +449,15 @@
             
             <!-- 飞书配置 -->
             <div class="tab-pane fade" id="feishu" role="tabpanel">
-                <div class="card mt-3">
-                    <div class="card-header">
+                <div class="card mt-3" id="feishu_config_card">
+                    <div class="card-header" id="feishu_config_header">
                         <h5 class="mb-0">
                             <i class="fas fa-cloud me-2"></i>
                             飞书配置
                         </h5>
                     </div>
-                    <div class="card-body">
-                        <div class="alert alert-info">
+                    <div class="card-body" id="feishu_config_body">
+                        <div class="alert alert-info" id="feishu_config_info">
                             <i class="fas fa-info-circle me-2"></i>
                             <strong>配置说明：</strong>配置飞书应用信息后，可以将抓取的数据同步到飞书多维表格中。
                             <br><br>
@@ -539,12 +553,12 @@
                                 </div>
                             </div>
                             
-                            <div class="d-flex gap-2">
-                                <button type="submit" class="btn btn-primary">
+                            <div class="d-flex gap-2" id="feishu_action_buttons">
+                                <button type="submit" name="save_feishu_config" class="btn btn-primary">
                                     <i class="fas fa-save me-2"></i>
                                     保存配置
                                 </button>
-                                <button type="button" class="btn btn-outline-info" onclick="testFeishuConnection()">
+                                <button type="button" name="test_feishu_connection" class="btn btn-outline-info" onclick="testFeishuConnection()">
                                     <i class="fas fa-plug me-2"></i>
                                     测试连接
                                 </button>
@@ -556,15 +570,15 @@
             
             <!-- 导出设置 -->
             <div class="tab-pane fade" id="export" role="tabpanel">
-                <div class="card mt-3">
-                    <div class="card-header">
+                <div class="card mt-3" id="export_config_card">
+                    <div class="card-header" id="export_config_header">
                         <h5 class="mb-0">
                             <i class="fas fa-download me-2"></i>
                             导出设置
                         </h5>
                     </div>
-                    <div class="card-body">
-                        <form action="{{ url_for('update_config') }}" method="POST">
+                    <div class="card-body" id="export_config_body">
+                        <form action="{{ url_for('update_config') }}" method="POST" id="export_config_form">
                             <input type="hidden" name="config_type" value="export">
                             
                             <div class="mb-3">
@@ -618,14 +632,14 @@
                                     <div class="col-md-6">
                                         <div class="form-check">
                                             <input class="form-check-input" type="checkbox" id="field_likes" 
-                                                   name="export_fields" value="likes_count" 
-                                                   {{ 'checked' if 'likes_count' in (config.export_fields or []) }}>
+                                                   name="export_fields" value="likes" 
+                                                   {{ 'checked' if 'likes' in (config.export_fields or []) }}>
                                             <label class="form-check-label" for="field_likes">点赞数</label>
                                         </div>
                                         <div class="form-check">
                                             <input class="form-check-input" type="checkbox" id="field_retweets" 
-                                                   name="export_fields" value="retweets_count" 
-                                                   {{ 'checked' if 'retweets_count' in (config.export_fields or []) }}>
+                                                   name="export_fields" value="retweets" 
+                                                   {{ 'checked' if 'retweets' in (config.export_fields or []) }}>
                                             <label class="form-check-label" for="field_retweets">转发数</label>
                                         </div>
                                         <div class="form-check">
@@ -658,16 +672,16 @@
             
             <!-- 系统信息 -->
             <div class="tab-pane fade" id="system" role="tabpanel">
-                <div class="card mt-3">
-                    <div class="card-header">
+                <div class="card mt-3" id="system_config_card">
+                    <div class="card-header" id="system_config_header">
                         <h5 class="mb-0">
                             <i class="fas fa-server me-2"></i>
                             系统信息
                         </h5>
                     </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
+                    <div class="card-body" id="system_info_body">
+                        <div class="row" id="system_info_row">
+                            <div class="col-md-6" id="system_status_col">
                                 <h6>系统状态</h6>
                                 <table class="table table-sm">
                                     <tr>
@@ -714,20 +728,20 @@
                         <hr>
                         
                         <h6>系统操作</h6>
-                        <div class="d-flex gap-2 flex-wrap">
-                            <button onclick="backupDatabase()" class="btn btn-outline-primary">
+                        <div class="d-flex gap-2 flex-wrap" id="system_action_buttons">
+                            <button onclick="backupDatabase()" name="backup_database" class="btn btn-outline-primary">
                                 <i class="fas fa-database me-2"></i>
                                 备份数据库
                             </button>
-                            <button onclick="cleanupData()" class="btn btn-outline-warning">
+                            <button onclick="cleanupData()" name="cleanup_data" class="btn btn-outline-warning">
                                 <i class="fas fa-broom me-2"></i>
                                 清理过期数据
                             </button>
-                            <button onclick="exportLogs()" class="btn btn-outline-info">
+                            <button onclick="exportLogs()" name="export_logs" class="btn btn-outline-info">
                                 <i class="fas fa-file-alt me-2"></i>
                                 导出日志
                             </button>
-                            <button onclick="restartSystem()" class="btn btn-outline-danger">
+                            <button onclick="restartSystem()" name="restart_system" class="btn btn-outline-danger">
                                 <i class="fas fa-redo me-2"></i>
                                 重启系统
                             </button>
@@ -770,6 +784,7 @@ function testFeishuConnection() {
         url: '/api/config/feishu/test',
         method: 'POST',
         contentType: 'application/json',
+        dataType: 'json',
         data: JSON.stringify({
             app_id: appId,
             app_secret: appSecret,
@@ -778,14 +793,64 @@ function testFeishuConnection() {
         })
     })
     .done(function(response) {
-        if (response.success) {
+        if (typeof response === 'string') {
+            try {
+                response = JSON.parse(response);
+            } catch (e) {
+                console.error('JSON解析失败:', e);
+                showAlert('响应解析失败', 'danger');
+                return;
+            }
+        }
+        console.log('飞书测试响应:', response);
+        
+        // 检查响应的success字段
+        if (response.success === true) {
             showAlert('飞书连接测试成功！', 'success');
         } else {
-            showAlert('连接测试失败: ' + response.error, 'danger');
+            showAlert('连接测试失败: ' + (response.error || '未知错误'), 'danger');
         }
     })
     .fail(function(xhr) {
-        const error = xhr.responseJSON ? xhr.responseJSON.error : '连接测试失败';
+        let error = '连接测试失败';
+        let logs = [];
+        
+        // 尝试多种方式获取错误信息和日志
+        if (xhr.responseJSON) {
+            if (xhr.responseJSON.error) {
+                error = xhr.responseJSON.error;
+            }
+            if (xhr.responseJSON.logs) {
+                logs = xhr.responseJSON.logs;
+            }
+        } else if (xhr.responseText) {
+            try {
+                const errorData = JSON.parse(xhr.responseText);
+                error = errorData.error || errorData.message || error;
+                logs = errorData.logs || [];
+            } catch (e) {
+                console.error('解析错误响应失败:', e);
+                error = '响应解析失败';
+            }
+        } else {
+            error = `HTTP ${xhr.status} 错误`;
+        }
+        
+        // 如果有日志，显示相关的错误日志
+        if (logs && logs.length > 0) {
+            const errorLogs = logs.filter(log => 
+                log.includes('连接测试失败') || 
+                log.includes('同步失败') || 
+                log.includes('配置失败') ||
+                log.includes('异常') ||
+                log.includes('error') ||
+                log.includes('invalid')
+            );
+            if (errorLogs.length > 0) {
+                error += `<br><small>错误日志: ${errorLogs.slice(-2).join('<br>')}</small>`;
+            }
+        }
+        
         showAlert('连接测试失败: ' + error, 'danger');
     })
     .always(function() {
@@ -793,10 +858,21 @@ function testFeishuConnection() {
     });
 }
 
-function checkAdsPowerInstallation() {
+function checkAdsPowerInstallation(event) {
+    console.log('=== checkAdsPowerInstallation 函数被调用 ===');
+    if (event) {
+        event.preventDefault();
+    }
+    
     const statusLoading = document.getElementById('status-loading');
     const statusText = document.getElementById('status-text');
     const installGuide = document.getElementById('install-guide');
+    
+    console.log('DOM元素检查:', {
+        statusLoading: !!statusLoading,
+        statusText: !!statusText,
+        installGuide: !!installGuide
+    });
     
     // 错误处理：确保元素存在
     if (!statusLoading || !statusText || !installGuide) {
@@ -811,23 +887,46 @@ function checkAdsPowerInstallation() {
     installGuide.style.display = 'none';
     
     // 检测AdsPower是否安装（通过尝试连接API）
-    const apiHost = $('#adspower_api_host').val() || 'local.adspower.net';
+    const apiHost = $('#adspower_api_host').val() || 'localhost';
     const apiPort = $('#adspower_api_port').val() || '50325';
     const apiUrl = `http://${apiHost}:${apiPort}`;
+    
+    console.log('准备发送AJAX请求:', {
+        apiHost: apiHost,
+        apiPort: apiPort,
+        apiUrl: apiUrl,
+        requestUrl: '/api/check_adspower_installation'
+    });
     
     $.ajax({
         url: '/api/check_adspower_installation',
         method: 'POST',
         contentType: 'application/json',
+        dataType: 'json',
         data: JSON.stringify({
             api_host: apiHost,
-            api_port: apiPort,
-            api_url: apiUrl
+            api_port: apiPort
         }),
         timeout: 5000
     })
     .done(function(response) {
         statusLoading.style.display = 'none';
+        
+        // 添加调试信息
+        console.log('AdsPower检测响应:', response);
+        
+        // 如果响应是字符串，尝试解析为JSON
+        if (typeof response === 'string') {
+            try {
+                response = JSON.parse(response);
+            } catch (e) {
+                console.error('JSON解析失败:', e);
+                statusText.innerHTML = '<i class="fas fa-times-circle text-danger me-2"></i>响应解析失败';
+                statusText.className = 'text-danger';
+                installGuide.style.display = 'block';
+                return;
+            }
+        }
         
         // 错误处理：确保响应对象存在
         if (!response) {
@@ -838,7 +937,16 @@ function checkAdsPowerInstallation() {
             return;
         }
         
-        if (response.success) {
+        // 检查响应是否有success字段
+        if (typeof response.success === 'undefined') {
+            console.error('AdsPower检测：响应缺少success字段', response);
+            statusText.innerHTML = '<i class="fas fa-times-circle text-danger me-2"></i>检测失败：响应格式错误';
+            statusText.className = 'text-danger';
+            installGuide.style.display = 'block';
+            return;
+        }
+        
+        if (response.success === true) {
             statusText.innerHTML = '<i class="fas fa-check-circle text-success me-2"></i>AdsPower已安装并正在运行';
             statusText.className = 'text-success';
             installGuide.style.display = 'none';
@@ -848,6 +956,7 @@ function checkAdsPowerInstallation() {
             }
         } else {
             const message = response.message || '未知错误';
+            console.log('AdsPower检测失败，消息:', message);
             statusText.innerHTML = '<i class="fas fa-times-circle text-warning me-2"></i>' + message;
             statusText.className = 'text-warning';
             installGuide.style.display = 'block';
@@ -855,17 +964,33 @@ function checkAdsPowerInstallation() {
     })
     .fail(function(xhr) {
         statusLoading.style.display = 'none';
-        statusText.innerHTML = '<i class="fas fa-times-circle text-danger me-2"></i>无法连接到AdsPower (可能未安装或未启动)';
+        console.error('AdsPower检测请求失败:', xhr);
+        console.error('状态码:', xhr.status);
+        console.error('响应文本:', xhr.responseText);
+        
+        let errorMessage = '无法连接到AdsPower (可能未安装或未启动)';
+        if (xhr.responseJSON && xhr.responseJSON.message) {
+            errorMessage = xhr.responseJSON.message;
+        } else if (xhr.responseText) {
+            try {
+                const errorData = JSON.parse(xhr.responseText);
+                errorMessage = errorData.message || errorMessage;
+            } catch (e) {
+                console.error('解析错误响应失败:', e);
+            }
+        }
+        
+        statusText.innerHTML = '<i class="fas fa-times-circle text-danger me-2"></i>' + errorMessage;
         statusText.className = 'text-danger';
         installGuide.style.display = 'block';
     });
 }
 
-function testAdsPowerConnection() {
-    const button = event.target;
+function testAdsPowerConnection(event) {
+    const button = event ? event.target : null;
     const originalText = showLoading(button);
     
-    const apiHost = $('#adspower_api_host').val() || 'local.adspower.net';
+    const apiHost = $('#adspower_api_host').val() || 'localhost';
     const apiPort = $('#adspower_api_port').val() || '50325';
     const apiUrl = `http://${apiHost}:${apiPort}`;
     const userId = $('#adspower_user_id').val();
@@ -903,9 +1028,9 @@ function testAdsPowerConnection() {
     });
 }
 
-function backupDatabase() {
+function backupDatabase(event) {
     if (confirm('确定要备份数据库吗？')) {
-        const button = event.target;
+        const button = event ? event.target : null;
         const originalText = showLoading(button);
         
         $.post('/backup_database')
@@ -922,9 +1047,9 @@ function backupDatabase() {
     }
 }
 
-function cleanupData() {
+function cleanupData(event) {
     if (confirm('确定要清理过期数据吗？此操作不可恢复！')) {
-        const button = event.target;
+        const button = event ? event.target : null;
         const originalText = showLoading(button);
         
         $.post('/cleanup_data')
@@ -1027,3 +1152,39 @@ $('form').on('submit', function(e) {
 });
 </script>
 {% endblock %}
+
+function testOpenAdsPower() {
+    console.log('Starting testOpenAdsPower with userId:', $('#adspower_user_id').val());
+    const apiHost = $('#adspower_api_host').val() || 'localhost';
+    const apiPort = $('#adspower_api_port').val() || '50325';
+    const userId = $('#adspower_user_id').val();
+    
+    if (!userId) {
+        showAlert('请先填写用户ID', 'warning');
+        return;
+    }
+    
+    $.ajax({
+        url: '/api/test_open_adspower',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            api_host: apiHost,
+            api_port: apiPort,
+            user_id: userId
+        })
+    })
+    .done(function(response) {
+        console.log('testOpenAdsPower success:', response);
+        if (response.success) {
+            showAlert('AdsPower浏览器打开成功！', 'success');
+        } else {
+            showAlert(response.message, 'warning');
+        }
+    })
+    .fail(function(xhr) {
+        console.log('testOpenAdsPower failed:', xhr);
+        const error = xhr.responseJSON ? xhr.responseJSON.message : '打开失败';
+        showAlert('打开AdsPower失败: ' + error, 'danger');
+    });
+}

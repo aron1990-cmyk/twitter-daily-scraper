@@ -12,7 +12,7 @@ from datetime import datetime
 from playwright.async_api import async_playwright, Browser, Page
 # 配置将从调用方传入或使用默认配置
 from human_behavior_simulator import HumanBehaviorSimulator
-from performance_optimizer import EnhancedSearchOptimizer
+# from performance_optimizer import EnhancedSearchOptimizer
 
 class TwitterParser:
     def __init__(self, debug_port: str = None):
@@ -20,7 +20,7 @@ class TwitterParser:
         self.browser: Optional[Browser] = None
         self.page: Optional[Page] = None
         self.behavior_simulator = None
-        self.search_optimizer = EnhancedSearchOptimizer()
+        # self.search_optimizer = EnhancedSearchOptimizer()
         self.logger = logging.getLogger(__name__)
         self.config = None
         
@@ -160,12 +160,12 @@ class TwitterParser:
                 for i in range(3):
                     # 向下滚动
                     await self.page.evaluate('window.scrollBy(0, 500)')
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(2)
                     self.logger.info(f"执行第 {i+1} 次下拉")
                 
                 # 滚动回顶部
                 await self.page.evaluate('window.scrollTo(0, 0)')
-                await asyncio.sleep(1)
+                await asyncio.sleep(2)
                 self.logger.info("页面下拉测试完成，已滚动回顶部")
                 return
                 
@@ -275,7 +275,7 @@ class TwitterParser:
                 
                 # 等待搜索结果加载（极速模式）
                 self.logger.info("等待搜索结果加载...")
-                await asyncio.sleep(1)  # 极短等待时间
+                await asyncio.sleep(2)  # 极短等待时间
                 
                 # 检查是否有搜索结果
                 try:
@@ -336,6 +336,93 @@ class TwitterParser:
                     
         except Exception as e:
             self.logger.warning(f"页面焦点检查失败: {e}，继续执行")
+            
+    async def dismiss_translate_popup(self):
+        """
+        检测并关闭页面上的翻译弹窗，确保滚动和抓取不被中断
+        """
+        try:
+            # 检查是否存在翻译弹窗
+            # 常见的翻译弹窗选择器，根据实际情况可能需要调整
+            popup_selectors = [
+                'div[role="dialog"][aria-modal="true"]',  # 通用对话框
+                'div.translate-dialog',                  # 可能的翻译对话框类名
+                'div[aria-label*="translate"]',          # 带有translate字样的对话框
+                'div[data-testid="translatePrompt"]',    # Twitter特定的翻译提示
+                'div.r-1upvrn0',                        # Twitter常用的弹窗类
+                'div[role="button"][tabindex="0"][aria-label*="关闭"]',  # 关闭按钮
+                'div[role="button"][tabindex="0"][aria-label*="Close"]'   # 英文关闭按钮
+            ]
+            
+            for selector in popup_selectors:
+                popup_elements = await self.page.query_selector_all(selector)
+                if popup_elements:
+                    self.logger.info(f"检测到可能的翻译弹窗: {selector}，尝试关闭")
+                    
+                    # 尝试方法1：点击关闭按钮
+                    close_button_selectors = [
+                        'div[role="button"][aria-label*="关闭"]',
+                        'div[role="button"][aria-label*="Close"]',
+                        'div[role="button"][aria-label*="Dismiss"]',
+                        'div[role="button"][aria-label*="取消"]',
+                        'div[role="button"][aria-label*="Cancel"]',
+                        'button[aria-label*="关闭"]',
+                        'button[aria-label*="Close"]',
+                        'svg[aria-label*="关闭"]',
+                        'svg[aria-label*="Close"]'
+                    ]
+                    
+                    for close_selector in close_button_selectors:
+                        try:
+                            close_button = await self.page.query_selector(close_selector)
+                            if close_button:
+                                await close_button.click()
+                                self.logger.info(f"成功点击关闭按钮: {close_selector}")
+                                await asyncio.sleep(0.5)  # 等待弹窗消失
+                                return True
+                        except Exception as click_error:
+                            self.logger.debug(f"点击关闭按钮失败: {click_error}")
+                    
+                    # 尝试方法2：点击弹窗外部区域
+                    try:
+                        # 获取弹窗位置
+                        popup = popup_elements[0]
+                        popup_box = await popup.bounding_box()
+                        if popup_box:
+                            # 点击弹窗外的区域（页面左上角）
+                            await self.page.mouse.click(10, 10)
+                            self.logger.info("尝试通过点击页面其他区域关闭弹窗")
+                            await asyncio.sleep(0.5)  # 等待弹窗消失
+                            return True
+                    except Exception as outside_click_error:
+                        self.logger.debug(f"点击弹窗外部区域失败: {outside_click_error}")
+                    
+                    # 尝试方法3：使用键盘ESC键
+                    try:
+                        await self.page.keyboard.press('Escape')
+                        self.logger.info("尝试通过ESC键关闭弹窗")
+                        await asyncio.sleep(0.5)  # 等待弹窗消失
+                        return True
+                    except Exception as key_error:
+                        self.logger.debug(f"使用ESC键关闭弹窗失败: {key_error}")
+                    
+                    # 尝试方法4：使用JavaScript关闭弹窗
+                    try:
+                        await self.page.evaluate('''
+                        document.querySelectorAll('div[role="dialog"]').forEach(dialog => {
+                            dialog.style.display = 'none';
+                        });
+                        ''')
+                        self.logger.info("尝试通过JavaScript隐藏弹窗")
+                        await asyncio.sleep(0.5)  # 等待弹窗消失
+                        return True
+                    except Exception as js_error:
+                        self.logger.debug(f"使用JavaScript隐藏弹窗失败: {js_error}")
+            
+            return False  # 没有发现弹窗或关闭失败
+        except Exception as e:
+            self.logger.warning(f"处理翻译弹窗时出错: {e}")
+            return False
     
     async def scroll_and_load_tweets(self, max_tweets: int = 10):
         """
@@ -373,36 +460,44 @@ class TwitterParser:
                     stagnant_count = 0
                 last_tweet_count = current_tweets
                 
-                # 使用优化的滚动策略
-                strategy = self.search_optimizer.optimize_scroll_strategy(
-                    current_tweets, max_tweets, scroll_attempts
-                )
+                # 检查并处理可能出现的翻译弹窗
+                popup_dismissed = await self.dismiss_translate_popup()
+                if popup_dismissed:
+                    self.logger.info("已处理翻译弹窗，继续滚动")
+                    # 弹窗处理后重置停滞计数，避免因弹窗导致的误判
+                    stagnant_count = max(0, stagnant_count - 1)
                 
-                if not strategy['should_continue']:
-                    self.logger.info(f"滚动策略建议停止，当前推文数: {current_tweets}")
-                    break
+                # 使用简化的滚动策略（修复search_optimizer缺失问题）
+                scroll_distance = 800
+                wait_time = 1.5
+                max_scrolls = 20
                 
                 # 如果连续多次没有新内容，启用激进模式
                 if stagnant_count >= 3:
-                    strategy['scroll_distance'] = 3000
-                    strategy['wait_time'] = 1.0
-                    strategy['aggressive_mode'] = True
+                    scroll_distance = 3000
+                    wait_time = 1.0
                     self.logger.debug("检测到内容停滞，启用激进滚动模式")
                 
+                # 检查是否应该继续滚动
+                if scroll_attempts >= max_scrolls:
+                    self.logger.info(f"达到最大滚动次数 {max_scrolls}，停止滚动")
+                    break
+                
+                if stagnant_count >= 8:
+                    self.logger.info(f"内容长时间停滞 ({stagnant_count} 次)，停止滚动")
+                    break
+                
                 # 执行滚动
-                if strategy['aggressive_mode']:
-                    self.logger.debug(f"激进滚动模式，距离: {strategy['scroll_distance']}")
+                self.logger.debug(f"执行滚动，距离: {scroll_distance}px，等待时间: {wait_time}s")
                 
                 await self.ensure_page_focus()
-                await self.page.evaluate(f'window.scrollBy(0, {strategy["scroll_distance"]})')
-                await asyncio.sleep(strategy['wait_time'])
+                await self.page.evaluate(f'window.scrollBy(0, {scroll_distance})')
+                await asyncio.sleep(wait_time)
+                
+                # 再次检查是否有翻译弹窗出现
+                await self.dismiss_translate_popup()
                 
                 scroll_attempts += 1
-                
-                # 防止无限滚动
-                if scroll_attempts >= strategy['max_scrolls']:
-                    self.logger.warning(f"达到最大滚动次数 {strategy['max_scrolls']}，停止滚动")
-                    break
                 
                 # 如果长时间没有新内容，尝试刷新页面
                 if stagnant_count >= 8:
@@ -410,17 +505,23 @@ class TwitterParser:
                     await self.page.reload()
                     await asyncio.sleep(2)
                     stagnant_count = 0
+                    # 刷新页面后也检查是否有翻译弹窗
+                    await self.dismiss_translate_popup()
             
             # 如果有人工行为模拟器且效果不佳，作为补充
             if self.behavior_simulator and current_tweets < max_tweets * 0.7:
                 self.logger.info("当前效果不佳，使用人工行为模拟器作为补充")
                 try:
+                    # 使用人工行为模拟器前先处理可能的弹窗
+                    await self.dismiss_translate_popup()
                     await self.behavior_simulator.smart_scroll_and_collect(
                         max_tweets=max_tweets - current_tweets,
                         target_selector='[data-testid="tweet"]'
                     )
                 except Exception as e:
                     self.logger.warning(f"人工行为模拟器补充失败: {e}")
+                    # 出错时也尝试处理可能的弹窗
+                    await self.dismiss_translate_popup()
             
             # 获取最终的推文数量
             final_tweets = await self.page.query_selector_all('[data-testid="tweet"]')
@@ -429,6 +530,8 @@ class TwitterParser:
             
         except Exception as e:
             self.logger.error(f"优化滚动失败: {e}")
+            # 出错时也尝试处理可能的弹窗
+            await self.dismiss_translate_popup()
             raise
     
     def extract_number(self, text: str) -> int:
@@ -444,23 +547,53 @@ class TwitterParser:
         if not text:
             return 0
         
-        # 移除逗号和空格
-        text = text.replace(',', '').replace(' ', '').lower()
+        # 记录原始文本用于调试
+        original_text = text
         
-        # 提取数字和单位
-        match = re.search(r'([0-9.]+)([km]?)', text)
-        if not match:
-            return 0
+        # 移除多余的空格和特殊字符，但保留数字、单位和分隔符
+        text = re.sub(r'[^\d\.KkMmBb万千百十,\s]', '', text)
         
-        number = float(match.group(1))
-        unit = match.group(2)
+        # 查找数字模式，按优先级排序
+        patterns = [
+            (r'([\d,]+(?:\.\d+)?)\s*[Bb]', 1000000000),  # 1.2B, 1,234B
+            (r'([\d,]+(?:\.\d+)?)\s*[Mm]', 1000000),     # 1.2M, 1,234M
+            (r'([\d,]+(?:\.\d+)?)\s*[Kk]', 1000),        # 1.2K, 1,234K
+            (r'([\d,]+(?:\.\d+)?)\s*万', 10000),          # 1.2万
+            (r'([\d,]+(?:\.\d+)?)\s*千', 1000),           # 1.2千
+            (r'([\d,]+(?:\.\d+)?)\s*百', 100),            # 1.2百
+            (r'([\d,]+(?:\.\d+)?)\s*十', 10),             # 1.2十
+            (r'([\d,]+(?:\.\d+)?)', 1),                   # 普通数字
+        ]
         
-        if unit == 'k':
-            return int(number * 1000)
-        elif unit == 'm':
-            return int(number * 1000000)
-        else:
-            return int(number)
+        for pattern, multiplier in patterns:
+            match = re.search(pattern, text)
+            if match:
+                number_str = match.group(1).replace(',', '')
+                try:
+                    number = float(number_str)
+                    result = int(number * multiplier)
+                    
+                    # 调试日志
+                    if result > 0:
+                        self.logger.debug(f"数字提取成功: '{original_text}' -> '{number_str}' * {multiplier} = {result}")
+                    
+                    return result
+                except ValueError:
+                    continue
+        
+        # 如果没有匹配到，尝试更宽松的匹配
+        loose_match = re.search(r'(\d+)', text)
+        if loose_match:
+            try:
+                result = int(loose_match.group(1))
+                if result > 0:
+                    self.logger.debug(f"宽松匹配数字提取: '{original_text}' -> {result}")
+                return result
+            except ValueError:
+                pass
+        
+        self.logger.debug(f"数字提取失败: '{original_text}' -> 0")
+        return 0
     
     async def parse_tweet_element(self, tweet_element) -> Optional[Dict[str, Any]]:
         """
@@ -607,68 +740,161 @@ class TwitterParser:
             # 使用更稳定的方式提取互动数据
             interaction_data = {'likes': 0, 'comments': 0, 'retweets': 0}
             
-            # 点赞数
+            # 点赞数 - 增强版提取
             try:
                 like_selectors = [
                     '[data-testid="like"]',
                     '[aria-label*="like"]',
-                    '[aria-label*="Like"]'
+                    '[aria-label*="Like"]',
+                    '[aria-label*="喜欢"]',
+                    '[aria-label*="赞"]',
+                    'div[role="group"] div:first-child button',
+                    'div[role="group"] > div:nth-child(4) button',
+                    '[data-testid="tweet"] div[role="group"] button:nth-child(3)',
+                    'button[aria-label*="heart"]',
+                    'button[aria-label*="favorite"]'
                 ]
                 
                 for selector in like_selectors:
                     try:
                         like_element = await tweet_element.query_selector(selector)
                         if like_element:
+                            # 尝试从 aria-label 获取
                             like_text = await like_element.get_attribute('aria-label') or ''
                             if like_text:
-                                interaction_data['likes'] = self.extract_number(like_text)
-                                break
+                                extracted_likes = self.extract_number(like_text)
+                                if extracted_likes > 0:
+                                    interaction_data['likes'] = extracted_likes
+                                    self.logger.debug(f"从aria-label提取点赞数: {extracted_likes}")
+                                    break
+                            
+                            # 尝试从内部文本获取
+                            inner_text = await like_element.inner_text()
+                            if inner_text and inner_text.strip():
+                                extracted_likes = self.extract_number(inner_text)
+                                if extracted_likes > 0:
+                                    interaction_data['likes'] = extracted_likes
+                                    self.logger.debug(f"从内部文本提取点赞数: {extracted_likes}")
+                                    break
                     except Exception:
                         continue
             except Exception as e:
                 self.logger.debug(f"提取点赞数失败: {e}")
             
-            # 评论数
+            # 评论数 - 增强版提取
             try:
                 reply_selectors = [
                     '[data-testid="reply"]',
                     '[aria-label*="repl"]',
-                    '[aria-label*="Reply"]'
+                    '[aria-label*="Reply"]',
+                    '[aria-label*="回复"]',
+                    '[aria-label*="评论"]',
+                    'div[role="group"] div:first-child button',
+                    'div[role="group"] > div:nth-child(1) button',
+                    '[data-testid="tweet"] div[role="group"] button:first-child',
+                    'button[aria-label*="comment"]'
                 ]
                 
                 for selector in reply_selectors:
                     try:
                         reply_element = await tweet_element.query_selector(selector)
                         if reply_element:
+                            # 尝试从 aria-label 获取
                             reply_text = await reply_element.get_attribute('aria-label') or ''
                             if reply_text:
-                                interaction_data['comments'] = self.extract_number(reply_text)
-                                break
+                                extracted_replies = self.extract_number(reply_text)
+                                if extracted_replies > 0:
+                                    interaction_data['comments'] = extracted_replies
+                                    self.logger.debug(f"从aria-label提取评论数: {extracted_replies}")
+                                    break
+                            
+                            # 尝试从内部文本获取
+                            inner_text = await reply_element.inner_text()
+                            if inner_text and inner_text.strip():
+                                extracted_replies = self.extract_number(inner_text)
+                                if extracted_replies > 0:
+                                    interaction_data['comments'] = extracted_replies
+                                    self.logger.debug(f"从内部文本提取评论数: {extracted_replies}")
+                                    break
                     except Exception:
                         continue
             except Exception as e:
                 self.logger.debug(f"提取评论数失败: {e}")
             
-            # 转发数
+            # 转发数 - 增强版提取
             try:
                 retweet_selectors = [
                     '[data-testid="retweet"]',
                     '[aria-label*="retweet"]',
-                    '[aria-label*="Retweet"]'
+                    '[aria-label*="Retweet"]',
+                    '[aria-label*="转发"]',
+                    '[aria-label*="转推"]',
+                    'div[role="group"] div:nth-child(2) button',
+                    'div[role="group"] > div:nth-child(2) button',
+                    '[data-testid="tweet"] div[role="group"] button:nth-child(2)',
+                    'button[aria-label*="repost"]'
                 ]
                 
                 for selector in retweet_selectors:
                     try:
                         retweet_element = await tweet_element.query_selector(selector)
                         if retweet_element:
+                            # 尝试从 aria-label 获取
                             retweet_text = await retweet_element.get_attribute('aria-label') or ''
                             if retweet_text:
-                                interaction_data['retweets'] = self.extract_number(retweet_text)
-                                break
+                                extracted_retweets = self.extract_number(retweet_text)
+                                if extracted_retweets > 0:
+                                    interaction_data['retweets'] = extracted_retweets
+                                    self.logger.debug(f"从aria-label提取转发数: {extracted_retweets}")
+                                    break
+                            
+                            # 尝试从内部文本获取
+                            inner_text = await retweet_element.inner_text()
+                            if inner_text and inner_text.strip():
+                                extracted_retweets = self.extract_number(inner_text)
+                                if extracted_retweets > 0:
+                                    interaction_data['retweets'] = extracted_retweets
+                                    self.logger.debug(f"从内部文本提取转发数: {extracted_retweets}")
+                                    break
                     except Exception:
                         continue
             except Exception as e:
                 self.logger.debug(f"提取转发数失败: {e}")
+            
+            # 通用方法：尝试从推文底部的统计区域提取数据
+            try:
+                # 查找包含统计数据的区域
+                stats_elements = await tweet_element.query_selector_all('div[role="group"] button')
+                if stats_elements and len(stats_elements) >= 3:
+                    for i, button in enumerate(stats_elements[:4]):  # 通常前4个按钮是回复、转发、点赞、分享
+                        try:
+                            aria_label = await button.get_attribute('aria-label') or ''
+                            inner_text = await button.inner_text() or ''
+                            
+                            # 组合文本进行分析
+                            combined_text = f"{aria_label} {inner_text}".lower()
+                            
+                            if any(keyword in combined_text for keyword in ['reply', 'repl', '回复', '评论']) and interaction_data['comments'] == 0:
+                                extracted_num = self.extract_number(combined_text)
+                                if extracted_num > 0:
+                                    interaction_data['comments'] = extracted_num
+                                    self.logger.debug(f"通用方法提取评论数: {extracted_num}")
+                            
+                            elif any(keyword in combined_text for keyword in ['retweet', 'repost', '转发', '转推']) and interaction_data['retweets'] == 0:
+                                extracted_num = self.extract_number(combined_text)
+                                if extracted_num > 0:
+                                    interaction_data['retweets'] = extracted_num
+                                    self.logger.debug(f"通用方法提取转发数: {extracted_num}")
+                            
+                            elif any(keyword in combined_text for keyword in ['like', 'heart', 'favorite', '喜欢', '赞']) and interaction_data['likes'] == 0:
+                                extracted_num = self.extract_number(combined_text)
+                                if extracted_num > 0:
+                                    interaction_data['likes'] = extracted_num
+                                    self.logger.debug(f"通用方法提取点赞数: {extracted_num}")
+                        except Exception:
+                            continue
+            except Exception as e:
+                self.logger.debug(f"通用统计数据提取失败: {e}")
             
             # 合并互动数据
             tweet_data.update(interaction_data)
@@ -729,62 +955,189 @@ class TwitterParser:
             self.logger.error(f"解析推文元素失败: {e}")
             return None
     
-    async def scrape_tweets(self, max_tweets: int = 10, enable_enhanced: bool = False) -> List[Dict[str, Any]]:
+    async def scrape_tweets(self, max_tweets: int = 10, enable_enhanced: bool = False, filter_criteria: dict = None) -> List[Dict[str, Any]]:
         """
         抓取当前页面的推文数据
         
         Args:
             max_tweets: 最大抓取推文数量
             enable_enhanced: 是否启用增强抓取（包含详情页内容）
+            filter_criteria: 筛选条件 {'min_likes': int, 'min_comments': int, 'min_retweets': int}
             
         Returns:
             推文数据列表
         """
         if enable_enhanced:
-            return await self.enhanced_tweet_scraping(max_tweets)
-            
+            return await self.enhanced_tweet_scraping(max_tweets, filter_criteria=filter_criteria)
+        
+        tweets_data = []
+        max_scroll_attempts = 200  # 增加最大滚动次数以确保能抓取足够满足条件的推文
+        scroll_attempts = 0
+        last_tweet_count = 0
+        no_new_tweets_count = 0
+        consecutive_empty_scrolls = 0  # 连续空滚动计数器
+        total_parsed_tweets = 0  # 总解析推文数（包括不满足条件的）
+        
         try:
-            # 确保页面焦点
-            await self.ensure_page_focus()
+            self.logger.info(f"开始抓取推文，目标数量: {max_tweets}")
             
-            # 滚动页面加载更多推文
-            await self.scroll_and_load_tweets(max_tweets)
-            
-            # 获取所有推文元素
-            tweet_elements = await self.page.query_selector_all('[data-testid="tweet"]')
-            self.logger.info(f"找到 {len(tweet_elements)} 个推文元素")
-            
-            tweets_data = []
-            
-            for i, tweet_element in enumerate(tweet_elements[:max_tweets]):
-                # 每隔几条推文检查页面焦点
-                if i % 5 == 0:
-                    await self.ensure_page_focus()
+            while len(tweets_data) < max_tweets and scroll_attempts < max_scroll_attempts:
+                # 等待推文加载
+                try:
+                    await self.page.wait_for_selector('[data-testid="tweet"]', timeout=5000)
+                except Exception:
+                    self.logger.warning(f"等待推文元素超时，当前滚动次数: {scroll_attempts}")
+                    if scroll_attempts == 0:  # 第一次就没找到推文，可能页面有问题
+                        break
                 
-                # 模拟人工查看推文的行为
-                if self.behavior_simulator and i % 3 == 0:  # 每3条推文模拟一次交互
-                    await self.behavior_simulator.simulate_tweet_interaction(tweet_element)
+                # 获取当前页面的推文元素
+                tweet_elements = await self.page.query_selector_all('[data-testid="tweet"]')
+                current_tweet_count = len(tweet_elements)
                 
-                self.logger.debug(f"开始解析第 {i+1} 个推文元素")
-                tweet_data = await self.parse_tweet_element(tweet_element)
-                if tweet_data:
-                    tweets_data.append(tweet_data)
-                    self.logger.info(f"成功解析第 {i+1} 条推文: @{tweet_data['username']}")
+                self.logger.info(f"滚动第 {scroll_attempts + 1} 次，页面推文数: {current_tweet_count}，已抓取: {len(tweets_data)}")
+                
+                # 解析新的推文
+                new_tweets_parsed = 0
+                new_valid_tweets = 0  # 新增：满足筛选条件的推文数
+                for i, tweet_element in enumerate(tweet_elements):
+                    if len(tweets_data) >= max_tweets:
+                        break
+                    
+                    # 每隔几条推文检查页面焦点
+                    if i % 5 == 0:
+                        await self.ensure_page_focus()
+                    
+                    tweet_data = await self.parse_tweet_element(tweet_element)
+                    if tweet_data:
+                        total_parsed_tweets += 1
+                        
+                        # 检查是否已经抓取过这条推文（去重）
+                        tweet_link = tweet_data.get('link', '')
+                        if tweet_link:
+                            # 优先使用推文链接作为唯一标识
+                            tweet_id = tweet_link
+                        else:
+                            # 如果没有链接，使用内容的哈希值作为标识（更宽松的去重）
+                            content = tweet_data.get('content', '').strip()
+                            if len(content) > 20:  # 只对有足够内容的推文进行去重
+                                content_hash = hash(content[:100])  # 只使用前100个字符
+                                tweet_id = f"content_{content_hash}"
+                            else:
+                                # 对于短内容，使用更详细的标识避免误判
+                                detail_hash = hash(f"{tweet_data.get('username', '')}{content}{tweet_data.get('timestamp', '')}{i}")
+                                tweet_id = f"detail_{detail_hash}"
+                        
+                        if tweet_id not in self.seen_tweet_ids:
+                            self.seen_tweet_ids.add(tweet_id)
+                            new_tweets_parsed += 1
+                            
+                            # 应用筛选条件
+                            if self._meets_filter_criteria(tweet_data, filter_criteria):
+                                tweets_data.append(tweet_data)
+                                new_valid_tweets += 1
+                                self.logger.debug(f"新抓取有效推文: @{tweet_data.get('username', 'unknown')} (点赞:{tweet_data.get('likes', 0)}, 转发:{tweet_data.get('retweets', 0)})")
+                            else:
+                                self.logger.debug(f"推文不满足筛选条件: @{tweet_data.get('username', 'unknown')} (点赞:{tweet_data.get('likes', 0)}, 转发:{tweet_data.get('retweets', 0)})")
+                        else:
+                            self.logger.debug(f"跳过重复推文: {tweet_id[:50]}...")
+                
+                self.logger.info(f"本次滚动新解析推文: {new_tweets_parsed}，满足条件: {new_valid_tweets}，累计有效: {len(tweets_data)}/{max_tweets}，总解析: {total_parsed_tweets}")
+                
+                # 检查是否有新推文
+                if current_tweet_count <= last_tweet_count:
+                    no_new_tweets_count += 1
+                    self.logger.info(f"页面推文数量未增加，连续次数: {no_new_tweets_count}")
                 else:
-                    self.logger.debug(f"第 {i+1} 个推文元素解析失败或返回None")
+                    no_new_tweets_count = 0
                 
-                # 模拟人工阅读间隔（极速模式）
-                if self.behavior_simulator:
-                    await asyncio.sleep(0.05)  # 极短等待时间
+                # 检查本次滚动是否解析到新的有效推文
+                if new_valid_tweets == 0:
+                    consecutive_empty_scrolls += 1
+                    self.logger.info(f"本次滚动未获得满足条件的推文，连续空滚动次数: {consecutive_empty_scrolls}")
+                    
+                    # 如果连续很多次没有获得有效推文，且页面推文数量也不增加，则停止
+                    if consecutive_empty_scrolls >= 20 and no_new_tweets_count >= 10:
+                        self.logger.info("连续多次滚动未获得满足条件的推文且页面无新推文，可能已到页面底部或无更多满足条件的推文")
+                        break
+                else:
+                    consecutive_empty_scrolls = 0
+                
+                last_tweet_count = current_tweet_count
+                
+                # 如果已达到目标数量，停止滚动
+                if len(tweets_data) >= max_tweets:
+                    self.logger.info(f"已达到目标推文数量: {len(tweets_data)}/{max_tweets}")
+                    break
+                
+                # 滚动页面加载更多推文
+                scroll_attempts += 1
+                if scroll_attempts < max_scroll_attempts:
+                    # 根据连续空滚动次数调整滚动距离
+                    scroll_distance = 1500 if consecutive_empty_scrolls > 3 else 1200
+                    await self.page.evaluate(f'window.scrollBy(0, {scroll_distance})')
+                    
+                    # 根据情况调整等待时间
+                    wait_time = 3 if consecutive_empty_scrolls > 5 else 2
+                    await asyncio.sleep(wait_time)  # 等待加载
+                    
+                    # 处理可能的弹窗
+                    try:
+                        await self.dismiss_translate_popup()
+                    except Exception:
+                        pass
             
-            self.logger.info(f"总共抓取到 {len(tweets_data)} 条推文")
-            return tweets_data
+            # 只返回目标数量的推文
+            final_tweets = tweets_data[:max_tweets]
+            filter_info = f"（筛选条件: {filter_criteria}）" if filter_criteria else "（无筛选条件）"
+            self.logger.info(f"推文抓取完成{filter_info}，目标: {max_tweets}，实际获取: {len(final_tweets)}，总解析: {total_parsed_tweets}，滚动次数: {scroll_attempts}")
+            
+            if len(final_tweets) < max_tweets:
+                shortage = max_tweets - len(final_tweets)
+                self.logger.warning(f"满足条件的推文数量不足，缺少 {shortage} 条推文（总共解析了 {total_parsed_tweets} 条推文）")
+            
+            return final_tweets
             
         except Exception as e:
             self.logger.error(f"抓取推文失败: {e}")
-            return []
+            return tweets_data[:max_tweets] if tweets_data else []
     
-    async def scrape_user_tweets(self, username: str, max_tweets: int = 10, enable_enhanced: bool = False) -> List[Dict[str, Any]]:
+    def _meets_filter_criteria(self, tweet_data: Dict[str, Any], filter_criteria: dict = None) -> bool:
+        """
+        检查推文是否满足筛选条件
+        
+        Args:
+            tweet_data: 推文数据
+            filter_criteria: 筛选条件字典
+            
+        Returns:
+            是否满足筛选条件
+        """
+        if not filter_criteria:
+            return True
+        
+        # 获取推文的互动数据
+        likes = tweet_data.get('likes', 0)
+        comments = tweet_data.get('comments', 0)
+        retweets = tweet_data.get('retweets', 0)
+        
+        # 检查最小点赞数
+        min_likes = filter_criteria.get('min_likes', 0)
+        if likes < min_likes:
+            return False
+        
+        # 检查最小评论数
+        min_comments = filter_criteria.get('min_comments', 0)
+        if comments < min_comments:
+            return False
+        
+        # 检查最小转发数
+        min_retweets = filter_criteria.get('min_retweets', 0)
+        if retweets < min_retweets:
+            return False
+        
+        return True
+    
+    async def scrape_user_tweets(self, username: str, max_tweets: int = 10, enable_enhanced: bool = False, filter_criteria: dict = None) -> List[Dict[str, Any]]:
         """
         抓取指定用户的推文
         
@@ -792,6 +1145,7 @@ class TwitterParser:
             username: Twitter 用户名
             max_tweets: 最大抓取推文数量
             enable_enhanced: 是否启用增强抓取（包含详情页内容）
+            filter_criteria: 筛选条件 {'min_likes': int, 'min_comments': int, 'min_retweets': int}
             
         Returns:
             推文数据列表
@@ -812,7 +1166,7 @@ class TwitterParser:
             else:
                 await asyncio.sleep(0.8)  # 极速回退等待
             
-            tweets = await self.scrape_tweets(max_tweets, enable_enhanced)
+            tweets = await self.scrape_tweets(max_tweets, enable_enhanced, filter_criteria)
             
             # 模拟用户会话结束行为
             if self.behavior_simulator:
@@ -829,7 +1183,7 @@ class TwitterParser:
             self.logger.error(f"抓取用户 @{username} 的推文失败: {e}")
             return []
     
-    async def scrape_keyword_tweets(self, keyword: str, max_tweets: int = 10, enable_enhanced: bool = False) -> List[Dict[str, Any]]:
+    async def scrape_keyword_tweets(self, keyword: str, max_tweets: int = 10, enable_enhanced: bool = False, filter_criteria: dict = None) -> List[Dict[str, Any]]:
         """
         抓取包含指定关键词的推文
         
@@ -837,6 +1191,7 @@ class TwitterParser:
             keyword: 搜索关键词
             max_tweets: 最大抓取推文数量
             enable_enhanced: 是否启用增强抓取（包含详情页内容）
+            filter_criteria: 筛选条件 {'min_likes': int, 'min_comments': int, 'min_retweets': int}
             
         Returns:
             推文数据列表
@@ -857,7 +1212,7 @@ class TwitterParser:
             else:
                 await asyncio.sleep(0.8)  # 极速回退等待
             
-            tweets = await self.scrape_tweets(max_tweets, enable_enhanced)
+            tweets = await self.scrape_tweets(max_tweets, enable_enhanced, filter_criteria)
             
             # 模拟搜索会话结束行为
             if self.behavior_simulator:
@@ -969,7 +1324,7 @@ class TwitterParser:
             await self.page.wait_for_load_state('domcontentloaded', timeout=30000)
             
             # 等待内容加载（极速模式）
-            await asyncio.sleep(1)
+            await asyncio.sleep(2)
             
             # 抓取完整的推文内容
             full_content = await self.extract_full_tweet_content()
@@ -1631,7 +1986,7 @@ class TwitterParser:
     # ==================== 优化功能方法 ====================
     
     def clean_tweet_content(self, content: str) -> str:
-        """优化的推文内容清理"""
+        """优化的推文内容清理 - 修复过度清理问题"""
         if not content:
             return ""
         
@@ -1641,35 +1996,28 @@ class TwitterParser:
         
         original_content = content
         
-        # 去除多余的空白字符
+        # 基础清理：去除多余的空白字符
         content = re.sub(r'\s+', ' ', content.strip())
         
-        # 去除重复的用户名模式 (如: "Elon Musk Elon Musk @elonmusk")
-        content = re.sub(r'(\w+\s+\w+)\s+\1', r'\1', content)
+        # 只进行必要的清理，避免过度删除内容
+        # 1. 去除明显的重复用户名模式 (完全相同的连续重复)
+        content = re.sub(r'\b(\w+)\s+\1\b', r'\1', content)
         
-        # 去除重复的数字模式 (如: "4,8K 4,8K 4,8K")
-        content = re.sub(r'(\d+[,.]?\d*[KMB]?)\s+\1(\s+\1)*', r'\1', content)
-        
-        # 去除重复的符号模式
-        content = re.sub(r'(·\s*)+', '· ', content)
-        
-        # 去除末尾的统计数据模式
+        # 2. 去除末尾的统计数据模式（但保留主要内容）
         content = re.sub(r'\s*·\s*[\d,KMB.\s]+$', '', content)
         
-        # 去除开头的用户名重复
-        content = re.sub(r'^(@?\w+\s+){2,}', '', content)
+        # 3. 去除开头可能的用户名重复（但只删除明显重复的部分）
+        content = re.sub(r'^(@?\w+)\s+\1\s+', r'\1 ', content)
         
-        # 去除多余的点和空格
-        content = re.sub(r'\s*·\s*$', '', content)
+        # 4. 清理末尾的多余符号
+        content = re.sub(r'\s*[·…]+\s*$', '', content)
         
-        # 去除连续的重复词汇
-        words = content.split()
-        cleaned_words = []
-        for i, word in enumerate(words):
-            if i == 0 or word != words[i-1]:
-                cleaned_words.append(word)
+        # 保留原始内容的主体部分，只做最小必要的清理
+        cleaned_content = content.strip()
         
-        cleaned_content = ' '.join(cleaned_words).strip()
+        # 如果清理后内容太短且原内容较长，则返回原内容
+        if len(cleaned_content) < len(original_content) * 0.3 and len(original_content) > 20:
+            cleaned_content = original_content.strip()
         
         # 缓存结果
         self.content_cache[original_content] = cleaned_content
@@ -1687,11 +2035,21 @@ class TwitterParser:
     
     def is_duplicate_tweet(self, tweet_link: str) -> bool:
         """检查是否为重复推文"""
+        if not tweet_link:
+            return False
+            
+        # 统一使用seen_tweet_ids进行去重
+        if tweet_link in self.seen_tweet_ids:
+            return True
+            
+        # 提取推文ID进行更精确的去重
         tweet_id = self.extract_tweet_id(tweet_link)
         if tweet_id:
-            if tweet_id in self.seen_tweet_ids:
-                return True
-            self.seen_tweet_ids.add(tweet_id)
+            # 检查是否已经有相同ID的推文
+            for seen_id in self.seen_tweet_ids:
+                if tweet_id in seen_id:
+                    return True
+                    
         return False
     
     def parse_engagement_number(self, num_str: str) -> int:
@@ -1750,6 +2108,13 @@ class TwitterParser:
             
             last_unique_count = current_unique_tweets
             
+            # 检查并处理可能出现的翻译弹窗
+            popup_dismissed = await self.dismiss_translate_popup()
+            if popup_dismissed:
+                self.logger.info("已处理翻译弹窗，继续滚动")
+                # 弹窗处理后重置停滞计数，避免因弹窗导致的误判
+                stagnant_rounds = max(0, stagnant_rounds - 1)
+            
             # 根据停滞情况调整策略
             if stagnant_rounds >= 3:
                 # 激进模式：增加滚动距离，减少等待时间
@@ -1769,7 +2134,7 @@ class TwitterParser:
             # 执行滚动
             try:
                 # 确保页面焦点
-                await self.page.evaluate('window.focus()')
+                await self.ensure_page_focus()
                 
                 # 平滑滚动
                 current_scroll = await self.page.evaluate('window.pageYOffset')
@@ -1783,12 +2148,17 @@ class TwitterParser:
                 # 等待滚动完成和内容加载
                 await asyncio.sleep(wait_time)
                 
+                # 再次检查是否有翻译弹窗出现
+                await self.dismiss_translate_popup()
+                
                 # 检查新推文并更新seen_tweet_ids
                 await self.update_seen_tweets()
                 
             except Exception as e:
                 self.logger.warning(f"滚动失败: {e}")
-                await asyncio.sleep(1)
+                await asyncio.sleep(2)
+                # 出错时也尝试处理可能的弹窗
+                await self.dismiss_translate_popup()
             
             # 如果连续多轮无新内容，考虑刷新
             if stagnant_rounds >= 8:
@@ -1842,6 +2212,302 @@ class TwitterParser:
         except Exception as e:
             self.logger.warning(f"重建已见推文ID失败: {e}")
     
+    
+    async def parse_tweet_element_enhanced(self, element) -> Optional[Dict[str, Any]]:
+        """增强的推文元素解析 - 解决数量不足问题"""
+        try:
+            # 首先检查是否为有效的推文元素
+            if not await self.is_valid_tweet_element(element):
+                return None
+            
+            # 提取基础信息
+            tweet_data = {
+                'username': await self.extract_username_enhanced(element),
+                'content': await self.extract_content_enhanced(element),
+                'link': await self.extract_tweet_link_enhanced(element),
+                'publish_time': await self.extract_publish_time_enhanced(element),
+                'likes': 0,
+                'comments': 0,
+                'retweets': 0,
+                'media': {'images': [], 'videos': []}
+            }
+            
+            # 提取互动数据
+            engagement = await self.extract_engagement_enhanced(element)
+            tweet_data.update(engagement)
+            
+            # 提取媒体内容
+            media = await self.extract_media_content_enhanced(element)
+            tweet_data['media'] = media
+            
+            # 改进的去重检查
+            if await self.is_duplicate_tweet_enhanced(tweet_data):
+                self.logger.debug(f"推文重复，跳过: {tweet_data.get('link', 'no_link')}")
+                return None
+            
+            # 放宽验证条件 - 只要有基本信息就保留
+            if self.is_valid_tweet_data_enhanced(tweet_data):
+                return tweet_data
+            
+            return None
+            
+        except Exception as e:
+            self.logger.debug(f"解析推文元素失败: {e}")
+            return None
+    
+    async def is_valid_tweet_element(self, element) -> bool:
+        """检查是否为有效的推文元素"""
+        try:
+            # 检查是否包含推文的基本结构
+            has_user_info = await element.query_selector('[data-testid="User-Name"]') is not None
+            has_content_area = await element.query_selector('[data-testid="tweetText"]') is not None
+            has_time = await element.query_selector('time') is not None
+            has_actions = await element.query_selector('[role="group"]') is not None
+            
+            # 排除广告和推荐内容
+            element_text = await element.text_content()
+            is_ad = any(keyword in element_text.lower() for keyword in ['promoted', '推广', 'ad', '广告'])
+            
+            # 至少要有用户信息或内容区域，且不是广告
+            return (has_user_info or has_content_area or has_time or has_actions) and not is_ad
+            
+        except Exception:
+            return True  # 出错时保守处理，认为是有效元素
+    
+    async def extract_username_enhanced(self, element) -> str:
+        """增强的用户名提取"""
+        try:
+            # 扩展选择器列表
+            selectors = [
+                '[data-testid="User-Name"] [dir="ltr"]',
+                '[data-testid="User-Name"] span',
+                '[data-testid="User-Names"] [dir="ltr"]',
+                '[data-testid="User-Names"] span',
+                'a[href^="/"][role="link"] span',
+                '[dir="ltr"] span',
+                'div[dir="ltr"] span',
+                'span[dir="ltr"]'
+            ]
+            
+            for selector in selectors:
+                try:
+                    elements = await element.query_selector_all(selector)
+                    for elem in elements:
+                        text = await elem.text_content()
+                        if text and text.strip():
+                            username = self.clean_username(text.strip())
+                            if username and username != 'unknown':
+                                return username
+                except Exception:
+                    continue
+            
+            # 从链接中提取
+            try:
+                link_elem = await element.query_selector('a[href^="/"][role="link"]')
+                if link_elem:
+                    href = await link_elem.get_attribute('href')
+                    if href:
+                        match = re.match(r'^/([^/]+)', href)
+                        if match:
+                            return match.group(1)
+            except Exception:
+                pass
+            
+            return 'unknown'
+            
+        except Exception:
+            return 'unknown'
+    
+    def clean_username(self, text: str) -> str:
+        """清理用户名"""
+        if not text:
+            return 'unknown'
+        
+        # 移除@符号
+        text = re.sub(r'^@+', '', text)
+        
+        # 只保留第一个单词
+        text = text.split()[0] if text.split() else text
+        
+        # 移除特殊字符，只保留字母数字和下划线
+        text = re.sub(r'[^a-zA-Z0-9_]', '', text)
+        
+        # 排除明显的数字（如点赞数等）
+        if re.match(r'^\d+[KMB]?$', text):
+            return 'unknown'
+        
+        return text if text else 'unknown'
+    
+    async def extract_content_enhanced(self, element) -> str:
+        """增强的内容提取"""
+        try:
+            content_parts = []
+            
+            # 扩展内容选择器
+            selectors = [
+                '[data-testid="tweetText"]',
+                '[data-testid="tweetText"] span',
+                '[lang] span',
+                'div[dir="auto"] span',
+                'div[dir="ltr"] span',
+                'div[dir="rtl"] span',
+                'span[dir="auto"]',
+                'span[dir="ltr"]',
+                'span[dir="rtl"]',
+                'div[lang] span'
+            ]
+            
+            for selector in selectors:
+                try:
+                    elements = await element.query_selector_all(selector)
+                    for elem in elements:
+                        text = await elem.text_content()
+                        if text and text.strip():
+                            clean_text = text.strip()
+                            if clean_text not in content_parts and len(clean_text) > 2:
+                                content_parts.append(clean_text)
+                except Exception:
+                    continue
+            
+            if content_parts:
+                content = ' '.join(content_parts)
+                return self.clean_tweet_content_enhanced(content)
+            
+            # 如果没有找到内容，尝试从整个元素提取
+            try:
+                full_text = await element.text_content()
+                if full_text:
+                    lines = [line.strip() for line in full_text.split('\n') if line.strip()]
+                    # 过滤掉用户名、时间等信息，保留主要内容
+                    content_lines = []
+                    for line in lines:
+                        if (len(line) > 10 and 
+                            not line.startswith('@') and 
+                            not re.match(r'^\d+[hms]$', line) and
+                            not re.match(r'^\d+[KMB]?$', line)):
+                            content_lines.append(line)
+                    
+                    if content_lines:
+                        return ' '.join(content_lines[:3])  # 取前3行
+            except Exception:
+                pass
+            
+            return 'No content available'
+            
+        except Exception:
+            return 'No content available'
+    
+    def clean_tweet_content_enhanced(self, content: str) -> str:
+        """增强的内容清理"""
+        if not content:
+            return ""
+        
+        # 基础清理
+        content = re.sub(r'\s+', ' ', content.strip())
+        
+        # 移除明显的重复模式
+        content = re.sub(r'(\w+)\s+', r'', content)
+        
+        # 移除末尾的统计信息
+        content = re.sub(r'\s*[·…]+\s*\d+[KMB]?\s*$', '', content)
+        
+        # 移除开头的重复用户名
+        content = re.sub(r'^(@?\w+)\s+\s+', r' ', content)
+        
+        return content.strip()
+    
+    async def extract_tweet_link_enhanced(self, element) -> str:
+        """增强的链接提取"""
+        try:
+            # 多种链接选择器
+            selectors = [
+                'a[href*="/status/"]',
+                'a[href*="/status/"][role="link"]',
+                'time[datetime] a',
+                'time a'
+            ]
+            
+            for selector in selectors:
+                try:
+                    link_elem = await element.query_selector(selector)
+                    if link_elem:
+                        href = await link_elem.get_attribute('href')
+                        if href and '/status/' in href:
+                            if href.startswith('/'):
+                                return f'https://x.com{href}'
+                            return href
+                except Exception:
+                    continue
+            
+            return ''
+            
+        except Exception:
+            return ''
+    
+    async def is_duplicate_tweet_enhanced(self, tweet_data: Dict[str, Any]) -> bool:
+        """增强的去重检查"""
+        try:
+            # 优先使用链接去重
+            link = tweet_data.get('link', '')
+            if link:
+                tweet_id = self.extract_tweet_id(link)
+                if tweet_id:
+                    if not hasattr(self, 'seen_tweet_ids_enhanced'):
+                        self.seen_tweet_ids_enhanced = set()
+                    
+                    if tweet_id in self.seen_tweet_ids_enhanced:
+                        return True
+                    self.seen_tweet_ids_enhanced.add(tweet_id)
+                    return False
+            
+            # 如果没有链接，使用内容去重（更宽松的策略）
+            content = tweet_data.get('content', '')
+            if content and len(content) > 20:
+                # 使用内容的哈希值而不是前50字符
+                import hashlib
+                content_hash = hashlib.md5(content.encode()).hexdigest()
+                
+                if not hasattr(self, 'seen_content_hashes'):
+                    self.seen_content_hashes = set()
+                
+                if content_hash in self.seen_content_hashes:
+                    return True
+                self.seen_content_hashes.add(content_hash)
+            
+            return False
+            
+        except Exception:
+            return False
+    
+    def is_valid_tweet_data_enhanced(self, tweet_data: Dict[str, Any]) -> bool:
+        """增强的推文数据验证 - 更宽松的条件"""
+        try:
+            username = tweet_data.get('username', '')
+            content = tweet_data.get('content', '')
+            link = tweet_data.get('link', '')
+            
+            # 只要满足以下任一条件就认为有效：
+            # 1. 有用户名且不是unknown
+            # 2. 有内容且长度大于5
+            # 3. 有有效链接
+            # 4. 有媒体内容
+            # 5. 有任何互动数据
+            
+            has_username = username and username != 'unknown'
+            has_content = content and content != 'No content available' and len(content.strip()) > 5
+            has_link = link and '/status/' in link
+            has_media = (tweet_data.get('media', {}).get('images') or 
+                        tweet_data.get('media', {}).get('videos'))
+            has_engagement = (tweet_data.get('likes', 0) > 0 or 
+                            tweet_data.get('comments', 0) > 0 or 
+                            tweet_data.get('retweets', 0) > 0)
+            
+            return has_username or has_content or has_link or has_media or has_engagement
+            
+        except Exception:
+            return False
+
+
     async def parse_tweet_element_optimized(self, element) -> Optional[Dict[str, Any]]:
         """优化的推文元素解析"""
         try:
@@ -1857,7 +2523,10 @@ class TwitterParser:
             
             # 检查重复
             if self.is_duplicate_tweet(link):
+                self.logger.info(f"🔧 推文重复，跳过 - 链接: {link}")
                 return None
+            
+            self.logger.info(f"🔧 推文不重复，继续解析 - 链接: {link}")
             
             # 提取时间
             publish_time = await self.extract_publish_time(element)
@@ -1888,15 +2557,15 @@ class TwitterParser:
                 'post_type': post_type
             }
             
-            # 验证数据有效性 - 放宽验证条件
+            # 验证数据有效性 - 进一步放宽验证条件
             # 只要满足以下任一条件就认为是有效推文：
             # 1. 有有效用户名
-            # 2. 有内容（即使是默认内容）
+            # 2. 有内容（长度大于3个字符）
             # 3. 有链接
             # 4. 有媒体内容
             # 5. 有互动数据
             has_username = username and username != 'unknown'
-            has_content = content and content != 'No content available'
+            has_content = content and content != 'No content available' and len(content.strip()) > 3
             has_link = link and link.strip()
             has_media = media['images'] or media['videos']
             has_engagement = engagement['likes'] > 0 or engagement['comments'] > 0 or engagement['retweets'] > 0
@@ -1904,7 +2573,7 @@ class TwitterParser:
             # 详细记录验证信息
             self.logger.info(f"🔧 推文验证详情:")
             self.logger.info(f"   - 用户名: '{username}' (有效: {has_username})")
-            self.logger.info(f"   - 内容: '{content[:50] if content else 'None'}...' (有效: {has_content})")
+            self.logger.info(f"   - 内容: '{content[:50] if content else 'None'}...' (长度: {len(content) if content else 0}, 有效: {has_content})")
             self.logger.info(f"   - 链接: '{link}' (有效: {has_link})")
             self.logger.info(f"   - 媒体: {media} (有效: {has_media})")
             self.logger.info(f"   - 互动: {engagement} (有效: {has_engagement})")
@@ -1937,12 +2606,12 @@ class TwitterParser:
                 if username_element:
                     username = await username_element.text_content()
                     username = username.strip()
-                    self.logger.debug(f"找到用户名原始文本: '{username}' (选择器: {selector})")
+                    self.logger.info(f"找到用户名原始文本: '{username}' (选择器: {selector})")
                     # 清理用户名
                     username = re.sub(r'^@', '', username)
                     username = re.sub(r'\s.*', '', username)  # 只保留第一个词
                     if username and not re.match(r'^\d+[KMB]?$', username):
-                        self.logger.debug(f"提取到有效用户名: '{username}'")
+                        self.logger.info(f"提取到有效用户名: '{username}'")
                         return username
             
             # 从链接中提取用户名
@@ -1950,14 +2619,14 @@ class TwitterParser:
             if link_element:
                 href = await link_element.get_attribute('href')
                 if href:
-                    self.logger.debug(f"找到链接: {href}")
+                    self.logger.info(f"找到链接: {href}")
                     match = re.match(r'^/([^/]+)', href)
                     if match:
                         username = match.group(1)
-                        self.logger.debug(f"从链接提取用户名: '{username}'")
+                        self.logger.info(f"从链接提取用户名: '{username}'")
                         return username
             
-            self.logger.debug("未找到有效用户名，返回 'unknown'")
+            self.logger.info("未找到有效用户名，返回 'unknown'")
             return 'unknown'
             
         except Exception as e:
@@ -1978,24 +2647,24 @@ class TwitterParser:
             
             for selector in content_selectors:
                 content_elements = await element.query_selector_all(selector)
-                self.logger.debug(f"选择器 '{selector}' 找到 {len(content_elements)} 个内容元素")
+                self.logger.info(f"选择器 '{selector}' 找到 {len(content_elements)} 个内容元素")
                 for content_element in content_elements:
                     text = await content_element.text_content()
                     text = text.strip()
                     if text and text not in content_parts:
-                        self.logger.debug(f"找到内容片段: '{text[:50]}...'")
+                        self.logger.info(f"找到内容片段: '{text[:50]}...'")
                         content_parts.append(text)
             
             # 合并内容
             raw_content = ' '.join(content_parts)
-            self.logger.debug(f"合并后的原始内容: '{raw_content[:100]}...'")
+            self.logger.info(f"合并后的原始内容: '{raw_content[:100]}...'")
             
             # 清理内容
             clean_content = self.clean_tweet_content(raw_content)
-            self.logger.debug(f"清理后的内容: '{clean_content[:100]}...'")
+            self.logger.info(f"清理后的内容: '{clean_content[:100]}...'")
             
             result = clean_content if clean_content else 'No content available'
-            self.logger.debug(f"最终返回内容: '{result[:50]}...'")
+            self.logger.info(f"最终返回内容: '{result[:50]}...'")
             return result
             
         except Exception as e:
@@ -2112,7 +2781,14 @@ class TwitterParser:
     def enable_optimizations(self):
         """启用优化功能"""
         self.optimization_enabled = True
+        # 清空之前的缓存，确保每次任务都是全新开始
+        self.seen_tweet_ids.clear()
+        self.content_cache.clear()
+        # 清空解析阶段的去重集合
+        if hasattr(self, 'parsed_tweet_ids'):
+            self.parsed_tweet_ids.clear()
         self.logger.info("✅ 优化功能已启用")
+        self.logger.info("🔄 已清空推文ID缓存、内容缓存和解析去重集合")
     
     def disable_optimizations(self):
         """禁用优化功能"""
@@ -2163,3 +2839,69 @@ if __name__ == "__main__":
             await parser.close()
     
     asyncio.run(main())
+    def detect_tweet_quality(self, tweet_data: Dict[str, Any]) -> Dict[str, Any]:
+        """检测推文质量并添加质量标记"""
+        try:
+            quality_score = 0
+            quality_issues = []
+            
+            # 检查用户名
+            username = tweet_data.get('username', '')
+            if username and username != 'unknown':
+                quality_score += 20
+            else:
+                quality_issues.append('缺少用户名')
+            
+            # 检查内容
+            content = tweet_data.get('content', '')
+            if content and content != 'No content available':
+                if len(content) > 10:
+                    quality_score += 30
+                elif len(content) > 5:
+                    quality_score += 15
+                    quality_issues.append('内容过短')
+                else:
+                    quality_issues.append('内容太短')
+            else:
+                quality_issues.append('缺少内容')
+            
+            # 检查链接
+            link = tweet_data.get('link', '')
+            if link and '/status/' in link:
+                quality_score += 25
+            else:
+                quality_issues.append('缺少有效链接')
+            
+            # 检查时间
+            if tweet_data.get('publish_time'):
+                quality_score += 10
+            else:
+                quality_issues.append('缺少发布时间')
+            
+            # 检查互动数据
+            has_engagement = (tweet_data.get('likes', 0) > 0 or 
+                            tweet_data.get('comments', 0) > 0 or 
+                            tweet_data.get('retweets', 0) > 0)
+            if has_engagement:
+                quality_score += 15
+            else:
+                quality_issues.append('缺少互动数据')
+            
+            # 添加质量信息
+            tweet_data['quality_score'] = quality_score
+            tweet_data['quality_issues'] = quality_issues
+            tweet_data['quality_level'] = (
+                'high' if quality_score >= 80 else
+                'medium' if quality_score >= 50 else
+                'low'
+            )
+            
+            return tweet_data
+            
+        except Exception as e:
+            self.logger.debug(f"质量检测失败: {e}")
+            tweet_data['quality_score'] = 0
+            tweet_data['quality_issues'] = ['质量检测失败']
+            tweet_data['quality_level'] = 'unknown'
+            return tweet_data
+

@@ -12,11 +12,16 @@ let selectedInfluencers = new Set();
 
 // 页面加载完成后初始化
 $(document).ready(function() {
-    initializePage();
-    bindEvents();
-    loadInfluencers();
-    loadCategories();
-    loadStats();
+    try {
+        initializePage();
+        bindEvents();
+        loadInfluencers();
+        loadCategories();
+        loadStats();
+    } catch (error) {
+        console.error('页面初始化错误:', error);
+        showAlert('页面初始化失败，请刷新页面重试', 'danger');
+    }
 });
 
 /**
@@ -24,6 +29,24 @@ $(document).ready(function() {
  */
 function initializePage() {
     console.log('博主管理页面初始化');
+    
+    // 检查必要的元素是否存在
+    const requiredElements = [
+        '#influencerListContainer',
+        '#alertContainer',
+        '#searchInput',
+        '#categoryFilter',
+        '#selectAll'
+    ];
+    
+    requiredElements.forEach(selector => {
+        if ($(selector).length === 0) {
+            console.error(`必要元素不存在: ${selector}`);
+        }
+    });
+    
+    // 设置初始状态
+    $('#batchScrapeBtn, #batchToggleStatusBtn, #batchDeleteBtn').prop('disabled', true);
 }
 
 /**
@@ -88,6 +111,7 @@ function debounce(func, wait) {
  * 加载博主列表
  */
 function loadInfluencers() {
+    console.log('开始加载博主列表...');
     showLoading(true);
     
     const params = {
@@ -103,16 +127,29 @@ function loadInfluencers() {
         params.search = currentSearch;
     }
     
-    $.get('/api/influencers', params)
+    console.log('请求参数:', params);
+    
+    $.ajax({
+        url: '/api/influencers',
+        method: 'GET',
+        data: params,
+        dataType: 'json'
+    })
         .done(function(response) {
-            if (response.success) {
+            console.log('API响应:', response);
+            console.log('response.success的值:', response.success, '类型:', typeof response.success);
+            if (response && response.success === true) {
                 displayInfluencers(response.data.influencers);
                 updatePagination(response.data);
+                console.log('博主列表加载成功，共', response.data.influencers.length, '条记录');
             } else {
-                showAlert('加载博主列表失败: ' + response.error, 'danger');
+                console.error('API返回错误:', response);
+                const errorMsg = response && response.error ? response.error : '未知错误';
+                showAlert('加载博主列表失败: ' + errorMsg, 'danger');
             }
         })
-        .fail(function() {
+        .fail(function(xhr, status, error) {
+            console.error('请求失败:', status, error, xhr.responseText);
             showAlert('网络错误，请稍后重试', 'danger');
         })
         .always(function() {
@@ -164,6 +201,9 @@ function displayInfluencers(influencers) {
                                 <a class="dropdown-item" href="#" onclick="editInfluencer(${influencer.id})">
                                     <i class="fas fa-edit"></i> 编辑
                                 </a>
+                                <a class="dropdown-item" href="#" onclick="toggleInfluencerStatus(${influencer.id})">
+                                    <i class="fas fa-toggle-${influencer.is_active ? 'off' : 'on'}"></i> ${influencer.is_active ? '禁用' : '启用'}
+                                </a>
                                 <a class="dropdown-item" href="#" onclick="scrapeInfluencer(${influencer.id})">
                                     <i class="fas fa-download"></i> 抓取
                                 </a>
@@ -188,7 +228,7 @@ function displayInfluencers(influencers) {
                     </div>
                     <div class="card-footer small text-muted">
                         <div class="d-flex justify-content-between">
-                            <span>粉丝: ${influencer.followers_count.toLocaleString()}</span>
+                            <span>粉丝: ${(influencer.followers_count || 0).toLocaleString()}</span>
                             <span>最后抓取: ${lastScraped}</span>
                         </div>
                     </div>
@@ -455,6 +495,28 @@ function scrapeInfluencer(id) {
 }
 
 /**
+ * 切换博主状态
+ */
+function toggleInfluencerStatus(id) {
+    $.ajax({
+        url: `/api/influencers/${id}/toggle-status`,
+        method: 'PATCH'
+    })
+    .done(function(response) {
+        if (response.success) {
+            showAlert(response.message, 'success');
+            loadInfluencers(); // 重新加载列表以更新状态显示
+            loadStats(); // 更新统计数据
+        } else {
+            showAlert('状态切换失败: ' + response.error, 'danger');
+        }
+    })
+    .fail(function() {
+        showAlert('网络错误，请稍后重试', 'danger');
+    });
+}
+
+/**
  * 批量抓取博主
  */
 function batchScrapeInfluencers() {
@@ -532,7 +594,58 @@ function batchToggleStatus() {
         return;
     }
     
-    showAlert('批量状态切换功能开发中...', 'info');
+    if (!confirm(`确定要切换选中的 ${selectedInfluencers.size} 个博主的状态吗？`)) {
+        return;
+    }
+    
+    const $batchToggleBtn = $('#batchToggleStatusBtn');
+    const originalText = $batchToggleBtn.html();
+    $batchToggleBtn.html('<i class="fas fa-spinner fa-spin"></i> 处理中...');
+    $batchToggleBtn.prop('disabled', true);
+    
+    let completed = 0;
+    let errors = 0;
+    const total = selectedInfluencers.size;
+    
+    // 逐个切换状态
+    selectedInfluencers.forEach(id => {
+        $.ajax({
+            url: `/api/influencers/${id}/toggle-status`,
+            method: 'PATCH'
+        })
+        .done(function(response) {
+            completed++;
+            if (!response.success) {
+                errors++;
+            }
+        })
+        .fail(function() {
+            completed++;
+            errors++;
+        })
+        .always(function() {
+            // 检查是否全部完成
+            if (completed === total) {
+                // 恢复按钮状态
+                $batchToggleBtn.html(originalText);
+                $batchToggleBtn.prop('disabled', false);
+                
+                // 显示结果
+                if (errors === 0) {
+                    showAlert(`成功切换了 ${total} 个博主的状态`, 'success');
+                } else {
+                    showAlert(`完成批量切换，成功 ${total - errors} 个，失败 ${errors} 个`, 'warning');
+                }
+                
+                // 清除选择并重新加载
+                $('#selectAll').prop('checked', false);
+                $('.influencer-checkbox').prop('checked', false);
+                updateSelectedInfluencers();
+                loadInfluencers();
+                loadStats();
+            }
+        });
+    });
 }
 
 /**
@@ -548,7 +661,54 @@ function batchDeleteInfluencers() {
         return;
     }
     
-    showAlert('批量删除功能开发中...', 'info');
+    const $batchDeleteBtn = $('#batchDeleteBtn');
+    const originalText = $batchDeleteBtn.html();
+    $batchDeleteBtn.html('<i class="fas fa-spinner fa-spin"></i> 删除中...');
+    $batchDeleteBtn.prop('disabled', true);
+    
+    let completed = 0;
+    let errors = 0;
+    const total = selectedInfluencers.size;
+    
+    // 逐个删除博主
+    selectedInfluencers.forEach(id => {
+        $.ajax({
+            url: `/api/influencers/${id}`,
+            method: 'DELETE'
+        })
+        .done(function(response) {
+            completed++;
+            if (!response.success) {
+                errors++;
+            }
+        })
+        .fail(function() {
+            completed++;
+            errors++;
+        })
+        .always(function() {
+            // 检查是否全部完成
+            if (completed === total) {
+                // 恢复按钮状态
+                $batchDeleteBtn.html(originalText);
+                $batchDeleteBtn.prop('disabled', false);
+                
+                // 显示结果
+                if (errors === 0) {
+                    showAlert(`成功删除了 ${total} 个博主`, 'success');
+                } else {
+                    showAlert(`完成批量删除，成功 ${total - errors} 个，失败 ${errors} 个`, 'warning');
+                }
+                
+                // 清除选择并重新加载
+                $('#selectAll').prop('checked', false);
+                $('.influencer-checkbox').prop('checked', false);
+                updateSelectedInfluencers();
+                loadInfluencers();
+                loadStats();
+            }
+        });
+    });
 }
 
 /**
@@ -597,6 +757,13 @@ function showLoading(show) {
  * 显示警告信息
  */
 function showAlert(message, type = 'info') {
+    // 确保alertContainer存在
+    const alertContainer = $('#alertContainer');
+    if (alertContainer.length === 0) {
+        console.error('alertContainer not found');
+        return;
+    }
+    
     const alertHtml = `
         <div class="alert alert-${type} alert-dismissible fade show" role="alert">
             ${message}
@@ -604,11 +771,11 @@ function showAlert(message, type = 'info') {
         </div>
     `;
     
-    $('#alertContainer').html(alertHtml);
+    alertContainer.html(alertHtml);
     
     // 自动隐藏
     setTimeout(() => {
-        const alertElement = document.querySelector('.alert');
+        const alertElement = alertContainer.find('.alert')[0];
         if (alertElement) {
             const alert = new bootstrap.Alert(alertElement);
             alert.close();

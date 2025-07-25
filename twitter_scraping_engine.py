@@ -14,9 +14,10 @@ from dataclasses import dataclass, field
 
 from ads_browser_launcher import AdsPowerLauncher
 from twitter_parser import TwitterParser
-from enhanced_twitter_parser import EnhancedTwitterParser, MultiWindowEnhancedScraper
-from optimized_scraping_engine import OptimizedScrapingEngine
-from data_storage import DataStorage
+from enhanced_twitter_parser import EnhancedTwitterParser
+# from enhanced_twitter_parser import MultiWindowEnhancedScraper
+# from optimized_scraping_engine import OptimizedScrapingEngine
+from storage_manager import StorageManager
 from cloud_sync import CloudSyncManager
 from config import ADS_POWER_CONFIG, CLOUD_SYNC_CONFIG
 from exceptions import ScrapingException, TwitterScrapingError
@@ -107,14 +108,15 @@ class TwitterScrapingEngine:
         self.account_states: Dict[str, AccountState] = {}
         
         # 数据存储和云同步
-        self.data_storage = DataStorage()
+        self.data_storage = StorageManager()
         self.cloud_sync = CloudSyncManager(CLOUD_SYNC_CONFIG)
         
         # 优化抓取引擎
         self.enable_optimized = enable_optimized
         if enable_optimized:
-            self.optimized_scraper = MultiWindowEnhancedScraper(max_workers=max_workers)
-            self.logger.info(f"已启用优化抓取引擎，最大工作线程: {max_workers}")
+            # self.optimized_scraper = MultiWindowEnhancedScraper(max_workers=max_workers)
+            self.optimized_scraper = None
+            self.logger.info(f"优化抓取引擎暂时禁用，使用传统模式")
         else:
             self.optimized_scraper = None
             self.logger.info("使用传统抓取模式")

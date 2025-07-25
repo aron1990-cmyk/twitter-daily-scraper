@@ -159,7 +159,11 @@
                                             </h6>
                                             <small class="text-muted">
                                                 <i class="fas fa-clock me-1"></i>
-                                                {{ tweet.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                                {% if tweet.publish_time %}
+                                                    {{ tweet.publish_time }}
+                                                {% else %}
+                                                    {{ tweet.scraped_at.strftime('%Y-%m-%d %H:%M') if tweet.scraped_at else '未知时间' }}
+                                                {% endif %}
                                             </small>
                                         </div>
                                         <div class="dropdown">
@@ -195,19 +199,19 @@
                                         {% endif %}
                                     </div>
                                     
-                                    <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
                                         <div class="d-flex gap-3">
                                             <small class="text-muted">
                                                 <i class="fas fa-heart text-danger me-1"></i>
-                                                {{ tweet.likes_count or 0 }}
+                                                {{ tweet.likes or 0 }}
                                             </small>
                                             <small class="text-muted">
                                                 <i class="fas fa-retweet text-success me-1"></i>
-                                                {{ tweet.retweets_count or 0 }}
+                                                {{ tweet.retweets or 0 }}
                                             </small>
                                             <small class="text-muted">
                                                 <i class="fas fa-comment text-info me-1"></i>
-                                                {{ tweet.replies_count or 0 }}
+                                                {{ tweet.comments or 0 }}
                                             </small>
                                         </div>
                                         <small class="text-muted">
@@ -215,6 +219,12 @@
                                                 <span class="badge bg-secondary">{{ tweet.task.name }}</span>
                                             {% endif %}
                                         </small>
+                                    </div>
+                                    
+                                    <div class="d-grid">
+                                        <a href="{{ url_for('tweet_detail', tweet_id=tweet.id) }}" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye me-2"></i>查看详情
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -228,7 +238,7 @@
                             <ul class="pagination">
                                 {% if pagination.has_prev %}
                                     <li class="page-item">
-                                        <a class="page-link" href="{{ url_for('data', page=pagination.prev_num, **request.args) }}">
+                                        <a class="page-link" href="{{ url_for('data', page=pagination.prev_num, search=request.args.get('search', ''), task_id=request.args.get('task_id', ''), min_likes=request.args.get('min_likes', ''), min_retweets=request.args.get('min_retweets', ''), sort=request.args.get('sort', '')) }}">
                                             <i class="fas fa-chevron-left"></i>
                                         </a>
                                     </li>
@@ -238,7 +248,7 @@
                                     {% if page_num %}
                                         {% if page_num != pagination.page %}
                                             <li class="page-item">
-                                                <a class="page-link" href="{{ url_for('data', page=page_num, **request.args) }}">{{ page_num }}</a>
+                                                <a class="page-link" href="{{ url_for('data', page=page_num, search=request.args.get('search', ''), task_id=request.args.get('task_id', ''), min_likes=request.args.get('min_likes', ''), min_retweets=request.args.get('min_retweets', ''), sort=request.args.get('sort', '')) }}">{{ page_num }}</a>
                                             </li>
                                         {% else %}
                                             <li class="page-item active">
@@ -254,7 +264,7 @@
                                 
                                 {% if pagination.has_next %}
                                     <li class="page-item">
-                                        <a class="page-link" href="{{ url_for('data', page=pagination.next_num, **request.args) }}">
+                                        <a class="page-link" href="{{ url_for('data', page=pagination.next_num, search=request.args.get('search', ''), task_id=request.args.get('task_id', ''), min_likes=request.args.get('min_likes', ''), min_retweets=request.args.get('min_retweets', ''), sort=request.args.get('sort', '')) }}">
                                             <i class="fas fa-chevron-right"></i>
                                         </a>
                                     </li>
@@ -363,32 +373,128 @@ function exportData() {
 }
 
 function syncToFeishu() {
+    console.log('🚀 [飞书同步] 开始同步流程');
     const button = event.target;
     const originalText = showLoading(button);
     
     // 获取当前选择的任务ID
     const taskId = document.getElementById('task_id').value;
+    console.log(`📋 [飞书同步] 选择的任务ID: ${taskId}`);
     
-    // 构建请求数据
-    const requestData = {};
-    if (taskId) {
-        requestData.task_id = parseInt(taskId);
+    // 如果没有选择任务，提示用户
+    if (!taskId) {
+        console.warn('⚠️ [飞书同步] 未选择任务ID，终止同步');
+        hideLoading(button, originalText);
+        showAlert('请先选择要同步的任务', 'warning');
+        return;
     }
     
+    // 显示同步确认对话框
+    console.log('💬 [飞书同步] 显示确认对话框');
+    if (!confirm(`确定要将任务 ${taskId} 的所有数据同步到飞书吗？\n\n注意：\n1. 只会同步尚未同步过的数据\n2. 系统会自动检查重复内容\n3. 同步过程可能需要一些时间`)) {
+        console.log('❌ [飞书同步] 用户取消同步');
+        hideLoading(button, originalText);
+        return;
+    }
+    
+    console.log('✅ [飞书同步] 用户确认同步，开始执行');
+    
+    // 显示同步进度提示
+    console.log('🔍 [飞书同步] 显示检查重复内容提示');
+    showAlert('正在检查重复内容...', 'info');
+    
+    // 构建请求数据 - 使用FormData格式，因为后端期望form数据
+    const formData = new FormData();
+    formData.append('task_id', taskId);
+    console.log('📦 [飞书同步] 构建请求数据完成');
+    
+    // 更新进度提示
+    setTimeout(() => {
+        console.log('🔄 [飞书同步] 更新进度提示为"正在同步中..."');
+        // 移除之前的提示
+        $('.alert').remove();
+        showAlert('正在同步中...', 'info');
+    }, 1000);
+    
+    console.log('🌐 [飞书同步] 发送AJAX请求到 /sync_feishu');
     $.ajax({
         url: '/sync_feishu',
         type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify(requestData)
+        data: formData,
+        processData: false,
+        contentType: false
     })
         .done(function(response) {
-            showAlert(response.message || '数据已成功同步到飞书文档！', 'success');
+            console.log('✅ [飞书同步] 收到服务器响应:', response);
+            // 清除进度提示
+            $('.alert').remove();
+            
+            if (response.success) {
+                console.log('🎉 [飞书同步] 同步成功');
+                // 检查是否有新数据同步
+                const report = response.report || {};
+                console.log('📊 [飞书同步] 同步报告:', report);
+                let message = '';
+                
+                if (report.to_sync === 0) {
+                    // 没有新数据需要同步
+                    message = `同步完成！任务 ${taskId} 的所有数据（${report.total_tweets || 0} 条）都已经同步过了。`;
+                    console.log('ℹ️ [飞书同步] 无新数据需要同步');
+                } else {
+                    // 有新数据同步
+                    message = `同步完成！成功同步了 ${report.synced_count || report.to_sync || 0} 条新数据到飞书。`;
+                    if (report.already_synced > 0) {
+                        message += `另有 ${report.already_synced} 条数据之前已同步。`;
+                    }
+                    console.log(`📈 [飞书同步] 成功同步 ${report.synced_count || report.to_sync || 0} 条新数据`);
+                }
+                
+                console.log('💬 [飞书同步] 显示成功消息:', message);
+                showAlert(message, 'success');
+                
+                // 询问是否刷新页面
+                setTimeout(() => {
+                    console.log('🔄 [飞书同步] 询问是否刷新页面');
+                    if (confirm('是否刷新页面查看最新状态？')) {
+                        console.log('🔄 [飞书同步] 用户确认刷新页面');
+                        location.reload();
+                    } else {
+                        console.log('❌ [飞书同步] 用户取消刷新页面');
+                    }
+                }, 2000);
+            } else {
+                console.error('❌ [飞书同步] 同步失败:', response.message || '未知错误');
+                showAlert('同步失败: ' + (response.message || '未知错误'), 'danger');
+            }
         })
         .fail(function(xhr) {
-            const error = xhr.responseJSON ? xhr.responseJSON.message : '同步失败';
-            showAlert('同步失败: ' + error, 'danger');
+            console.error('❌ [飞书同步] AJAX请求失败');
+            console.error('📊 [飞书同步] 错误状态码:', xhr.status);
+            console.error('📊 [飞书同步] 错误状态文本:', xhr.statusText);
+            console.error('📊 [飞书同步] 响应内容:', xhr.responseText);
+            
+            // 清除进度提示
+            $('.alert').remove();
+            
+            let errorMessage = '同步失败';
+            if (xhr.responseJSON) {
+                console.error('📊 [飞书同步] 解析到JSON错误响应:', xhr.responseJSON);
+                errorMessage += ': ' + (xhr.responseJSON.message || xhr.responseJSON.error || '未知错误');
+            } else if (xhr.responseText) {
+                try {
+                    const errorData = JSON.parse(xhr.responseText);
+                    console.error('📊 [飞书同步] 手动解析JSON错误响应:', errorData);
+                    errorMessage += ': ' + (errorData.message || errorData.error || '未知错误');
+                } catch (e) {
+                    console.error('📊 [飞书同步] JSON解析失败:', e);
+                    errorMessage += ': 服务器响应异常';
+                }
+            }
+            console.error('💬 [飞书同步] 最终错误消息:', errorMessage);
+            showAlert(errorMessage, 'danger');
         })
         .always(function() {
+            console.log('🔚 [飞书同步] AJAX请求完成，恢复按钮状态');
             hideLoading(button, originalText);
         });
 }
