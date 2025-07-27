@@ -1,14 +1,14 @@
 {
-  "app_id": "your_feishu_app_id",
-  "app_secret": "your_feishu_app_secret",
-  "spreadsheet_token": "your_spreadsheet_token",
-  "table_id": "your_table_id",
+  "app_id": "cli_a8f94354c178900b",
+  "app_secret": "HGQGTQyvr2QsWVmPMdY8Oe7A67J3ihVV",
+  "spreadsheet_token": "V862biEswatwnRsGalochUI6n6d",
+  "table_id": "tblicDZl35dn2vZ9",
   "enabled": true,
   "description": {
-    "app_id": "飞书应用的App ID",
-    "app_secret": "飞书应用的App Secret",
-    "spreadsheet_token": "飞书多维表格的token（从URL中获取）",
-    "table_id": "多维表格中具体表的ID（可选，不填则使用第一个表）"
+    "app_id": "cli_a8f94354c178900b",
+    "app_secret": "HGQGTQyvr2QsWVmPMdY8Oe7A67J3ihVV",
+    "spreadsheet_token": "V862biEswatwnRsGalochUI6n6d",
+    "table_id": "tblicDZl35dn2vZ9"
   },
   "setup_instructions": {
     "1": "登录飞书开放平台 https://open.feishu.cn/",

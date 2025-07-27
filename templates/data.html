@@ -20,6 +20,10 @@
                     <i class="fas fa-cloud-upload-alt me-2"></i>
                     同步飞书
                 </button>
+                <button onclick="validateFeishuData()" class="btn btn-warning">
+                    <i class="fas fa-check-double me-2"></i>
+                    验证数据
+                </button>
             </div>
         </div>
     </div>
@@ -343,33 +347,101 @@
 
 <script>
 function exportData() {
+    console.log('📊 [Excel导出] 开始导出流程');
+    const button = event.target;
+    const originalText = showLoading(button);
+    
     // 获取当前筛选参数
     const params = new URLSearchParams();
     
     const search = document.getElementById('search').value;
-    if (search) params.append('search', search);
+    if (search) {
+        params.append('search', search);
+        console.log(`🔍 [Excel导出] 搜索条件: ${search}`);
+    }
     
     const taskId = document.getElementById('task_id').value;
-    if (taskId) params.append('task_id', taskId);
+    if (taskId) {
+        params.append('task_id', taskId);
+        console.log(`📋 [Excel导出] 任务ID: ${taskId}`);
+    }
     
     const minLikes = document.getElementById('min_likes').value;
-    if (minLikes) params.append('min_likes', minLikes);
+    if (minLikes) {
+        params.append('min_likes', minLikes);
+        console.log(`👍 [Excel导出] 最小点赞数: ${minLikes}`);
+    }
     
     const minRetweets = document.getElementById('min_retweets').value;
-    if (minRetweets) params.append('min_retweets', minRetweets);
+    if (minRetweets) {
+        params.append('min_retweets', minRetweets);
+        console.log(`🔄 [Excel导出] 最小转发数: ${minRetweets}`);
+    }
     
     // 构建导出URL
     const exportUrl = '/api/data/export' + (params.toString() ? '?' + params.toString() : '');
+    console.log(`🌐 [Excel导出] 导出URL: ${exportUrl}`);
     
-    // 创建隐藏的下载链接
-    const link = document.createElement('a');
-    link.href = exportUrl;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // 显示导出进度提示
+    showAlert('正在准备导出文件，请稍候...', 'info');
     
-    showAlert('正在准备导出文件...', 'info');
+    // 使用fetch API进行更好的错误处理
+    fetch(exportUrl)
+        .then(response => {
+            console.log(`📊 [Excel导出] 收到响应，状态码: ${response.status}`);
+            
+            if (!response.ok) {
+                throw new Error(`导出失败: ${response.status} ${response.statusText}`);
+            }
+            
+            // 检查响应类型
+            const contentType = response.headers.get('content-type');
+            console.log(`📄 [Excel导出] 响应类型: ${contentType}`);
+            
+            if (contentType && contentType.includes('application/json')) {
+                // 如果返回JSON，说明有错误
+                return response.json().then(data => {
+                    throw new Error(data.error || '导出失败');
+                });
+            }
+            
+            // 获取文件名
+            const contentDisposition = response.headers.get('content-disposition');
+            let filename = 'tweets_export.xlsx';
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                if (filenameMatch) {
+                    filename = filenameMatch[1];
+                }
+            }
+            console.log(`📁 [Excel导出] 文件名: ${filename}`);
+            
+            // 下载文件
+            return response.blob().then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+                
+                console.log('✅ [Excel导出] 文件下载成功');
+                $('.alert').remove();
+                showAlert('Excel文件导出成功！', 'success');
+            });
+        })
+        .catch(error => {
+            console.error('❌ [Excel导出] 导出失败:', error);
+            $('.alert').remove();
+            showAlert('导出失败: ' + error.message, 'danger');
+        })
+        .finally(() => {
+            console.log('🔚 [Excel导出] 导出流程完成，恢复按钮状态');
+            hideLoading(button, originalText);
+        });
 }
 
 function syncToFeishu() {
@@ -525,6 +597,142 @@ function deleteTweet(tweetId) {
             showAlert('删除失败: ' + error, 'danger');
         });
     }
+}
+
+function validateFeishuData() {
+    console.log('🔍 [飞书验证] 开始数据验证流程');
+    const button = event.target;
+    const originalText = showLoading(button);
+    
+    // 获取当前选择的任务ID
+    const taskId = document.getElementById('task_id').value;
+    console.log(`📋 [飞书验证] 选择的任务ID: ${taskId}`);
+    
+    // 如果没有选择任务，提示用户
+    if (!taskId) {
+        console.warn('⚠️ [飞书验证] 未选择任务ID，终止验证');
+        hideLoading(button, originalText);
+        showAlert('请先选择要验证的任务', 'warning');
+        return;
+    }
+    
+    // 显示验证确认对话框
+    console.log('💬 [飞书验证] 显示确认对话框');
+    if (!confirm(`确定要验证任务 ${taskId} 的飞书数据同步准确性吗？\n\n验证过程将：\n1. 获取飞书表格中的数据\n2. 与本地数据进行比对\n3. 生成详细的验证报告`)) {
+        console.log('❌ [飞书验证] 用户取消验证');
+        hideLoading(button, originalText);
+        return;
+    }
+    
+    console.log('✅ [飞书验证] 用户确认验证，开始执行');
+    
+    // 显示验证进度提示
+    console.log('🔍 [飞书验证] 显示验证进度提示');
+    showAlert('正在获取飞书数据...', 'info');
+    
+    // 更新进度提示
+    setTimeout(function() {
+        console.log('🔄 [飞书验证] 更新进度提示为"正在比对数据..."');
+        $('.alert').remove();
+        showAlert('正在比对数据...', 'info');
+    }, 1500);
+    
+    console.log(`🌐 [飞书验证] 发送AJAX请求到 /api/data/validate_feishu/${taskId}`);
+    $.ajax({
+        url: `/api/data/validate_feishu/${taskId}`,
+        type: 'POST',
+        contentType: 'application/json'
+    })
+        .done(function(response) {
+            console.log('✅ [飞书验证] 收到服务器响应:', response);
+            // 清除进度提示
+            $('.alert').remove();
+            
+            if (response.success) {
+                console.log('🎉 [飞书验证] 验证成功');
+                const report = response.validation_report || {};
+                const summary = report.summary || {};
+                console.log('📊 [飞书验证] 验证报告:', report);
+                
+                // 构建验证结果消息
+                let message = `数据验证完成！\n\n`;
+                message += `📊 同步准确率: ${summary.sync_accuracy || 0}%\n`;
+                message += `✅ 匹配记录: ${report.details?.matched_records_count || 0} 条\n`;
+                
+                if (report.details?.missing_in_feishu_count > 0) {
+                    message += `⚠️ 飞书缺失: ${report.details.missing_in_feishu_count} 条\n`;
+                }
+                
+                if (report.details?.extra_in_feishu_count > 0) {
+                    message += `ℹ️ 飞书多余: ${report.details.extra_in_feishu_count} 条\n`;
+                }
+                
+                if (report.details?.field_mismatches_count > 0) {
+                    message += `🔄 字段不匹配: ${report.details.field_mismatches_count} 条\n`;
+                }
+                
+                message += `\n质量评估: ${report.quality_assessment?.description || '未知'}`;
+                
+                // 根据准确率选择提示类型
+                const alertType = summary.sync_accuracy >= 95 ? 'success' : 
+                                summary.sync_accuracy >= 85 ? 'warning' : 'danger';
+                
+                console.log('💬 [飞书验证] 显示验证结果:', message);
+                showAlert(message, alertType);
+                
+                // 如果有问题，询问是否查看详细报告
+                if (summary.sync_accuracy < 100) {
+                    setTimeout(function() {
+                        if (confirm('发现数据不一致，是否在控制台查看详细报告？')) {
+                            console.log('📋 [飞书验证] 详细验证报告:', report);
+                            if (report.missing_samples) {
+                                console.log('❌ [飞书验证] 飞书缺失数据样例:', report.missing_samples);
+                            }
+                            if (report.mismatch_samples) {
+                                console.log('🔄 [飞书验证] 字段不匹配样例:', report.mismatch_samples);
+                            }
+                            alert('详细报告已输出到浏览器控制台，请按F12查看。');
+                        }
+                    }, 3000);
+                }
+            } else {
+                const errorMsg = response.error || '验证失败，请检查飞书配置和网络连接';
+                console.error('❌ [飞书验证] 验证失败:', errorMsg);
+                showAlert('验证失败: ' + errorMsg, 'danger');
+            }
+        })
+        .fail(function(xhr) {
+            console.error('❌ [飞书验证] AJAX请求失败');
+            console.error('📊 [飞书验证] 错误状态码:', xhr.status);
+            console.error('📊 [飞书验证] 错误状态文本:', xhr.statusText);
+            console.error('📊 [飞书验证] 响应内容:', xhr.responseText);
+            
+            // 清除进度提示
+            $('.alert').remove();
+            
+            let errorMessage = '验证失败';
+            if (xhr.responseJSON) {
+                console.error('📊 [飞书验证] 解析到JSON错误响应:', xhr.responseJSON);
+                errorMessage += ': ' + (xhr.responseJSON.error || xhr.responseJSON.message || '服务器返回错误但未提供详细信息');
+            } else if (xhr.responseText) {
+                try {
+                    const errorData = JSON.parse(xhr.responseText);
+                    console.error('📊 [飞书验证] 手动解析JSON错误响应:', errorData);
+                    errorMessage += ': ' + (errorData.error || errorData.message || '服务器返回错误但未提供详细信息');
+                } catch (e) {
+                    console.error('📊 [飞书验证] JSON解析失败:', e);
+                    errorMessage += ': 服务器响应异常，请检查网络连接';
+                }
+            } else {
+                errorMessage += ': 网络连接异常或服务器无响应';
+            }
+            console.error('💬 [飞书验证] 最终错误消息:', errorMessage);
+            showAlert(errorMessage, 'danger');
+        })
+        .always(function() {
+            console.log('🔚 [飞书验证] AJAX请求完成，恢复按钮状态');
+            hideLoading(button, originalText);
+        });
 }
 
 // 图表初始化

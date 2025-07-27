@@ -114,7 +114,7 @@ from refactored_task_manager import RefactoredTaskManager
 app = Flask(__name__)
 app.debug = True
 app.config['SECRET_KEY'] = 'twitter-scraper-web-2024'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///twitter_scraper.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////Users/aron/twitter-daily-scraper/instance/twitter_scraper.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # 设置字符编码
@@ -205,6 +205,8 @@ def load_config_from_database():
             FEISHU_CONFIG['table_id'] = config_dict['feishu_table_id']
         if 'feishu_enabled' in config_dict:
             FEISHU_CONFIG['enabled'] = config_dict['feishu_enabled'].lower() == 'true'
+        if 'feishu_auto_sync' in config_dict:
+            FEISHU_CONFIG['auto_sync'] = config_dict['feishu_auto_sync'].lower() == 'true'
         
         print("✅ 配置已从数据库加载完成")
         
@@ -785,9 +787,8 @@ class ScrapingTaskExecutor:
                 return
             
             # 检查是否启用自动同步
-            auto_sync_config = SystemConfig.query.filter_by(key='feishu_auto_sync').first()
-            if not auto_sync_config or auto_sync_config.value.lower() not in ['true', '1']:
-                print(f"[调试] 自动同步未启用，跳过同步 (当前值: {auto_sync_config.value if auto_sync_config else 'None'})")
+            if not FEISHU_CONFIG.get('auto_sync', False):
+                print(f"[调试] 自动同步未启用，跳过同步 (当前值: {FEISHU_CONFIG.get('auto_sync', False)})")
                 return
             
             # 检查飞书配置完整性
@@ -814,69 +815,70 @@ class ScrapingTaskExecutor:
                 except:
                     hashtags = []
                 
-                # 转换发布时间为毫秒时间戳
-                publish_timestamp = ''
-                if tweet.publish_time:
-                    try:
-                        if isinstance(tweet.publish_time, str):
-                            dt = datetime.fromisoformat(tweet.publish_time.replace('Z', '+00:00'))
-                        else:
-                            dt = tweet.publish_time
-                        publish_timestamp = str(int(dt.timestamp() * 1000))
-                    except:
-                        publish_timestamp = ''
-                
-                # 转换创建时间为毫秒时间戳
-                created_timestamp = ''
-                if tweet.scraped_at:
-                    try:
-                        created_timestamp = str(int(tweet.scraped_at.timestamp() * 1000))
-                    except:
-                        created_timestamp = ''
+                # 不再需要时间戳转换，让飞书自动处理时间字段
                 
                 sync_data.append({
                     '推文原文内容': tweet.content or '',
-                    '发布时间': publish_timestamp,
                     '作者（账号）': tweet.username or '',
                     '推文链接': tweet.link or '',
                     '话题标签（Hashtag）': ', '.join(hashtags),
                     '类型标签': tweet.content_type or '',
-                    '评论': 0,  # Twitter API限制，暂时设为0
+                    '评论': tweet.comments or 0,
                     '点赞': tweet.likes or 0,
-                    '转发': tweet.retweets or 0,
-                    '创建时间': created_timestamp
+                    '转发': tweet.retweets or 0
                 })
             
-            # 创建云同步管理器并同步
+            # 创建云同步管理器并同步（统一初始化方式，与API同步保持一致）
             from cloud_sync import CloudSyncManager
             sync_config = {
                 'feishu': {
                     'enabled': True,
                     'app_id': FEISHU_CONFIG['app_id'],
                     'app_secret': FEISHU_CONFIG['app_secret'],
+                    'spreadsheet_token': FEISHU_CONFIG['spreadsheet_token'],
+                    'table_id': FEISHU_CONFIG['table_id'],
                     'base_url': 'https://open.feishu.cn/open-apis'
                 }
             }
             sync_manager = CloudSyncManager(sync_config)
             
-            # 设置飞书配置
-            if sync_manager.setup_feishu(FEISHU_CONFIG['app_id'], FEISHU_CONFIG['app_secret']):
-                success = sync_manager.sync_to_feishu(
-                    sync_data,
-                    FEISHU_CONFIG['spreadsheet_token'],
-                    FEISHU_CONFIG['table_id']
-                )
+            # 直接执行同步（不调用setup_feishu，保持配置完整性）
+            success = sync_manager.sync_to_feishu(
+                sync_data,
+                FEISHU_CONFIG['spreadsheet_token'],
+                FEISHU_CONFIG['table_id']
+            )
+            
+            if success:
+                # 更新同步状态
+                for tweet in tweets:
+                    tweet.synced_to_feishu = True
+                db.session.commit()
+                print(f"任务 {task_id} 自动同步到飞书成功，已更新 {len(tweets)} 条记录的同步状态")
                 
-                if success:
-                    # 更新同步状态
-                    for tweet in tweets:
-                        tweet.synced_to_feishu = True
-                    db.session.commit()
-                    print(f"任务 {task_id} 自动同步到飞书成功，已更新 {len(tweets)} 条记录的同步状态")
-                else:
-                    print(f"任务 {task_id} 自动同步到飞书失败")
+                # 执行数据验证
+                print(f"🔍 [AUTO_SYNC] 开始数据验证...")
+                try:
+                    from feishu_data_validator import FeishuDataValidator
+                    validator = FeishuDataValidator()
+                    validation_result = validator.validate_sync_data(task_id=task_id)
+                    
+                    if validation_result.get('success'):
+                        comparison = validation_result['comparison_result']
+                        summary = comparison['summary']
+                        print(f"✅ [AUTO_SYNC] 数据验证完成")
+                        print(f"📊 [AUTO_SYNC] 验证结果: 同步准确率 {summary['sync_accuracy']:.2f}%")
+                        print(f"📊 [AUTO_SYNC] 匹配记录: {summary['matched_count']}/{summary['total_local']}")
+                        
+                        if summary['sync_accuracy'] < 95:
+                            print(f"⚠️ [AUTO_SYNC] 发现 {summary['field_mismatch_count']} 条字段不匹配，建议检查")
+                    else:
+                        print(f"⚠️ [AUTO_SYNC] 数据验证失败: {validation_result.get('error', '未知错误')}")
+                        
+                except Exception as e:
+                    print(f"❌ [AUTO_SYNC] 数据验证异常: {e}")
             else:
-                print(f"任务 {task_id} 自动同步失败：飞书配置设置失败")
+                print(f"任务 {task_id} 自动同步到飞书失败")
                 
         except Exception as e:
             print(f"自动同步到飞书时发生错误: {e}")
@@ -1556,21 +1558,59 @@ def sync_feishu():
             print(f"   - 内容类型: {content_type}")
             
             # 处理发布时间
+            print(f"   - 🕐 开始处理发布时间")
+            print(f"     - 原始发布时间: {tweet.publish_time} (类型: {type(tweet.publish_time)})")
+            
             publish_time = ''
             if tweet.publish_time:
                 try:
                     if isinstance(tweet.publish_time, str):
                         # 如果是字符串，尝试解析为datetime
+                        print(f"     - 发布时间为字符串，开始解析")
                         from dateutil import parser
                         dt = parser.parse(tweet.publish_time)
-                        publish_time = int(dt.timestamp() * 1000)
+                        publish_time = int(dt.timestamp())  # 使用秒级时间戳，不乘以1000
+                        print(f"     - 字符串解析成功: {publish_time} ({dt})")
                     else:
                         # 如果已经是datetime对象
-                        publish_time = int(tweet.publish_time.timestamp() * 1000)
-                    print(f"   - 发布时间: {publish_time}")
+                        print(f"     - 发布时间为datetime对象")
+                        publish_time = int(tweet.publish_time.timestamp())  # 使用秒级时间戳，不乘以1000
+                        print(f"     - datetime转换成功: {publish_time} ({tweet.publish_time})")
+                    
+                    # 验证时间戳合理性
+                    if publish_time < 946684800:  # 2000年1月1日的时间戳
+                        print(f"     - ⚠️ 发布时间戳异常 ({publish_time})，可能是1970年问题")
+                        publish_time = int(datetime.now().timestamp())
+                        print(f"     - 修正为当前时间戳: {publish_time}")
+                    
+                    print(f"   - ✅ 最终发布时间: {publish_time} ({datetime.fromtimestamp(publish_time)})")
                 except Exception as e:
-                    print(f"   - 发布时间解析失败: {e}")
-                    publish_time = ''
+                    print(f"   - ❌ 发布时间解析失败: {e}")
+                    publish_time = int(datetime.now().timestamp())
+                    print(f"   - 使用当前时间戳: {publish_time}")
+            else:
+                print(f"     - 发布时间为空，使用当前时间")
+                publish_time = int(datetime.now().timestamp())
+                print(f"   - 默认发布时间: {publish_time}")
+            
+            # 处理创建时间
+            print(f"   - 🕐 开始处理创建时间")
+            print(f"     - 原始创建时间: {tweet.scraped_at} (类型: {type(tweet.scraped_at)})")
+            
+            if tweet.scraped_at:
+                create_time = int(tweet.scraped_at.timestamp())
+                print(f"     - 创建时间转换成功: {create_time} ({tweet.scraped_at})")
+            else:
+                create_time = int(datetime.now().timestamp())
+                print(f"     - 创建时间为空，使用当前时间: {create_time}")
+            
+            # 验证创建时间戳合理性
+            if create_time < 946684800:  # 2000年1月1日的时间戳
+                print(f"     - ⚠️ 创建时间戳异常 ({create_time})，可能是1970年问题")
+                create_time = int(datetime.now().timestamp())
+                print(f"     - 修正为当前时间戳: {create_time}")
+            
+            print(f"   - ✅ 最终创建时间: {create_time} ({datetime.fromtimestamp(create_time)})")
             
             tweet_data = {
                 '推文原文内容': tweet.content,
@@ -1582,12 +1622,27 @@ def sync_feishu():
                 '评论': 0,  # Twitter API限制，暂时设为0
                 '点赞': tweet.likes,
                 '转发': tweet.retweets,
-                '创建时间': int(tweet.scraped_at.timestamp() * 1000)
+                '创建时间': create_time
             }
             sync_data.append(tweet_data)
             print(f"   - 数据字段数: {len(tweet_data)}")
+            print(f"   - 数据内容预览: {str(tweet_data)[:200]}...")
         
         print(f"✅ [后端] 数据准备完成，共 {len(sync_data)} 条记录")
+        
+        # 显示前3条数据的详细信息用于调试
+        print(f"📋 [后端] 准备同步的数据示例:")
+        for i, item in enumerate(sync_data[:3]):
+            print(f"   - 第{i+1}条数据:")
+            for key, value in item.items():
+                if key in ['发布时间', '创建时间']:
+                    if isinstance(value, (int, float)) and value > 0:
+                        readable_time = datetime.fromtimestamp(value)
+                        print(f"     - {key}: {value} ({readable_time})")
+                    else:
+                        print(f"     - {key}: {value} (无效时间戳)")
+                else:
+                    print(f"     - {key}: {str(value)[:50]}..." if len(str(value)) > 50 else f"     - {key}: {value}")
         
         # 同步到飞书多维表格
         print(f"🚀 [后端] 开始执行飞书同步")
@@ -1942,6 +1997,25 @@ def api_get_task(task_id):
     except Exception as e:
         return f'<div class="alert alert-danger">加载任务详情失败: {str(e)}</div>', 500
 
+@app.route('/api/tasks/<int:task_id>/tweets', methods=['GET'])
+def api_get_task_tweets(task_id):
+    """获取任务的推文数据（JSON格式）"""
+    try:
+        task = ScrapingTask.query.get_or_404(task_id)
+        
+        # 获取任务相关的推文数据
+        tweets = TweetData.query.filter_by(task_id=task_id).order_by(TweetData.scraped_at.desc()).all()
+        
+        return jsonify({
+            'success': True,
+            'task': task.to_dict(),
+            'tweets_count': len(tweets),
+            'tweets': [tweet.to_dict() for tweet in tweets]
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/tasks/<int:task_id>', methods=['DELETE'])
 def api_delete_task(task_id):
     """删除任务"""
@@ -2089,6 +2163,7 @@ def api_export_data():
         import io
         import pandas as pd
         from flask import send_file
+        import json
         
         # 获取筛选参数
         search = request.args.get('search', '')
@@ -2097,7 +2172,7 @@ def api_export_data():
         min_retweets = request.args.get('min_retweets', type=int)
         
         # 构建查询（与data页面相同的筛选逻辑）
-        query = TweetData.query
+        query = TweetData.query.join(ScrapingTask, TweetData.task_id == ScrapingTask.id)
         
         # 搜索过滤
         if search:
@@ -2126,35 +2201,72 @@ def api_export_data():
         if not tweets:
             return jsonify({'success': False, 'error': '没有数据可导出'}), 400
         
-        # 获取导出配置
-        export_fields_config = SystemConfig.query.filter_by(key='export_fields').first()
-        if export_fields_config and export_fields_config.value:
-            selected_fields = export_fields_config.value.split(',')
-        else:
-            # 默认导出字段
-            selected_fields = ['content', 'username', 'created_at', 'likes_count', 'retweets_count', 'hashtags']
-        
-        # 准备导出数据
+        # 准备导出数据 - 包含所有重要字段
         export_data = []
+        # 缓存任务名称以提高性能
+        task_name_cache = {}
+        
         for tweet in tweets:
-            row = {}
-            if 'content' in selected_fields:
-                row['推文内容'] = tweet.content
-            if 'username' in selected_fields:
-                row['用户名'] = tweet.username
-            if 'created_at' in selected_fields:
-                row['发布时间'] = tweet.created_at.strftime('%Y-%m-%d %H:%M:%S') if tweet.created_at else ''
-            if 'likes_count' in selected_fields:
-                row['点赞数'] = tweet.likes_count or 0
-            if 'retweets_count' in selected_fields:
-                row['转发数'] = tweet.retweets_count or 0
-            if 'hashtags' in selected_fields:
-                row['话题标签'] = tweet.hashtags or ''
+            # 获取任务名称
+            task_name = ''
+            if tweet.task_id:
+                if tweet.task_id not in task_name_cache:
+                    task = ScrapingTask.query.get(tweet.task_id)
+                    task_name_cache[tweet.task_id] = task.name if task else ''
+                task_name = task_name_cache[tweet.task_id]
             
-            # 添加其他字段
-            row['抓取时间'] = tweet.scraped_at.strftime('%Y-%m-%d %H:%M:%S')
-            if tweet.task:
-                row['任务名称'] = tweet.task.name
+            # 处理话题标签
+            hashtags_str = ''
+            if tweet.hashtags:
+                try:
+                    hashtags_list = json.loads(tweet.hashtags) if isinstance(tweet.hashtags, str) else tweet.hashtags
+                    if isinstance(hashtags_list, list):
+                        hashtags_str = ', '.join([f'#{tag}' for tag in hashtags_list if tag])
+                    else:
+                        hashtags_str = str(tweet.hashtags)
+                except (json.JSONDecodeError, TypeError):
+                    hashtags_str = str(tweet.hashtags) if tweet.hashtags else ''
+            
+            # 处理发布时间
+            publish_time_str = ''
+            if tweet.publish_time:
+                if isinstance(tweet.publish_time, str):
+                    publish_time_str = tweet.publish_time
+                else:
+                    publish_time_str = tweet.publish_time.strftime('%Y-%m-%d %H:%M:%S')
+            
+            # 处理多媒体内容
+            media_info = ''
+            if tweet.media_content:
+                try:
+                    media_list = json.loads(tweet.media_content) if isinstance(tweet.media_content, str) else tweet.media_content
+                    if isinstance(media_list, list) and media_list:
+                        media_types = [item.get('type', '未知') for item in media_list if isinstance(item, dict)]
+                        media_info = ', '.join(media_types)
+                except (json.JSONDecodeError, TypeError):
+                    media_info = '有媒体内容' if tweet.media_content else ''
+            
+            # 构建导出行数据
+            row = {
+                'ID': tweet.id,
+                '推文原文内容': tweet.content or '',
+                '完整内容': tweet.full_content or tweet.content or '',
+                '作者（账号）': tweet.username or '',
+                '发布时间': publish_time_str,
+                '推文链接': tweet.link or '',
+                '话题标签': hashtags_str,
+                '类型标签': tweet.content_type or '',
+                '评论数': tweet.comments or 0,
+                '点赞数': tweet.likes or 0,
+                '转发数': tweet.retweets or 0,
+                '多媒体内容': media_info,
+                '抓取时间': tweet.scraped_at.strftime('%Y-%m-%d %H:%M:%S') if tweet.scraped_at else '',
+                '任务名称': task_name,
+                '任务ID': tweet.task_id,
+                '是否已同步飞书': '是' if tweet.synced_to_feishu else '否',
+                '是否包含详情内容': '是' if tweet.has_detailed_content else '否',
+                '详情抓取错误': tweet.detail_error or ''
+            }
             
             export_data.append(row)
         
@@ -2163,19 +2275,68 @@ def api_export_data():
         
         # 生成文件名
         filename_template = SystemConfig.query.filter_by(key='export_filename_template').first()
+        
+        # 获取任务名称
+        task_name = 'all_data'
+        if tweets and tweets[0].task_id:
+            task = ScrapingTask.query.get(tweets[0].task_id)
+            if task:
+                task_name = task.name
+        
         if filename_template and filename_template.value:
             filename = filename_template.value.format(
                 date=datetime.now().strftime('%Y%m%d'),
                 time=datetime.now().strftime('%H%M%S'),
-                task_name='all_data'
+                task_name=task_name
             )
         else:
-            filename = f'twitter_data_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
+            filename = f'twitter_data_{task_name}_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
         
         # 创建内存中的Excel文件
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            # 写入数据到Excel
             df.to_excel(writer, sheet_name='推文数据', index=False)
+            
+            # 获取工作表并设置列宽
+            worksheet = writer.sheets['推文数据']
+            
+            # 设置列宽以适应内容
+            column_widths = {
+                'A': 8,   # ID
+                'B': 50,  # 推文原文内容
+                'C': 50,  # 完整内容
+                'D': 20,  # 作者（账号）
+                'E': 20,  # 发布时间
+                'F': 40,  # 推文链接
+                'G': 30,  # 话题标签
+                'H': 15,  # 类型标签
+                'I': 10,  # 评论数
+                'J': 10,  # 点赞数
+                'K': 10,  # 转发数
+                'L': 20,  # 多媒体内容
+                'M': 20,  # 抓取时间
+                'N': 20,  # 任务名称
+                'O': 10,  # 任务ID
+                'P': 15,  # 是否已同步飞书
+                'Q': 15,  # 是否包含详情内容
+                'R': 30   # 详情抓取错误
+            }
+            
+            for col, width in column_widths.items():
+                worksheet.column_dimensions[col].width = width
+            
+            # 设置表头样式
+            from openpyxl.styles import Font, PatternFill, Alignment
+            header_font = Font(bold=True, color='FFFFFF')
+            header_fill = PatternFill(start_color='366092', end_color='366092', fill_type='solid')
+            header_alignment = Alignment(horizontal='center', vertical='center')
+            
+            for cell in worksheet[1]:
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = header_alignment
+        
         output.seek(0)
         
         return send_file(
@@ -2186,7 +2347,10 @@ def api_export_data():
         )
         
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        print(f"Excel导出错误: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': f'导出失败: {str(e)}'}), 500
 
 @app.route('/api/data/export/<int:task_id>')
 def api_export_task_data(task_id):
@@ -2209,27 +2373,53 @@ def api_export_task_data(task_id):
 @app.route('/api/data/sync_feishu/<int:task_id>', methods=['POST'])
 def api_sync_feishu(task_id):
     """同步数据到飞书多维表格"""
+    print(f"\n🔄 [FEISHU_SYNC] 开始同步任务 {task_id} 到飞书")
+    print(f"⏰ [FEISHU_SYNC] 同步时间: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
+    
     try:
         # 检查飞书配置
+        print(f"📋 [FEISHU_SYNC] 检查飞书配置...")
         if not FEISHU_CONFIG.get('enabled'):
+            print(f"❌ [FEISHU_SYNC] 飞书同步未启用")
             return jsonify({'success': False, 'error': '飞书同步未启用'}), 400
         
+        print(f"✅ [FEISHU_SYNC] 飞书同步已启用")
+        
         # 检查飞书配置完整性
+        print(f"🔍 [FEISHU_SYNC] 检查配置完整性...")
         required_fields = ['app_id', 'app_secret', 'spreadsheet_token', 'table_id']
         missing_fields = [field for field in required_fields if not FEISHU_CONFIG.get(field)]
         if missing_fields:
+            print(f"❌ [FEISHU_SYNC] 配置不完整，缺少字段: {missing_fields}")
             return jsonify({
                 'success': False, 
                 'error': f'飞书配置不完整，缺少字段: {", ".join(missing_fields)}'
             }), 400
         
-        # 获取任务数据
-        tweets = TweetData.query.filter_by(task_id=task_id).all()
+        print(f"✅ [FEISHU_SYNC] 配置完整性检查通过")
+        print(f"📊 [FEISHU_SYNC] 配置信息: app_id={FEISHU_CONFIG.get('app_id')[:8]}..., spreadsheet_token={FEISHU_CONFIG.get('spreadsheet_token')[:8]}..., table_id={FEISHU_CONFIG.get('table_id')}")
+        
+        # 获取任务数据 - 只获取未同步的数据
+        print(f"📊 [FEISHU_SYNC] 查询任务 {task_id} 的未同步数据...")
+        # 使用0而不是False，因为SQLite中BOOLEAN存储为整数
+        tweets = TweetData.query.filter_by(task_id=task_id, synced_to_feishu=0).all()
+        print(f"📊 [FEISHU_SYNC] 找到 {len(tweets)} 条未同步数据")
         
         if not tweets:
-            return jsonify({'success': False, 'error': '没有数据需要同步'}), 400
+            # 检查是否有已同步的数据
+            print(f"🔍 [FEISHU_SYNC] 没有未同步数据，检查已同步数据...")
+            # 使用1而不是True
+            synced_count = TweetData.query.filter_by(task_id=task_id, synced_to_feishu=1).count()
+            print(f"📊 [FEISHU_SYNC] 已同步数据数量: {synced_count}")
+            if synced_count > 0:
+                print(f"✅ [FEISHU_SYNC] 所有数据都已同步")
+                return jsonify({'success': True, 'message': f'任务 {task_id} 的所有数据（{synced_count} 条）都已同步到飞书'})
+            else:
+                print(f"❌ [FEISHU_SYNC] 没有任何数据需要同步")
+                return jsonify({'success': False, 'error': '没有数据需要同步'}), 400
         
         # 初始化云同步管理器
+        print(f"🔧 [FEISHU_SYNC] 初始化云同步管理器...")
         sync_config = {
             'feishu': {
                 'enabled': True,
@@ -2240,67 +2430,152 @@ def api_sync_feishu(task_id):
                 'base_url': 'https://open.feishu.cn/open-apis'
             }
         }
+        print(f"📋 [FEISHU_SYNC] 同步配置: {sync_config}")
         sync_manager = CloudSyncManager(sync_config)
+        print(f"✅ [FEISHU_SYNC] 云同步管理器初始化完成")
         
         # 准备数据，按照飞书多维表格字段映射
+        print(f"📝 [FEISHU_SYNC] 开始准备数据，共 {len(tweets)} 条推文...")
         data = []
-        for tweet in tweets:
+        for i, tweet in enumerate(tweets):
+            print(f"📝 [FEISHU_SYNC] 处理第 {i+1}/{len(tweets)} 条推文 (ID: {tweet.id})")
+            
             # 使用用户设置的类型标签，如果为空则使用自动分类
             content_type = tweet.content_type or classify_content_type(tweet.content)
+            print(f"🏷️ [FEISHU_SYNC] 推文 {tweet.id} 类型标签: {content_type}")
             
-            # 处理发布时间 - 修复时间戳转换问题
-            publish_time = ''
+            # 处理发布时间 - 修复时间戳转换问题，使用秒级时间戳与cloud_sync.py保持一致
+            print(f"⏰ [FEISHU_SYNC] 处理推文 {tweet.id} 的发布时间...")
+            print(f"⏰ [FEISHU_SYNC] 原始发布时间: {tweet.publish_time} (类型: {type(tweet.publish_time)})")
+            print(f"⏰ [FEISHU_SYNC] 抓取时间: {tweet.scraped_at} (类型: {type(tweet.scraped_at)})")
+            
+            publish_time = 0
             if tweet.publish_time:
                 try:
                     if isinstance(tweet.publish_time, str):
                         # 如果是字符串，尝试解析为datetime
                         from dateutil import parser
                         dt = parser.parse(tweet.publish_time)
-                        # 转换为毫秒时间戳
-                        publish_time = int(dt.timestamp() * 1000)
+                        # 转换为秒级时间戳（与cloud_sync.py保持一致）
+                        publish_time = int(dt.timestamp())
+                        print(f"⏰ [FEISHU_SYNC] 字符串时间解析成功: {dt} -> {publish_time}")
                     else:
                         # 如果已经是datetime对象
-                        publish_time = int(tweet.publish_time.timestamp() * 1000)
+                        publish_time = int(tweet.publish_time.timestamp())
+                        print(f"⏰ [FEISHU_SYNC] datetime对象转换成功: {tweet.publish_time} -> {publish_time}")
                 except Exception as e:
                     # 如果解析失败，使用抓取时间作为备选
-                    print(f"发布时间解析失败: {e}, 使用抓取时间作为备选")
-                    publish_time = int(tweet.scraped_at.timestamp() * 1000)
+                    print(f"❌ [FEISHU_SYNC] 发布时间解析失败: {e}, 使用抓取时间作为备选")
+                    publish_time = int(tweet.scraped_at.timestamp())
+                    print(f"⏰ [FEISHU_SYNC] 备选时间戳: {publish_time}")
             else:
                 # 如果没有发布时间，使用抓取时间
-                publish_time = int(tweet.scraped_at.timestamp() * 1000)
+                print(f"⚠️ [FEISHU_SYNC] 没有发布时间，使用抓取时间")
+                publish_time = int(tweet.scraped_at.timestamp())
+                print(f"⏰ [FEISHU_SYNC] 抓取时间戳: {publish_time}")
             
-            data.append({
-                '推文原文内容': tweet.content,
-                '发布时间': publish_time,
-                '作者（账号）': tweet.username,
+            # 验证时间戳合理性，避免1970年问题
+            if publish_time < 946684800:  # 2000年1月1日的时间戳
+                print(f"⚠️ [FEISHU_SYNC] 发布时间戳异常 ({publish_time})，可能是1970年问题，修正为当前时间")
+                publish_time = int(datetime.now().timestamp())
+                print(f"⏰ [FEISHU_SYNC] 修正后时间戳: {publish_time}")
+            
+            # 根据飞书表格的实际字段名称进行精确映射
+            # 从用户提供的截图可以看到字段包括：推文原文内容、发布时间、作者（账号）、推文链接、话题标签（Hashtag）、类型标签、评论、点赞、转发
+            hashtags_str = ', '.join(json.loads(tweet.hashtags) if tweet.hashtags else [])
+            
+            # 转换为毫秒级时间戳（飞书API要求）
+            if publish_time < 10000000000:  # 秒级时间戳
+                publish_time_ms = publish_time * 1000
+            else:  # 已经是毫秒级
+                publish_time_ms = publish_time
+            
+            print(f"⏰ [FEISHU_SYNC] 发布时间戳转换: {publish_time} -> {publish_time_ms} (毫秒级)")
+            
+            tweet_data = {
+                '推文原文内容': tweet.content or '',
+                # 注意：移除发布时间字段，不同步时间戳
+                '作者（账号）': tweet.username or '',
                 '推文链接': tweet.link or '',
-                '话题标签（Hashtag）': ', '.join(json.loads(tweet.hashtags) if tweet.hashtags else []),
-                '类型标签': content_type,
-                '评论': 0,  # Twitter API限制，暂时设为0
-                '点赞': tweet.likes,
-                '转发': tweet.retweets
-                # 移除创建时间字段，让飞书自动生成
-            })
+                '话题标签（Hashtag）': hashtags_str,
+                '类型标签': content_type or '',
+                '评论': tweet.comments or 0,
+                '点赞': tweet.likes or 0,
+                '转发': tweet.retweets or 0
+                # 注意：移除创建时间字段，让飞书自动生成
+            }
+            
+            print(f"📊 [FEISHU_SYNC] 推文 {tweet.id} 数据映射完成:")
+            print(f"   - 内容: {(tweet.content or '')[:50]}...")
+            print(f"   - 作者: {tweet.username or ''}")
+            print(f"   - 链接: {tweet.link or ''}")
+            print(f"   - 标签: {hashtags_str}")
+            print(f"   - 类型: {content_type or ''}")
+            
+            data.append(tweet_data)
         
         # 同步到飞书多维表格
+        print(f"🚀 [FEISHU_SYNC] 开始同步 {len(data)} 条数据到飞书多维表格...")
+        print(f"📋 [FEISHU_SYNC] 目标表格: {FEISHU_CONFIG['spreadsheet_token']}")
+        print(f"📋 [FEISHU_SYNC] 目标表ID: {FEISHU_CONFIG['table_id']}")
+        
         success = sync_manager.sync_to_feishu(
             data,
             FEISHU_CONFIG['spreadsheet_token'],
             FEISHU_CONFIG['table_id']
         )
         
+        print(f"📊 [FEISHU_SYNC] 同步结果: {'成功' if success else '失败'}")
+        
         if success:
+            print(f"✅ [FEISHU_SYNC] 同步成功，开始更新数据库状态...")
             # 更新同步状态和内容类型
             for i, tweet in enumerate(tweets):
-                tweet.synced_to_feishu = True
+                print(f"📝 [FEISHU_SYNC] 更新推文 {tweet.id} 同步状态")
+                # 使用1而不是True，因为SQLite中BOOLEAN存储为整数
+                tweet.synced_to_feishu = 1
                 tweet.content_type = classify_content_type(tweet.content)
-            db.session.commit()
             
-            return jsonify({'success': True, 'message': f'成功同步 {len(data)} 条数据到飞书多维表格'})
+            print(f"💾 [FEISHU_SYNC] 提交数据库更改...")
+            db.session.commit()
+            print(f"✅ [FEISHU_SYNC] 数据库更新完成")
+            
+            # 执行数据验证
+            print(f"🔍 [FEISHU_SYNC] 开始数据验证...")
+            try:
+                from feishu_data_validator import FeishuDataValidator
+                validator = FeishuDataValidator()
+                validation_result = validator.validate_sync_data(task_id=task_id)
+                
+                if validation_result.get('success'):
+                    comparison = validation_result['comparison_result']
+                    summary = comparison['summary']
+                    print(f"✅ [FEISHU_SYNC] 数据验证完成")
+                    print(f"📊 [FEISHU_SYNC] 验证结果: 同步准确率 {summary['sync_accuracy']:.2f}%")
+                    print(f"📊 [FEISHU_SYNC] 匹配记录: {summary['matched_count']}/{summary['total_local']}")
+                    
+                    # 在返回消息中包含验证结果
+                    validation_msg = f"，验证结果: 准确率 {summary['sync_accuracy']:.2f}% ({summary['matched_count']}/{summary['total_local']} 条匹配)"
+                    if summary['sync_accuracy'] < 95:
+                        validation_msg += f"，发现 {summary['field_mismatch_count']} 条字段不匹配"
+                else:
+                    print(f"⚠️ [FEISHU_SYNC] 数据验证失败: {validation_result.get('error', '未知错误')}")
+                    validation_msg = "，数据验证失败"
+                    
+            except Exception as e:
+                print(f"❌ [FEISHU_SYNC] 数据验证异常: {e}")
+                validation_msg = "，数据验证异常"
+            
+            print(f"🎉 [FEISHU_SYNC] 任务 {task_id} 同步完成，共 {len(data)} 条数据")
+            return jsonify({'success': True, 'message': f'成功同步 {len(data)} 条数据到飞书多维表格{validation_msg}'})
         else:
+            print(f"❌ [FEISHU_SYNC] 同步失败")
             return jsonify({'success': False, 'error': '飞书同步失败'}), 500
             
     except Exception as e:
+        print(f"❌ [FEISHU_SYNC] 同步过程中发生异常: {str(e)}")
+        import traceback
+        print(f"📋 [FEISHU_SYNC] 异常详情: {traceback.format_exc()}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/status')
@@ -2368,9 +2643,11 @@ def api_get_feishu_config():
     """获取飞书配置"""
     return jsonify({
         'app_id': FEISHU_CONFIG['app_id'],
+        'app_secret': FEISHU_CONFIG['app_secret'] if FEISHU_CONFIG['app_secret'] else '未配置',
         'spreadsheet_token': FEISHU_CONFIG['spreadsheet_token'],
         'table_id': FEISHU_CONFIG['table_id'],
-        'enabled': FEISHU_CONFIG['enabled']
+        'enabled': FEISHU_CONFIG['enabled'],
+        'auto_sync': FEISHU_CONFIG.get('auto_sync', False)
     })
 
 @app.route('/api/config/feishu', methods=['POST'])
@@ -2420,6 +2697,89 @@ def api_update_feishu_config():
         
     except Exception as e:
         db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/data/validate_feishu/<int:task_id>', methods=['POST'])
+def api_validate_feishu_data(task_id):
+    """验证飞书数据同步准确性"""
+    try:
+        print(f"\n🔍 [FEISHU_VALIDATE] 开始验证任务 {task_id} 的飞书数据")
+        print(f"⏰ [FEISHU_VALIDATE] 验证时间: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        # 检查飞书配置
+        if not FEISHU_CONFIG.get('enabled'):
+            return jsonify({'success': False, 'error': '飞书同步未启用'}), 400
+        
+        required_fields = ['app_id', 'app_secret', 'spreadsheet_token', 'table_id']
+        missing_fields = [field for field in required_fields if not FEISHU_CONFIG.get(field)]
+        if missing_fields:
+            return jsonify({
+                'success': False, 
+                'error': f'飞书配置不完整，缺少字段: {", ".join(missing_fields)}'
+            }), 400
+        
+        # 检查任务是否存在
+        task = ScrapingTask.query.get(task_id)
+        if not task:
+            return jsonify({'success': False, 'error': f'任务 {task_id} 不存在'}), 404
+        
+        # 执行数据验证
+        from feishu_data_validator import FeishuDataValidator
+        validator = FeishuDataValidator()
+        validation_result = validator.validate_sync_data(task_id=task_id)
+        
+        if validation_result.get('success'):
+            comparison = validation_result['comparison_result']
+            summary = comparison['summary']
+            
+            print(f"✅ [FEISHU_VALIDATE] 验证完成")
+            print(f"📊 [FEISHU_VALIDATE] 同步准确率: {summary['sync_accuracy']:.2f}%")
+            
+            # 构建详细的验证报告
+            validation_report = {
+                'task_id': task_id,
+                'task_name': task.name,
+                'validation_time': validation_result.get('validation_time'),
+                'summary': summary,
+                'details': {
+                    'matched_records_count': len(comparison['matched_records']),
+                    'missing_in_feishu_count': len(comparison['missing_in_feishu']),
+                    'extra_in_feishu_count': len(comparison['extra_in_feishu']),
+                    'field_mismatches_count': len(comparison['field_mismatches'])
+                },
+                'quality_assessment': {
+                    'level': 'excellent' if summary['sync_accuracy'] >= 95 else 'good' if summary['sync_accuracy'] >= 85 else 'needs_improvement',
+                    'description': f"同步准确率 {summary['sync_accuracy']:.2f}%"
+                }
+            }
+            
+            # 如果有不匹配的数据，提供样例
+            if comparison['missing_in_feishu']:
+                validation_report['missing_samples'] = comparison['missing_in_feishu'][:3]
+            
+            if comparison['field_mismatches']:
+                validation_report['mismatch_samples'] = comparison['field_mismatches'][:3]
+            
+            return jsonify({
+                'success': True, 
+                'message': f'数据验证完成，准确率 {summary["sync_accuracy"]:.2f}%',
+                'validation_report': validation_report
+            })
+        else:
+            # 确保错误信息完整
+            error_msg = validation_result.get('error')
+            if not error_msg:
+                error_msg = '数据验证失败，但未提供具体错误信息'
+                print(f"⚠️ [FEISHU_VALIDATE] 警告: 验证结果中缺少错误信息")
+                print(f"📋 [FEISHU_VALIDATE] 完整验证结果: {validation_result}")
+            
+            print(f"❌ [FEISHU_VALIDATE] 验证失败: {error_msg}")
+            return jsonify({'success': False, 'error': error_msg}), 500
+            
+    except Exception as e:
+        print(f"❌ [FEISHU_VALIDATE] 验证异常: {e}")
+        import traceback
+        print(f"📋 [FEISHU_VALIDATE] 异常详情: {traceback.format_exc()}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/config/feishu/test', methods=['POST'])
