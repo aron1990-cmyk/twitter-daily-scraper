@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}关于我 - Twitter 数据抓取系统{% endblock %}
+
+{% block extra_css %}
+<style>
+    .about-hero {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 4rem 0;
+        margin-bottom: 2rem;
+    }
+    
+    .profile-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        padding: 2rem;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .profile-avatar {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        margin: 0 auto 1.5rem;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 4rem;
+        color: white;
+        border: 5px solid #fff;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .social-links {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .social-link {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        text-decoration: none;
+        border-radius: 50px;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .social-link:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    
+    .qr-code-section {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        padding: 2rem;
+        text-align: center;
+    }
+    
+    .qr-placeholder {
+        width: 200px;
+        height: 200px;
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border: 2px dashed #dee2e6;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        color: #6c757d;
+        font-size: 1.2rem;
+    }
+    
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-top: 3rem;
+    }
+    
+    .feature-card {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .feature-icon {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 英雄区域 -->
+<div class="about-hero">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h1 class="display-4 fw-bold mb-3">关于我</h1>
+                <p class="lead">Twitter 数据抓取系统的创作者</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <!-- 个人资料卡片 -->
+        <div class="col-lg-8">
+            <div class="profile-card">
+                <div class="profile-avatar">
+                    <img src="https://trae-api-sg.mchost.guru/api/ide/v1/text_to_image?prompt=simple%20black%20and%20white%20cartoon%20avatar%20of%20a%20young%20man%20with%20glasses%20and%20black%20hair%2C%20minimalist%20line%20art%20style%2C%20friendly%20smile%2C%20clean%20design&image_size=square" alt="Aron 厚玉" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                </div>
+                <h2 class="fw-bold mb-3">Aron 厚玉</h2>
+                <p class="text-muted mb-4">全栈开发者 | 数据分析师 | 内容创作者</p>
+                <p class="lead mb-4">
+                    专注于数据抓取、自动化工具开发和技术分享。致力于通过技术手段提高工作效率，
+                    帮助更多人实现数据驱动的决策。
+                </p>
+                
+                <div class="social-links">
+                    <a href="https://www.youtube.com/@aronhouyu" target="_blank" class="social-link">
+                        <i class="fab fa-youtube me-2"></i>
+                        YouTube 频道
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row justify-content-center mt-4">
+        <!-- 微信朋友圈信息 -->
+        <div class="col-lg-8">
+            <div class="profile-card">
+                <h5 class="fw-bold mb-3 text-center">
+                    <i class="fab fa-weixin text-success me-2"></i>
+                    微信朋友圈：aronhouyu
+                </h5>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 项目特色 -->
+    <div class="feature-grid">
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-rocket"></i>
+            </div>
+            <h5 class="fw-bold mb-3">高效抓取</h5>
+            <p class="text-muted">
+                采用多线程并发技术，支持大规模数据抓取，
+                智能队列管理确保系统稳定运行。
+            </p>
+        </div>
+        
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <h5 class="fw-bold mb-3">数据分析</h5>
+            <p class="text-muted">
+                提供丰富的数据可视化功能，支持多维度分析，
+                帮助用户深入了解社交媒体趋势。
+            </p>
+        </div>
+        
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-cogs"></i>
+            </div>
+            <h5 class="fw-bold mb-3">易于使用</h5>
+            <p class="text-muted">
+                直观的Web界面，简单的配置流程，
+                即使是非技术用户也能轻松上手。
+            </p>
+        </div>
+        
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <h5 class="fw-bold mb-3">安全可靠</h5>
+            <p class="text-muted">
+                完善的错误处理机制，数据备份功能，
+                确保数据安全和系统稳定性。
+            </p>
+        </div>
+    </div>
+    
+    <!-- 联系信息 -->
+    <div class="row justify-content-center mt-5">
+        <div class="col-lg-8">
+            <div class="profile-card">
+                <h4 class="fw-bold mb-3">
+                    <i class="fas fa-envelope me-2" style="color: #667eea;"></i>
+                    联系方式
+                </h4>
+                <p class="text-muted mb-3">
+                    如果您对这个项目有任何问题或建议，欢迎通过以下方式联系我：
+                </p>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <i class="fab fa-youtube text-danger me-3" style="font-size: 1.5rem;"></i>
+                            <div>
+                                <div class="fw-semibold">YouTube</div>
+                                <small class="text-muted">技术分享和教程</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <i class="fab fa-weixin text-success me-3" style="font-size: 1.5rem;"></i>
+                            <div>
+                                <div class="fw-semibold">微信</div>
+                                <small class="text-muted">日常交流和咨询</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 添加页面加载动画
+    $('.feature-card').each(function(index) {
+        $(this).css('opacity', '0').delay(index * 100).animate({
+            opacity: 1
+        }, 500);
+    });
+});
+</script>
+{% endblock %}

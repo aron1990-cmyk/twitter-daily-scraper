@@ -385,31 +385,29 @@ function startTask(taskId) {
             .done(function(response) {
                 console.log('POST request successful:', response);
                 showAlert('任务已启动！AdsPower浏览器将自动打开并开始执行抓取任务。', 'success');
-                setTimeout(() => location.reload(), 1000);
+                setTimeout(function() { location.reload(); }, 1000);
             })
             .fail(function(xhr) {
                 console.log('POST request failed:', xhr);
-                let errorMessage = '启动失败';
-                let detailsHtml = '';
+                var errorMessage = '启动失败';
+                var detailsHtml = '';
                 
                 if (xhr.responseJSON) {
                     errorMessage = xhr.responseJSON.error || '启动失败';
                     
                     // 如果有详细信息，构建详细错误信息
                     if (xhr.responseJSON.details) {
-                        const details = xhr.responseJSON.details;
-                        detailsHtml = `
-                            <div class="mt-2">
-                                <strong>详细信息：</strong><br>
-                                <small>
-                                    • 当前运行任务数: ${details.running_count}/${details.max_concurrent}<br>
-                                    • 可用槽位: ${details.available_slots}<br>
-                                    • 可用浏览器: ${details.available_browsers}<br>
-                                    • 用户ID池: ${details.user_id_pool}<br>
-                                    • 配置的用户ID: ${details.available_user_ids ? details.available_user_ids.join(', ') : '无'}
-                                </small>
-                            </div>
-                        `;
+                        var details = xhr.responseJSON.details;
+                        detailsHtml = '<div class="mt-2">' +
+                            '<strong>详细信息：</strong><br>' +
+                            '<small>' +
+                                '• 当前运行任务数: ' + details.running_count + '/' + details.max_concurrent + '<br>' +
+                                '• 可用槽位: ' + details.available_slots + '<br>' +
+                                '• 可用浏览器: ' + details.available_browsers + '<br>' +
+                                '• 用户ID池: ' + details.user_id_pool + '<br>' +
+                                '• 配置的用户ID: ' + (details.available_user_ids ? details.available_user_ids.join(', ') : '无') +
+                            '</small>' +
+                        '</div>';
                     }
                 }
                 
@@ -422,13 +420,13 @@ function startTask(taskId) {
 
 function stopTask(taskId) {
     if (confirm('确定要停止这个任务吗？')) {
-        $.post(`/api/tasks/${taskId}/stop`)
+        $.post('/api/tasks/' + taskId + '/stop')
             .done(function(response) {
                 showAlert('任务已停止！', 'warning');
-                setTimeout(() => location.reload(), 1000);
+                setTimeout(function() { location.reload(); }, 1000);
             })
             .fail(function(xhr) {
-                const error = xhr.responseJSON ? xhr.responseJSON.error : '停止失败';
+                var error = xhr.responseJSON ? xhr.responseJSON.error : '停止失败';
                 showAlert('停止失败: ' + error, 'danger');
             });
     }
@@ -436,33 +434,31 @@ function stopTask(taskId) {
 
 function restartTask(taskId) {
     if (confirm('确定要重新执行这个任务吗？任务将重置状态并重新开始抓取。')) {
-        $.post(`/api/tasks/${taskId}/restart`)
+        $.post('/api/tasks/' + taskId + '/restart')
             .done(function(response) {
                 showAlert('任务已重新启动！AdsPower浏览器将自动打开并开始执行抓取任务。', 'success');
-                setTimeout(() => location.reload(), 1000);
+                setTimeout(function() { location.reload(); }, 1000);
             })
             .fail(function(xhr) {
-                let errorMessage = '重新启动失败';
-                let detailsHtml = '';
+                var errorMessage = '重新启动失败';
+                var detailsHtml = '';
                 
                 if (xhr.responseJSON) {
                     errorMessage = xhr.responseJSON.error || '重新启动失败';
                     
                     // 如果有详细信息，构建详细错误信息
                     if (xhr.responseJSON.details) {
-                        const details = xhr.responseJSON.details;
-                        detailsHtml = `
-                            <div class="mt-2">
-                                <strong>详细信息：</strong><br>
-                                <small>
-                                    • 当前运行任务数: ${details.running_count}/${details.max_concurrent}<br>
-                                    • 可用槽位: ${details.available_slots}<br>
-                                    • 可用浏览器: ${details.available_browsers}<br>
-                                    • 用户ID池: ${details.user_id_pool}<br>
-                                    • 配置的用户ID: ${details.available_user_ids ? details.available_user_ids.join(', ') : '无'}
-                                </small>
-                            </div>
-                        `;
+                        var details = xhr.responseJSON.details;
+                        detailsHtml = '<div class="mt-2">' +
+                            '<strong>详细信息：</strong><br>' +
+                            '<small>' +
+                                '• 当前运行任务数: ' + details.running_count + '/' + details.max_concurrent + '<br>' +
+                                '• 可用槽位: ' + details.available_slots + '<br>' +
+                                '• 可用浏览器: ' + details.available_browsers + '<br>' +
+                                '• 用户ID池: ' + details.user_id_pool + '<br>' +
+                                '• 配置的用户ID: ' + (details.available_user_ids ? details.available_user_ids.join(', ') : '无') +
+                            '</small>' +
+                        '</div>';
                     }
                 }
                 
@@ -474,22 +470,22 @@ function restartTask(taskId) {
 function deleteTask(taskId) {
     if (confirm('确定要删除这个任务吗？此操作不可恢复！')) {
         $.ajax({
-            url: `/api/tasks/${taskId}`,
+            url: '/api/tasks/' + taskId,
             type: 'DELETE'
         })
         .done(function(response) {
             showAlert('任务已删除！', 'success');
-            setTimeout(() => location.reload(), 1000);
+            setTimeout(function() { location.reload(); }, 1000);
         })
         .fail(function(xhr) {
-            const error = xhr.responseJSON ? xhr.responseJSON.error : '删除失败';
+            var error = xhr.responseJSON ? xhr.responseJSON.error : '删除失败';
             showAlert('删除失败: ' + error, 'danger');
         });
     }
 }
 
 function viewTask(taskId) {
-    $.get(`/api/tasks/${taskId}`)
+    $.get('/api/tasks/' + taskId)
         .done(function(response) {
             $('#taskDetailContent').html(response);
             $('#taskDetailModal').modal('show');
@@ -506,7 +502,7 @@ $(document).ready(function() {
     
     // 设置进度条宽度
     $('.progress-bar').each(function() {
-        const progress = $(this).data('progress');
+        var progress = $(this).data('progress');
         $(this).css('width', progress + '%');
     });
     
@@ -523,8 +519,8 @@ setInterval(function() {
 
 // 表单提交处理
 $('#createTaskModal form').on('submit', function(e) {
-    const keywords = $('#modal_keywords').val().trim();
-    const targetAccounts = $('#modal_target_accounts').val().trim();
+    var keywords = $('#modal_keywords').val().trim();
+    var targetAccounts = $('#modal_target_accounts').val().trim();
     
     if (!keywords && !targetAccounts) {
         e.preventDefault();
@@ -532,7 +528,7 @@ $('#createTaskModal form').on('submit', function(e) {
         return false;
     }
     
-    const submitBtn = $(this).find('button[type="submit"]');
+    var submitBtn = $(this).find('button[type="submit"]');
     showLoading(submitBtn[0]);
 });
 
@@ -541,14 +537,14 @@ function updateQueueStatus() {
     $.get('/api/queue/status')
         .done(function(response) {
             if (response.success) {
-                const data = response.data;
-                const queueLength = data.queue_length;
-                const availableSlots = data.available_slots;
-                const isQueueFull = data.is_queue_full;
+                var data = response.data;
+                var queueLength = data.queue_length;
+                var availableSlots = data.available_slots;
+                var isQueueFull = data.is_queue_full;
                 
                 // 更新队列状态显示
                 if (queueLength > 0) {
-                    $('#queueStatus').html(`<strong class="text-warning">${queueLength} 个任务排队等待</strong>`);
+                    $('#queueStatus').html('<strong class="text-warning">' + queueLength + ' 个任务排队等待</strong>');
                     $('#clearQueueBtn').removeClass('d-none');
                 } else {
                     $('#queueStatus').html('<span class="text-muted">队列为空</span>');
@@ -576,13 +572,13 @@ function clearQueue() {
                 if (response.success) {
                     showAlert('任务队列已清空', 'success');
                     updateQueueStatus();
-                    setTimeout(() => location.reload(), 1000);
+                    setTimeout(function() { location.reload(); }, 1000);
                 } else {
                     showAlert('清空队列失败: ' + response.error, 'danger');
                 }
             })
             .fail(function(xhr) {
-                const error = xhr.responseJSON ? xhr.responseJSON.error : '清空队列失败';
+                var error = xhr.responseJSON ? xhr.responseJSON.error : '清空队列失败';
                 showAlert('清空队列失败: ' + error, 'danger');
             });
     }

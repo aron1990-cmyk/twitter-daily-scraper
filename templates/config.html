@@ -335,11 +335,12 @@
                             <div class="row">
                                 <div class="col-md-4">
                                     <div class="mb-3">
-                                        <label for="max_concurrent_tasks" class="form-label">最大并发任务数</label>
-                                        <input type="number" class="form-control" id="max_concurrent_tasks" 
-                                               name="max_concurrent_tasks" value="{{ config.max_concurrent_tasks or 2 }}" 
-                                               min="1" max="10">
-                                        <div class="form-text">同时运行的最大任务数量</div>
+                                        <label for="max_concurrent_tasks_display" class="form-label">最大并发任务数</label>
+                                        <input type="text" class="form-control" id="max_concurrent_tasks_display" 
+                                               readonly style="background-color: #f8f9fa; cursor: not-allowed;" 
+                                               value="{{ config.max_concurrent_tasks or 1 }}">
+                                        <input type="hidden" id="max_concurrent_tasks" name="max_concurrent_tasks" value="{{ config.max_concurrent_tasks or 1 }}">
+                                        <div class="form-text">根据多窗口用户ID列表行数自动计算</div>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
@@ -757,25 +758,30 @@
 {% block extra_js %}
 <script>
 function testFeishuConnection() {
-    const button = event.target;
-    const originalText = showLoading(button);
+    var button = event.target;
+    var originalText = showLoading(button);
     
-    const appId = $('#feishu_app_id').val();
-    const appSecret = $('#feishu_app_secret').val();
-    const spreadsheetToken = $('#feishu_spreadsheet_token').val();
-    const tableId = $('#feishu_table_id').val();
+    var appId = $('#feishu_app_id').val();
+    var appSecret = $('#feishu_app_secret').val();
+    var spreadsheetToken = $('#feishu_spreadsheet_token').val();
+    var tableId = $('#feishu_table_id').val();
     
     // 验证必填字段
-    const requiredFields = [
+    var requiredFields = [
         { value: appId, name: 'App ID' },
         { value: appSecret, name: 'App Secret' },
         { value: spreadsheetToken, name: '文档 Token' },
         { value: tableId, name: '表格 ID' }
     ];
     
-    const missingFields = requiredFields.filter(field => !field.value).map(field => field.name);
+    var missingFields = [];
+    for (var i = 0; i < requiredFields.length; i++) {
+        if (!requiredFields[i].value) {
+            missingFields.push(requiredFields[i].name);
+        }
+    }
     if (missingFields.length > 0) {
-        showAlert(`请先填写以下必填字段: ${missingFields.join(', ')}`, 'warning');
+        showAlert('请先填写以下必填字段: ' + missingFields.join(', '), 'warning');
         hideLoading(button, originalText);
         return;
     }
@@ -825,7 +831,7 @@ function testFeishuConnection() {
             }
         } else if (xhr.responseText) {
             try {
-                const errorData = JSON.parse(xhr.responseText);
+                var errorData = JSON.parse(xhr.responseText);
                 error = errorData.error || errorData.message || error;
                 logs = errorData.logs || [];
             } catch (e) {
@@ -833,21 +839,26 @@ function testFeishuConnection() {
                 error = '响应解析失败';
             }
         } else {
-            error = `HTTP ${xhr.status} 错误`;
+            error = 'HTTP ' + xhr.status + ' 错误';
         }
         
         // 如果有日志，显示相关的错误日志
         if (logs && logs.length > 0) {
-            const errorLogs = logs.filter(log => 
-                log.includes('连接测试失败') || 
-                log.includes('同步失败') || 
-                log.includes('配置失败') ||
-                log.includes('异常') ||
-                log.includes('error') ||
-                log.includes('invalid')
-            );
+            var errorLogs = [];
+            for (var i = 0; i < logs.length; i++) {
+                var log = logs[i];
+                if (log.includes('连接测试失败') || 
+                    log.includes('同步失败') || 
+                    log.includes('配置失败') ||
+                    log.includes('异常') ||
+                    log.includes('error') ||
+                    log.includes('invalid')) {
+                    errorLogs.push(log);
+                }
+            }
             if (errorLogs.length > 0) {
-                error += `<br><small>错误日志: ${errorLogs.slice(-2).join('<br>')}</small>`;
+                var lastTwoLogs = errorLogs.slice(-2);
+                error += '<br><small>错误日志: ' + lastTwoLogs.join('<br>') + '</small>';
             }
         }
         
@@ -864,9 +875,9 @@ function checkAdsPowerInstallation(event) {
         event.preventDefault();
     }
     
-    const statusLoading = document.getElementById('status-loading');
-    const statusText = document.getElementById('status-text');
-    const installGuide = document.getElementById('install-guide');
+    var statusLoading = document.getElementById('status-loading');
+    var statusText = document.getElementById('status-text');
+    var installGuide = document.getElementById('install-guide');
     
     console.log('DOM元素检查:', {
         statusLoading: !!statusLoading,
@@ -887,9 +898,9 @@ function checkAdsPowerInstallation(event) {
     installGuide.style.display = 'none';
     
     // 检测AdsPower是否安装（通过尝试连接API）
-    const apiHost = $('#adspower_api_host').val() || 'localhost';
-    const apiPort = $('#adspower_api_port').val() || '50325';
-    const apiUrl = `http://${apiHost}:${apiPort}`;
+    var apiHost = $('#adspower_api_host').val() || 'localhost';
+    var apiPort = $('#adspower_api_port').val() || '50325';
+    var apiUrl = 'http://' + apiHost + ':' + apiPort;
     
     console.log('准备发送AJAX请求:', {
         apiHost: apiHost,
@@ -952,10 +963,10 @@ function checkAdsPowerInstallation(event) {
             installGuide.style.display = 'none';
             
             if (response.user_count && response.user_count > 0) {
-                statusText.innerHTML += ` (检测到 ${response.user_count} 个用户配置)`;
+                statusText.innerHTML += ' (检测到 ' + response.user_count + ' 个用户配置)';
             }
         } else {
-            const message = response.message || '未知错误';
+            var message = response.message || '未知错误';
             console.log('AdsPower检测失败，消息:', message);
             statusText.innerHTML = '<i class="fas fa-times-circle text-warning me-2"></i>' + message;
             statusText.className = 'text-warning';
@@ -968,12 +979,12 @@ function checkAdsPowerInstallation(event) {
         console.error('状态码:', xhr.status);
         console.error('响应文本:', xhr.responseText);
         
-        let errorMessage = '无法连接到AdsPower (可能未安装或未启动)';
+        var errorMessage = '无法连接到AdsPower (可能未安装或未启动)';
         if (xhr.responseJSON && xhr.responseJSON.message) {
             errorMessage = xhr.responseJSON.message;
         } else if (xhr.responseText) {
             try {
-                const errorData = JSON.parse(xhr.responseText);
+                var errorData = JSON.parse(xhr.responseText);
                 errorMessage = errorData.message || errorMessage;
             } catch (e) {
                 console.error('解析错误响应失败:', e);
@@ -987,13 +998,13 @@ function checkAdsPowerInstallation(event) {
 }
 
 function testAdsPowerConnection(event) {
-    const button = event ? event.target : null;
-    const originalText = showLoading(button);
+    var button = event ? event.target : null;
+    var originalText = showLoading(button);
     
-    const apiHost = $('#adspower_api_host').val() || 'localhost';
-    const apiPort = $('#adspower_api_port').val() || '50325';
-    const apiUrl = `http://${apiHost}:${apiPort}`;
-    const userId = $('#adspower_user_id').val();
+    var apiHost = $('#adspower_api_host').val() || 'localhost';
+    var apiPort = $('#adspower_api_port').val() || '50325';
+    var apiUrl = 'http://' + apiHost + ':' + apiPort;
+    var userId = $('#adspower_user_id').val();
     
     if (!userId) {
         showAlert('请先填写用户ID', 'warning');
@@ -1020,7 +1031,7 @@ function testAdsPowerConnection(event) {
         }
     })
     .fail(function(xhr) {
-        const error = xhr.responseJSON ? xhr.responseJSON.message : '连接测试失败';
+        var error = xhr.responseJSON ? xhr.responseJSON.message : '连接测试失败';
         showAlert('连接测试失败: ' + error, 'danger');
     })
     .always(function() {
@@ -1030,15 +1041,15 @@ function testAdsPowerConnection(event) {
 
 function backupDatabase(event) {
     if (confirm('确定要备份数据库吗？')) {
-        const button = event ? event.target : null;
-        const originalText = showLoading(button);
+        var button = event ? event.target : null;
+        var originalText = showLoading(button);
         
         $.post('/backup_database')
             .done(function(response) {
                 showAlert('数据库备份成功！', 'success');
             })
             .fail(function(xhr) {
-                const error = xhr.responseJSON ? xhr.responseJSON.error : '备份失败';
+                var error = xhr.responseJSON ? xhr.responseJSON.error : '备份失败';
                 showAlert('备份失败: ' + error, 'danger');
             })
             .always(function() {
@@ -1049,15 +1060,15 @@ function backupDatabase(event) {
 
 function cleanupData(event) {
     if (confirm('确定要清理过期数据吗？此操作不可恢复！')) {
-        const button = event ? event.target : null;
-        const originalText = showLoading(button);
+        var button = event ? event.target : null;
+        var originalText = showLoading(button);
         
         $.post('/cleanup_data')
             .done(function(response) {
-                showAlert(`清理完成！删除了 ${response.deleted_count} 条过期数据`, 'success');
+                showAlert('清理完成！删除了 ' + response.deleted_count + ' 条过期数据', 'success');
             })
             .fail(function(xhr) {
-                const error = xhr.responseJSON ? xhr.responseJSON.error : '清理失败';
+                var error = xhr.responseJSON ? xhr.responseJSON.error : '清理失败';
                 showAlert('清理失败: ' + error, 'danger');
             })
             .always(function() {
@@ -1075,10 +1086,10 @@ function restartSystem() {
         $.post('/restart_system')
             .done(function(response) {
                 showAlert('系统正在重启...', 'info');
-                setTimeout(() => location.reload(), 3000);
+                setTimeout(function() { location.reload(); }, 3000);
             })
             .fail(function(xhr) {
-                const error = xhr.responseJSON ? xhr.responseJSON.error : '重启失败';
+                var error = xhr.responseJSON ? xhr.responseJSON.error : '重启失败';
                 showAlert('重启失败: ' + error, 'danger');
             });
     }
@@ -1086,7 +1097,7 @@ function restartSystem() {
 
 function saveFeishuConfig() {
     // 获取表单数据
-    const formData = {
+    var formData = {
         app_id: document.getElementById('feishu_app_id').value,
         app_secret: document.getElementById('feishu_app_secret').value,
         spreadsheet_token: document.getElementById('feishu_spreadsheet_token').value,
@@ -1095,38 +1106,50 @@ function saveFeishuConfig() {
     };
     
     // 发送保存请求
-    fetch('/api/config/feishu', {
+    $.ajax({
+        url: '/api/config/feishu',
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
+        contentType: 'application/json',
+        data: JSON.stringify(formData),
+        success: function(data) {
+            if (data.success) {
+                showAlert('飞书配置保存成功', 'success');
+            } else {
+                showAlert('保存失败: ' + data.error, 'danger');
+            }
         },
-        body: JSON.stringify(formData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showAlert('飞书配置保存成功', 'success');
-        } else {
-            showAlert('保存失败: ' + data.error, 'danger');
+        error: function(xhr) {
+            var error = xhr.responseJSON ? xhr.responseJSON.error : '保存失败';
+            showAlert('保存失败: ' + error, 'danger');
         }
-    })
-    .catch(error => {
-        showAlert('保存失败: ' + error.message, 'danger');
     });
 }
 
 // AdsPower API地址实时预览功能
 function updateAdsPowerApiUrl() {
-    const host = document.getElementById('adspower_api_host').value || 'local.adspower.net';
-    const port = document.getElementById('adspower_api_port').value || '50325';
-    const fullUrl = `http://${host}:${port}`;
+    var host = document.getElementById('adspower_api_host').value || 'local.adspower.net';
+    var port = document.getElementById('adspower_api_port').value || '50325';
+    var fullUrl = 'http://' + host + ':' + port;
     document.getElementById('adspower_api_url_display').value = fullUrl;
+}
+
+// 计算并发任务数
+function updateConcurrentTasks() {
+    var multiUserIds = document.getElementById('adspower_multi_user_ids').value.trim();
+    var lines = multiUserIds ? multiUserIds.split('\n').filter(function(line) {
+        return line.trim() !== '';
+    }) : [];
+    
+    var concurrentCount = Math.max(1, lines.length);
+    
+    document.getElementById('max_concurrent_tasks_display').value = concurrentCount;
+    document.getElementById('max_concurrent_tasks').value = concurrentCount;
 }
 
 // 监听输入变化，实时更新API地址预览
 document.addEventListener('DOMContentLoaded', function() {
-    const hostInput = document.getElementById('adspower_api_host');
-    const portInput = document.getElementById('adspower_api_port');
+    var hostInput = document.getElementById('adspower_api_host');
+    var portInput = document.getElementById('adspower_api_port');
     
     if (hostInput && portInput) {
         // 初始化显示
@@ -1135,6 +1158,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // 监听输入变化
         hostInput.addEventListener('input', updateAdsPowerApiUrl);
         portInput.addEventListener('input', updateAdsPowerApiUrl);
+    }
+    
+    // 监听多窗口用户ID列表变化，自动更新并发任务数
+    var multiUserIdsInput = document.getElementById('adspower_multi_user_ids');
+    if (multiUserIdsInput) {
+        // 初始化并发任务数
+        updateConcurrentTasks();
+        
+        // 监听输入变化
+        multiUserIdsInput.addEventListener('input', updateConcurrentTasks);
+        multiUserIdsInput.addEventListener('paste', function() {
+            setTimeout(updateConcurrentTasks, 10);
+        });
     }
     
     // 确保AdsPower状态文本正确初始化
@@ -1150,8 +1186,6 @@ $('form').on('submit', function(e) {
     const submitBtn = $(this).find('button[type="submit"]');
     showLoading(submitBtn[0]);
 });
-</script>
-{% endblock %}
 
 function testOpenAdsPower() {
     console.log('Starting testOpenAdsPower with userId:', $('#adspower_user_id').val());
@@ -1188,3 +1222,5 @@ function testOpenAdsPower() {
         showAlert('打开AdsPower失败: ' + error, 'danger');
     });
 }
+</script>
+{% endblock %}

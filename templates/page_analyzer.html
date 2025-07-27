@@ -747,11 +747,11 @@ async function pollScrapingProgress(taskId) {
         const result = await response.json();
         
         if (result.success) {
-            const progress = result.data;
+            var progress = result.data;
             
             // 更新进度
-            const percentage = Math.min((progress.collected_count / progress.target_count) * 100, 100);
-            showProgress(`已采集 ${progress.collected_count}/${progress.target_count} 条数据`, percentage);
+            var percentage = Math.min((progress.collected_count / progress.target_count) * 100, 100);
+            showProgress('已采集 ' + progress.collected_count + '/' + progress.target_count + ' 条数据', percentage);
             
             // 更新结果显示
             if (progress.latest_data && progress.latest_data.length > 0) {
@@ -764,13 +764,13 @@ async function pollScrapingProgress(taskId) {
                 hideProgress();
                 
                 if (progress.status === 'completed') {
-                    alert(`采集完成！共采集到 ${progress.collected_count} 条数据`);
+                    alert('采集完成！共采集到 ' + progress.collected_count + ' 条数据');
                 } else {
                     alert('采集失败: ' + (progress.error || '未知错误'));
                 }
             } else {
                 // 继续轮询
-                setTimeout(() => pollScrapingProgress(taskId), 2000);
+                setTimeout(function() { pollScrapingProgress(taskId); }, 2000);
             }
         } else {
             throw new Error(result.message || '获取进度失败');
@@ -784,36 +784,39 @@ async function pollScrapingProgress(taskId) {
 
 // 更新采集结果显示
 function updateScrapingResults(newData) {
-    const container = document.getElementById('scrapingResults');
+    var container = document.getElementById('scrapingResults');
     
-    newData.forEach(item => {
-        if (!collectedData.find(existing => existing.index === item.index)) {
+    for (var i = 0; i < newData.length; i++) {
+        var item = newData[i];
+        var found = false;
+        for (var j = 0; j < collectedData.length; j++) {
+            if (collectedData[j].index === item.index) {
+                found = true;
+                break;
+            }
+        }
+        
+        if (!found) {
             collectedData.push(item);
             
-            const resultHtml = `
-                <div class="result-item" data-index="${item.index}">
-                    <div class="d-flex align-items-start">
-                        <div class="item-index me-3">${item.index + 1}</div>
-                        <div class="flex-grow-1">
-                            <div class="item-content mb-2">
-                                ${item.content ? item.content.substring(0, 200) + (item.content.length > 200 ? '...' : '') : '无内容'}
-                            </div>
-                            <div class="item-meta d-flex flex-wrap gap-2">
-                                ${item.metadata && item.metadata.username ? 
-                                    `<span class="badge bg-info">@${item.metadata.username}</span>` : ''}
-                                ${item.metadata && item.metadata.publish_time ? 
-                                    `<span class="badge bg-secondary">${new Date(item.metadata.publish_time).toLocaleString()}</span>` : ''}
-                                ${item.interactions ? 
-                                    `<span class="badge bg-success">❤️ ${item.interactions.likes || 0}</span>` : ''}
-                                ${item.interactions ? 
-                                    `<span class="badge bg-warning">💬 ${item.interactions.comments || 0}</span>` : ''}
-                                ${item.interactions ? 
-                                    `<span class="badge bg-primary">🔄 ${item.interactions.retweets || 0}</span>` : ''}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
+            var contentText = item.content ? (item.content.length > 200 ? item.content.substring(0, 200) + '...' : item.content) : '无内容';
+            var usernameSpan = (item.metadata && item.metadata.username) ? '<span class="badge bg-info">@' + item.metadata.username + '</span>' : '';
+            var timeSpan = (item.metadata && item.metadata.publish_time) ? '<span class="badge bg-secondary">' + new Date(item.metadata.publish_time).toLocaleString() + '</span>' : '';
+            var likesSpan = item.interactions ? '<span class="badge bg-success">❤️ ' + (item.interactions.likes || 0) + '</span>' : '';
+            var commentsSpan = item.interactions ? '<span class="badge bg-warning">💬 ' + (item.interactions.comments || 0) + '</span>' : '';
+            var retweetsSpan = item.interactions ? '<span class="badge bg-primary">🔄 ' + (item.interactions.retweets || 0) + '</span>' : '';
+            
+            var resultHtml = '<div class="result-item" data-index="' + item.index + '">' +
+                '<div class="d-flex align-items-start">' +
+                '<div class="item-index me-3">' + (item.index + 1) + '</div>' +
+                '<div class="flex-grow-1">' +
+                '<div class="item-content mb-2">' + contentText + '</div>' +
+                '<div class="item-meta d-flex flex-wrap gap-2">' +
+                usernameSpan + timeSpan + likesSpan + commentsSpan + retweetsSpan +
+                '</div>' +
+                '</div>' +
+                '</div>' +
+                '</div>';
             
             if (container.innerHTML.includes('采集结果将在这里实时显示')) {
                 container.innerHTML = resultHtml;
@@ -821,7 +824,7 @@ function updateScrapingResults(newData) {
                 container.insertAdjacentHTML('afterbegin', resultHtml);
             }
         }
-    });
+    }
     
     // 更新计数
     document.getElementById('collectedCount').textContent = collectedData.length;
@@ -834,18 +837,19 @@ function exportResults() {
         return;
     }
     
-    const dataStr = JSON.stringify(collectedData, null, 2);
-    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    var dataStr = JSON.stringify(collectedData, null, 2);
+    var dataBlob = new Blob([dataStr], {type: 'application/json'});
     
-    const link = document.createElement('a');
+    var link = document.createElement('a');
     link.href = URL.createObjectURL(dataBlob);
-    link.download = `scraping_results_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+    var timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+    link.download = 'scraping_results_' + timestamp + '.json';
     link.click();
 }
 
 // 工具函数
 function getFieldDisplayName(fieldType) {
-    const displayNames = {
+    var displayNames = {
         'text_content': '文本内容',
         'links': '链接',
         'images': '图片',
@@ -856,7 +860,10 @@ function getFieldDisplayName(fieldType) {
 }
 
 function selectNode(node) {
-    document.querySelectorAll('.structure-node').forEach(n => n.classList.remove('selected'));
+    var nodes = document.querySelectorAll('.structure-node');
+    for (var i = 0; i < nodes.length; i++) {
+        nodes[i].classList.remove('selected');
+    }
     node.classList.add('selected');
 }
 
@@ -882,7 +889,7 @@ function showProgress(text, percentage) {
 }
 
 function hideProgress() {
-    const modal = bootstrap.Modal.getInstance(document.getElementById('progressModal'));
+    var modal = bootstrap.Modal.getInstance(document.getElementById('progressModal'));
     if (modal) {
         modal.hide();
     }
@@ -891,33 +898,33 @@ function hideProgress() {
 // 博主管理相关函数
 
 // 添加博主
-async function addInfluencer() {
-    const url = document.getElementById('influencerUrl').value.trim();
-    const name = document.getElementById('influencerName').value.trim();
-    const category = document.getElementById('influencerCategory').value;
-    const description = document.getElementById('influencerDescription').value.trim();
+function addInfluencer() {
+    var url = document.getElementById('influencerUrl').value.trim();
+    var name = document.getElementById('influencerName').value.trim();
+    var category = document.getElementById('influencerCategory').value;
+    var description = document.getElementById('influencerDescription').value.trim();
     
     if (!url || !name) {
         alert('请填写博主URL和名称');
         return;
     }
     
-    try {
-        const response = await fetch('/api/influencers', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                name: name,
-                profile_url: url,
-                category: category,
-                description: description
-            })
-        });
-        
-        const result = await response.json();
-        
+    fetch('/api/influencers', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            name: name,
+            profile_url: url,
+            category: category,
+            description: description
+        })
+    })
+    .then(function(response) {
+        return response.json();
+    })
+    .then(function(result) {
         if (result.success) {
             alert('博主添加成功！');
             // 清空表单
@@ -929,27 +936,30 @@ async function addInfluencer() {
         } else {
             alert('添加失败: ' + result.error);
         }
-    } catch (error) {
+    })
+    .catch(function(error) {
         console.error('添加博主失败:', error);
         alert('添加博主失败: ' + error.message);
-    }
+    });
 }
 
 // 加载博主选项到下拉框
-async function loadInfluencerOptions() {
-    try {
-        const response = await fetch('/api/influencers?per_page=100');
-        const result = await response.json();
-        
+function loadInfluencerOptions() {
+    fetch('/api/influencers?per_page=100')
+    .then(function(response) {
+        return response.json();
+    })
+    .then(function(result) {
         if (result.success) {
-            const select = document.getElementById('selectedInfluencers');
+            var select = document.getElementById('selectedInfluencers');
             select.innerHTML = '';
             
-            result.data.influencers.forEach(influencer => {
+            for (var i = 0; i < result.data.influencers.length; i++) {
+                var influencer = result.data.influencers[i];
                 if (influencer.is_active) {
-                    const option = document.createElement('option');
+                    var option = document.createElement('option');
                     option.value = influencer.id;
-                    option.textContent = `${influencer.name} (@${influencer.username}) - ${influencer.category}`;
+                    option.textContent = influencer.name + ' (@' + influencer.username + ') - ' + influencer.category;
                     select.appendChild(option);
                 }
             });
@@ -961,94 +971,94 @@ async function loadInfluencerOptions() {
 
 // 显示博主列表管理
 function showInfluencerList() {
-    const modal = new bootstrap.Modal(document.getElementById('influencerListModal'));
+    var modal = new bootstrap.Modal(document.getElementById('influencerListModal'));
     modal.show();
     loadInfluencerList();
 }
 
 // 加载博主列表
-async function loadInfluencerList(page = 1, search = '', category = '') {
-    try {
-        const params = new URLSearchParams({
-            page: page,
-            per_page: 10
-        });
-        
-        if (search) params.append('search', search);
-        if (category) params.append('category', category);
-        
-        const response = await fetch(`/api/influencers?${params}`);
-        const result = await response.json();
-        
-        if (result.success) {
-            displayInfluencerList(result.data);
-            updateInfluencerPagination(result.data);
-        } else {
-            throw new Error(result.error);
+function loadInfluencerList(page, search, category) {
+    if (typeof page === 'undefined') page = 1;
+    if (typeof search === 'undefined') search = '';
+    if (typeof category === 'undefined') category = '';
+    
+    var params = 'page=' + page + '&per_page=10';
+    if (search) params += '&search=' + encodeURIComponent(search);
+    if (category) params += '&category=' + encodeURIComponent(category);
+    
+    $.ajax({
+        url: '/api/influencers?' + params,
+        method: 'GET',
+        success: function(result) {
+            if (result.success) {
+                displayInfluencerList(result.data);
+                updateInfluencerPagination(result.data);
+            } else {
+                throw new Error(result.error);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('加载博主列表失败:', error);
+            document.getElementById('influencerListContainer').innerHTML = 
+                '<div class="text-center py-4 text-danger">' +
+                '<i class="fas fa-exclamation-triangle fa-2x mb-2"></i>' +
+                '<p>加载失败: ' + error + '</p>' +
+                '</div>';
         }
-    } catch (error) {
-        console.error('加载博主列表失败:', error);
-        document.getElementById('influencerListContainer').innerHTML = `
-            <div class="text-center py-4 text-danger">
-                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-                <p>加载失败: ${error.message}</p>
-            </div>
-        `;
-    }
+    });
 }
 
 // 显示博主列表
 function displayInfluencerList(data) {
-    const container = document.getElementById('influencerListContainer');
+    var container = document.getElementById('influencerListContainer');
     
     if (data.influencers.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-4 text-muted">
-                <i class="fas fa-users fa-2x mb-2"></i>
-                <p>暂无博主数据</p>
-            </div>
-        `;
+        container.innerHTML = 
+            '<div class="text-center py-4 text-muted">' +
+            '<i class="fas fa-users fa-2x mb-2"></i>' +
+            '<p>暂无博主数据</p>' +
+            '</div>';
         return;
     }
     
-    let html = '<div class="list-group">';
+    var html = '<div class="list-group">';
     
-    data.influencers.forEach(influencer => {
-        const statusBadge = influencer.is_active ? 
+    for (var i = 0; i < data.influencers.length; i++) {
+        var influencer = data.influencers[i];
+        var statusBadge = influencer.is_active ? 
             '<span class="badge bg-success">启用</span>' : 
             '<span class="badge bg-secondary">禁用</span>';
         
-        const lastScraped = influencer.last_scraped ? 
+        var lastScraped = influencer.last_scraped ? 
             new Date(influencer.last_scraped).toLocaleString() : '从未抓取';
         
-        html += `
-            <div class="list-group-item">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1">
-                            ${influencer.name}
-                            <span class="badge bg-primary ms-2">${influencer.category}</span>
-                            ${statusBadge}
-                        </h6>
-                        <p class="mb-1 text-muted">@${influencer.username}</p>
-                        <p class="mb-1 small">${influencer.description || '无描述'}</p>
-                        <small class="text-muted">最后抓取: ${lastScraped}</small>
-                    </div>
-                    <div class="btn-group" role="group">
-                        <button class="btn btn-sm btn-outline-primary" onclick="editInfluencer(${influencer.id})">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-success" onclick="scrapeInfluencer(${influencer.id})">
-                            <i class="fas fa-download"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteInfluencer(${influencer.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
+        html += 
+            '<div class="list-group-item">' +
+                '<div class="d-flex justify-content-between align-items-start">' +
+                    '<div class="flex-grow-1">' +
+                        '<h6 class="mb-1">' +
+                            influencer.name +
+                            '<span class="badge bg-primary ms-2">' + influencer.category + '</span>' +
+                            statusBadge +
+                        '</h6>' +
+                        '<p class="mb-1 text-muted">@' + influencer.username + '</p>' +
+                        '<p class="mb-1 small">' + (influencer.description || '无描述') + '</p>' +
+                        '<small class="text-muted">最后抓取: ' + lastScraped + '</small>' +
+                    '</div>' +
+                    '<div class="btn-group" role="group">' +
+                        '<button class="btn btn-sm btn-outline-primary" onclick="editInfluencer(' + influencer.id + ')">' +
+                            '<i class="fas fa-edit"></i>' +
+                        '</button>' +
+                        '<button class="btn btn-sm btn-outline-success" onclick="scrapeInfluencer(' + influencer.id + ')">' +
+                            '<i class="fas fa-download"></i>' +
+                        '</button>' +
+                        '<button class="btn btn-sm btn-outline-danger" onclick="deleteInfluencer(' + influencer.id + ')">' +
+                            '<i class="fas fa-trash"></i>' +
+                        '</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+    }
     
     html += '</div>';
     container.innerHTML = html;
@@ -1056,8 +1066,8 @@ function displayInfluencerList(data) {
 
 // 更新分页
 function updateInfluencerPagination(data) {
-    const pagination = document.getElementById('influencerPagination');
-    const paginationList = document.getElementById('paginationList');
+    var pagination = document.getElementById('influencerPagination');
+    var paginationList = document.getElementById('paginationList');
     
     if (data.pages <= 1) {
         pagination.style.display = 'none';
@@ -1068,22 +1078,22 @@ function updateInfluencerPagination(data) {
     currentInfluencerPage = data.current_page;
     totalInfluencerPages = data.pages;
     
-    let html = '';
+    var html = '';
     
     // 上一页
     if (currentInfluencerPage > 1) {
-        html += `<li class="page-item"><a class="page-link" href="#" onclick="loadInfluencerList(${currentInfluencerPage - 1})">上一页</a></li>`;
+        html += '<li class="page-item"><a class="page-link" href="#" onclick="loadInfluencerList(' + (currentInfluencerPage - 1) + ')">上一页</a></li>';
     }
     
     // 页码
-    for (let i = Math.max(1, currentInfluencerPage - 2); i <= Math.min(totalInfluencerPages, currentInfluencerPage + 2); i++) {
-        const active = i === currentInfluencerPage ? 'active' : '';
-        html += `<li class="page-item ${active}"><a class="page-link" href="#" onclick="loadInfluencerList(${i})">${i}</a></li>`;
+    for (var i = Math.max(1, currentInfluencerPage - 2); i <= Math.min(totalInfluencerPages, currentInfluencerPage + 2); i++) {
+        var active = i === currentInfluencerPage ? 'active' : '';
+        html += '<li class="page-item ' + active + '"><a class="page-link" href="#" onclick="loadInfluencerList(' + i + ')">' + i + '</a></li>';
     }
     
     // 下一页
     if (currentInfluencerPage < totalInfluencerPages) {
-        html += `<li class="page-item"><a class="page-link" href="#" onclick="loadInfluencerList(${currentInfluencerPage + 1})">下一页</a></li>`;
+        html += '<li class="page-item"><a class="page-link" href="#" onclick="loadInfluencerList(' + (currentInfluencerPage + 1) + ')">下一页</a></li>';
     }
     
     paginationList.innerHTML = html;
@@ -1091,129 +1101,135 @@ function updateInfluencerPagination(data) {
 
 // 搜索博主
 function searchInfluencers() {
-    const search = document.getElementById('influencerSearch').value;
-    const category = document.getElementById('influencerCategoryFilter').value;
+    var search = document.getElementById('influencerSearch').value;
+    var category = document.getElementById('influencerCategoryFilter').value;
     loadInfluencerList(1, search, category);
 }
 
 // 编辑博主
-async function editInfluencer(influencerId) {
-    try {
-        // 获取博主信息
-        const response = await fetch(`/api/influencers?per_page=100`);
-        const result = await response.json();
-        
-        if (result.success) {
-            const influencer = result.data.influencers.find(inf => inf.id === influencerId);
-            if (influencer) {
-                // 填充编辑表单
-                document.getElementById('editInfluencerId').value = influencer.id;
-                document.getElementById('editInfluencerName').value = influencer.name;
-                document.getElementById('editInfluencerCategory').value = influencer.category;
-                document.getElementById('editInfluencerDescription').value = influencer.description || '';
-                document.getElementById('editInfluencerActive').checked = influencer.is_active;
-                
-                // 显示编辑模态框
-                const modal = new bootstrap.Modal(document.getElementById('editInfluencerModal'));
-                modal.show();
+function editInfluencer(influencerId) {
+    $.ajax({
+        url: '/api/influencers?per_page=100',
+        method: 'GET',
+        success: function(result) {
+            if (result.success) {
+                var influencer = null;
+                for (var i = 0; i < result.data.influencers.length; i++) {
+                    if (result.data.influencers[i].id === influencerId) {
+                        influencer = result.data.influencers[i];
+                        break;
+                    }
+                }
+                if (influencer) {
+                    // 填充编辑表单
+                    document.getElementById('editInfluencerId').value = influencer.id;
+                    document.getElementById('editInfluencerName').value = influencer.name;
+                    document.getElementById('editInfluencerCategory').value = influencer.category;
+                    document.getElementById('editInfluencerDescription').value = influencer.description || '';
+                    document.getElementById('editInfluencerActive').checked = influencer.is_active;
+                    
+                    // 显示编辑模态框
+                    var modal = new bootstrap.Modal(document.getElementById('editInfluencerModal'));
+                    modal.show();
+                }
             }
+        },
+        error: function(xhr, status, error) {
+            console.error('获取博主信息失败:', error);
+            alert('获取博主信息失败');
         }
-    } catch (error) {
-        console.error('获取博主信息失败:', error);
-        alert('获取博主信息失败');
-    }
+    });
 }
 
 // 更新博主信息
-async function updateInfluencer() {
-    const influencerId = document.getElementById('editInfluencerId').value;
-    const name = document.getElementById('editInfluencerName').value.trim();
-    const category = document.getElementById('editInfluencerCategory').value;
-    const description = document.getElementById('editInfluencerDescription').value.trim();
-    const isActive = document.getElementById('editInfluencerActive').checked;
+function updateInfluencer() {
+    var influencerId = document.getElementById('editInfluencerId').value;
+    var name = document.getElementById('editInfluencerName').value.trim();
+    var category = document.getElementById('editInfluencerCategory').value;
+    var description = document.getElementById('editInfluencerDescription').value.trim();
+    var isActive = document.getElementById('editInfluencerActive').checked;
     
     if (!name) {
         alert('请填写博主名称');
         return;
     }
     
-    try {
-        const response = await fetch(`/api/influencers/${influencerId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                name: name,
-                category: category,
-                description: description,
-                is_active: isActive
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            alert('博主信息更新成功！');
-            // 关闭编辑模态框
-            const modal = bootstrap.Modal.getInstance(document.getElementById('editInfluencerModal'));
-            modal.hide();
-            // 重新加载列表
-            loadInfluencerList(currentInfluencerPage);
-            loadInfluencerOptions();
-        } else {
-            alert('更新失败: ' + result.error);
+    $.ajax({
+        url: '/api/influencers/' + influencerId,
+        method: 'PUT',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            name: name,
+            category: category,
+            description: description,
+            is_active: isActive
+        }),
+        success: function(result) {
+            if (result.success) {
+                alert('博主信息更新成功！');
+                // 关闭编辑模态框
+                var modal = bootstrap.Modal.getInstance(document.getElementById('editInfluencerModal'));
+                modal.hide();
+                // 重新加载列表
+                loadInfluencerList(currentInfluencerPage);
+                loadInfluencerOptions();
+            } else {
+                alert('更新失败: ' + result.error);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('更新博主失败:', error);
+            alert('更新博主失败: ' + error);
         }
-    } catch (error) {
-        console.error('更新博主失败:', error);
-        alert('更新博主失败: ' + error.message);
-    }
+    });
 }
 
 // 删除博主
-async function deleteInfluencer(influencerId) {
+function deleteInfluencer(influencerId) {
     if (!confirm('确定要删除这个博主吗？')) {
         return;
     }
     
-    try {
-        const response = await fetch(`/api/influencers/${influencerId}`, {
-            method: 'DELETE'
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            alert('博主删除成功！');
-            loadInfluencerList(currentInfluencerPage);
-            loadInfluencerOptions();
-        } else {
-            alert('删除失败: ' + result.error);
+    $.ajax({
+        url: '/api/influencers/' + influencerId,
+        method: 'DELETE',
+        success: function(result) {
+            if (result.success) {
+                alert('博主删除成功！');
+                loadInfluencerList(currentInfluencerPage);
+                loadInfluencerOptions();
+            } else {
+                alert('删除失败: ' + result.error);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('删除博主失败:', error);
+            alert('删除博主失败: ' + error);
         }
-    } catch (error) {
-        console.error('删除博主失败:', error);
-        alert('删除博主失败: ' + error.message);
-    }
+    });
 }
 
 // 抓取单个博主
-async function scrapeInfluencer(influencerId) {
+function scrapeInfluencer(influencerId) {
     alert('单个博主抓取功能开发中...');
 }
 
 // 抓取选中的博主
-async function startInfluencerScraping() {
-    const selectedOptions = document.getElementById('selectedInfluencers').selectedOptions;
+function startInfluencerScraping() {
+    var selectedOptions = document.getElementById('selectedInfluencers').selectedOptions;
     
     if (selectedOptions.length === 0) {
         alert('请选择要抓取的博主');
         return;
     }
     
-    const selectedIds = Array.from(selectedOptions).map(option => parseInt(option.value));
+    var selectedIds = [];
+    for (var i = 0; i < selectedOptions.length; i++) {
+        selectedIds.push(parseInt(selectedOptions[i].value));
+    }
     
     // 这里可以实现批量抓取博主的功能
-    alert(`将抓取 ${selectedIds.length} 个博主的内容，功能开发中...`);
+    alert('将抓取 ' + selectedIds.length + ' 个博主的内容，功能开发中...');
     
     // TODO: 实现批量抓取逻辑
     console.log('选中的博主ID:', selectedIds);

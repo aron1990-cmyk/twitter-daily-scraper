@@ -300,6 +300,11 @@
                             <i class="fas fa-cog me-1"></i>系统配置
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('about') }}">
+                            <i class="fas fa-user me-1"></i>关于我
+                        </a>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -342,7 +347,7 @@
     <script>
         // 全局JavaScript函数
         function showLoading(button) {
-            const originalText = button.innerHTML;
+            var originalText = button.innerHTML;
             button.innerHTML = '<span class="loading"></span> 处理中...';
             button.disabled = true;
             return originalText;
@@ -353,13 +358,12 @@
             button.disabled = false;
         }
         
-        function showAlert(message, type = 'info') {
-            const alertHtml = `
-                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                    ${message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            `;
+        function showAlert(message, type) {
+            type = type || 'info';
+            var alertHtml = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+                message +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                '</div>';
             $('.container').first().prepend(alertHtml);
         }
         

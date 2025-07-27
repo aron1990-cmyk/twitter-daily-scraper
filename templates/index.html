@@ -2,131 +2,328 @@
 
 {% block title %}首页 - Twitter抓取管理系统{% endblock %}
 
-{% block content %}
-<!-- 欢迎横幅 -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card stats-card">
-            <div class="card-body text-center py-5">
-                <h1 class="display-4 mb-3">
-                    <i class="fab fa-twitter me-3"></i>
-                    Twitter抓取管理系统
-                </h1>
-                <p class="lead mb-4">智能化Twitter数据抓取与分析平台</p>
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="feature-icon">
-                            <i class="fas fa-search"></i>
-                        </div>
-                        <h5>关键词抓取</h5>
-                        <p class="small">支持多关键词配置</p>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="feature-icon">
-                            <i class="fas fa-database"></i>
-                        </div>
-                        <h5>数据存储</h5>
-                        <p class="small">本地数据库 + 云端同步</p>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="feature-icon">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                        <h5>实时监控</h5>
-                        <p class="small">任务状态实时跟踪</p>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="feature-icon">
-                            <i class="fas fa-file-export"></i>
-                        </div>
-                        <h5>数据导出</h5>
-                        <p class="small">Excel + 飞书文档</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+{% block extra_css %}
+<style>
+.hero-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    color: white;
+    margin-bottom: 2rem;
+    overflow: hidden;
+    position: relative;
+}
 
-<!-- 系统状态统计 -->
-<div class="row mb-4">
-    <div class="col-md-2">
-        <div class="card text-center">
-            <div class="card-body">
-                <div class="stats-icon text-primary mb-2">
-                    <i class="fas fa-tasks"></i>
-                </div>
-                <h3 class="text-primary">{{ stats.total_tasks }}</h3>
-                <p class="text-muted mb-0">总任务数</p>
-            </div>
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="%23ffffff" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>') repeat;
+    opacity: 0.3;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 1;
+    padding: 4rem 2rem;
+}
+
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.feature-item {
+    text-align: center;
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.feature-item:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.feature-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 1rem;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: none;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    margin: 0 auto 1rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: white;
+}
+
+.stat-icon.primary { background: linear-gradient(135deg, #667eea, #764ba2); }
+.stat-icon.success { background: linear-gradient(135deg, #56ab2f, #a8e6cf); }
+.stat-icon.warning { background: linear-gradient(135deg, #f093fb, #f5576c); }
+.stat-icon.info { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.modern-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: none;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.modern-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.modern-card .card-header {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-bottom: none;
+    padding: 1.5rem;
+    border-radius: 20px 20px 0 0;
+}
+
+.modern-card .card-body {
+    padding: 1.5rem;
+}
+
+.btn-modern {
+    border-radius: 12px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    border: none;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.btn-modern:hover::before {
+    left: 100%;
+}
+
+.btn-primary.btn-modern {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.btn-success.btn-modern {
+    background: linear-gradient(135deg, #56ab2f, #a8e6cf);
+    color: white;
+}
+
+.form-control.modern {
+    border-radius: 12px;
+    border: 2px solid #e9ecef;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control.modern:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.queue-status {
+    background: linear-gradient(135deg, #ffecd2, #fcb69f);
+    border-radius: 15px;
+    border: none;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+    .hero-content {
+        padding: 2rem 1rem;
+    }
+    
+    .feature-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 现代化英雄区域 -->
+<div class="hero-section">
+    <div class="hero-content text-center">
+        <div class="mb-4">
+            <i class="fab fa-twitter" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+            <h1 class="display-4 fw-bold mb-3">Twitter 数据抓取平台</h1>
+            <p class="lead mb-0">智能化社交媒体数据采集与分析解决方案</p>
         </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card text-center">
-            <div class="card-body">
-                <div class="stats-icon text-success mb-2">
-                    <i class="fas fa-play-circle"></i>
+        
+        <div class="feature-grid">
+            <div class="feature-item">
+                <div class="feature-icon">
+                    <i class="fas fa-search"></i>
                 </div>
-                <h3 class="text-success" id="runningTasksCount">{{ stats.running_tasks }}</h3>
-                <p class="text-muted mb-0">运行中任务</p>
+                <h6 class="fw-bold mb-2">智能抓取</h6>
+                <p class="small mb-0">多关键词配置</p>
             </div>
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card text-center">
-            <div class="card-body">
-                <div class="stats-icon text-warning mb-2">
-                    <i class="fas fa-hourglass-half"></i>
-                </div>
-                <h3 class="text-warning" id="queuedTasksCount">0</h3>
-                <p class="text-muted mb-0">排队任务</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card text-center">
-            <div class="card-body">
-                <div class="stats-icon text-info mb-2">
-                    <i class="fas fa-server"></i>
-                </div>
-                <h3 class="text-info" id="availableSlotsCount">0</h3>
-                <p class="text-muted mb-0">可用槽位</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card text-center">
-            <div class="card-body">
-                <div class="stats-icon text-info mb-2">
+            <div class="feature-item">
+                <div class="feature-icon">
                     <i class="fas fa-database"></i>
                 </div>
-                <h3 class="text-info">{{ stats.total_tweets }}</h3>
-                <p class="text-muted mb-0">抓取推文数</p>
+                <h6 class="fw-bold mb-2">数据存储</h6>
+                <p class="small mb-0">本地 + 云端同步</p>
             </div>
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card text-center">
-            <div class="card-body">
-                <div class="stats-icon text-warning mb-2">
-                    <i class="fas fa-clock"></i>
+            <div class="feature-item">
+                <div class="feature-icon">
+                    <i class="fas fa-chart-line"></i>
                 </div>
-                <h3 class="text-warning">{{ stats.today_tweets }}</h3>
-                <p class="text-muted mb-0">今日新增</p>
+                <h6 class="fw-bold mb-2">实时监控</h6>
+                <p class="small mb-0">状态实时跟踪</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">
+                    <i class="fas fa-file-export"></i>
+                </div>
+                <h6 class="fw-bold mb-2">数据导出</h6>
+                <p class="small mb-0">多格式支持</p>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 队列状态信息 -->
-<div class="row mb-4" id="queueStatusRow" style="display: none;">
+<!-- 现代化统计面板 -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon primary">
+            <i class="fas fa-tasks"></i>
+        </div>
+        <div class="stat-number">{{ stats.total_tasks }}</div>
+        <div class="stat-label">总任务数</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon success">
+            <i class="fas fa-play-circle"></i>
+        </div>
+        <div class="stat-number" id="runningTasksCount">{{ stats.running_tasks }}</div>
+        <div class="stat-label">运行中任务</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon warning">
+            <i class="fas fa-hourglass-half"></i>
+        </div>
+        <div class="stat-number" id="queuedTasksCount">0</div>
+        <div class="stat-label">排队任务</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon info">
+            <i class="fas fa-server"></i>
+        </div>
+        <div class="stat-number" id="availableSlotsCount">0</div>
+        <div class="stat-label">可用槽位</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon info">
+            <i class="fas fa-database"></i>
+        </div>
+        <div class="stat-number">{{ stats.total_tweets }}</div>
+        <div class="stat-label">抓取推文数</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon warning">
+            <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-number">{{ stats.today_tweets }}</div>
+        <div class="stat-label">今日新增</div>
+    </div>
+</div>
+
+<!-- 现代化队列状态 -->
+<div class="row" id="queueStatusRow" style="display: none;">
     <div class="col-12">
-        <div class="card border-warning">
+        <div class="queue-status">
             <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
-                        <h5 class="card-title mb-1">
-                            <i class="fas fa-list-ol text-warning me-2"></i>
+                        <h5 class="card-title mb-1 fw-bold">
+                            <i class="fas fa-list-ol me-2" style="color: #f093fb;"></i>
                             任务队列状态
                         </h5>
                         <p class="card-text mb-0" id="queueStatusText">队列为空</p>
@@ -134,7 +331,7 @@
                     <div class="text-end">
                         <small class="text-muted" id="queueEstimatedTime"></small>
                         <br>
-                        <button class="btn btn-sm btn-outline-danger" id="clearQueueBtn" onclick="clearQueue()" style="display: none;">
+                        <button class="btn btn-sm btn-outline-danger btn-modern" id="clearQueueBtn" onclick="clearQueue()" style="display: none;">
                             <i class="fas fa-trash me-1"></i>
                             清空队列
                         </button>
@@ -145,41 +342,41 @@
     </div>
 </div>
 
-<!-- 快速操作 -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card">
+<!-- 现代化操作面板 -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="modern-card">
             <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-plus-circle me-2"></i>
+                <h5 class="mb-0 fw-bold">
+                    <i class="fas fa-plus-circle me-2" style="color: #667eea;"></i>
                     快速创建任务
                 </h5>
             </div>
             <div class="card-body">
                 <form action="{{ url_for('create_task') }}" method="POST">
                     <div class="mb-3">
-                        <label for="task_name" class="form-label">任务名称</label>
-                        <input type="text" class="form-control" id="task_name" name="task_name" 
+                        <label for="task_name" class="form-label fw-semibold">任务名称</label>
+                        <input type="text" class="form-control modern" id="task_name" name="task_name" 
                                placeholder="输入任务名称" required>
                     </div>
                     <div class="mb-3">
-                        <label for="keywords" class="form-label">关键词（可选）</label>
-                        <input type="text" class="form-control" id="keywords" name="keywords" 
+                        <label for="keywords" class="form-label fw-semibold">关键词（可选）</label>
+                        <input type="text" class="form-control modern" id="keywords" name="keywords" 
                                placeholder="输入关键词，用逗号分隔">
                         <small class="form-text text-muted">关键词和目标账号至少需要填写一个</small>
                     </div>
                     <div class="mb-3">
-                        <label for="target_accounts" class="form-label">目标账号（可选）</label>
-                        <input type="text" class="form-control" id="target_accounts" name="target_accounts" 
+                        <label for="target_accounts" class="form-label fw-semibold">目标账号（可选）</label>
+                        <input type="text" class="form-control modern" id="target_accounts" name="target_accounts" 
                                placeholder="输入Twitter用户名，用逗号分隔">
                         <small class="form-text text-muted">关键词和目标账号至少需要填写一个</small>
                     </div>
                     <div class="mb-3">
-                        <label for="max_tweets" class="form-label">最大抓取数量</label>
-                        <input type="number" class="form-control" id="max_tweets" name="max_tweets" 
+                        <label for="max_tweets" class="form-label fw-semibold">最大抓取数量</label>
+                        <input type="number" class="form-control modern" id="max_tweets" name="max_tweets" 
                                value="100" min="1" max="1000">
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">
+                    <button type="submit" class="btn btn-primary btn-modern w-100">
                         <i class="fas fa-rocket me-2"></i>
                         创建并启动任务
                     </button>
@@ -303,126 +500,167 @@
     </div>
     -->
     
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-list me-2"></i>
-                    最近任务
-                </h5>
-            </div>
-            <div class="card-body">
-                {% if recent_tasks %}
-                    <div class="list-group list-group-flush">
-                        {% for task in recent_tasks %}
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="mb-1">{{ task.name }}</h6>
-                                <small class="text-muted">{{ task.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+    <div class="col-lg-6">
+        <div class="row g-3">
+            <!-- 最近任务 -->
+            <div class="col-12">
+                <div class="modern-card">
+                    <div class="card-header">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="fas fa-list me-2" style="color: #667eea;"></i>
+                            最近任务
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_tasks %}
+                            <div class="list-group list-group-flush">
+                                {% for task in recent_tasks[:3] %}
+                                <div class="list-group-item border-0 px-0 d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1 fw-semibold">{{ task.name }}</h6>
+                                        <small class="text-muted">{{ task.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    </div>
+                                    <div>
+                                        {% if task.status == 'running' %}
+                                            <span class="badge rounded-pill" style="background: linear-gradient(135deg, #56ab2f, #a8e6cf); color: white;">运行中</span>
+                                        {% elif task.status == 'completed' %}
+                                            <span class="badge rounded-pill" style="background: linear-gradient(135deg, #4facfe, #00f2fe); color: white;">已完成</span>
+                                        {% elif task.status == 'failed' %}
+                                            <span class="badge rounded-pill" style="background: linear-gradient(135deg, #f093fb, #f5576c); color: white;">失败</span>
+                                        {% else %}
+                                            <span class="badge rounded-pill" style="background: linear-gradient(135deg, #ffecd2, #fcb69f); color: #333;">等待中</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
                             </div>
-                            <div>
-                                {% if task.status == 'running' %}
-                                    <span class="status-badge status-running">运行中</span>
-                                {% elif task.status == 'completed' %}
-                                    <span class="status-badge status-completed">已完成</span>
-                                {% elif task.status == 'failed' %}
-                                    <span class="status-badge status-failed">失败</span>
-                                {% else %}
-                                    <span class="status-badge status-pending">等待中</span>
-                                {% endif %}
+                            <div class="text-center mt-3">
+                                <a href="{{ url_for('tasks') }}" class="btn btn-outline-primary btn-modern">
+                                    查看所有任务
+                                </a>
                             </div>
-                        </div>
-                        {% endfor %}
+                        {% else %}
+                            <div class="text-center py-3">
+                                <div class="mb-2">
+                                    <i class="fas fa-inbox" style="font-size: 2rem; color: #e9ecef;"></i>
+                                </div>
+                                <p class="text-muted mb-1">暂无任务</p>
+                                <p class="small text-muted">创建第一个抓取任务开始使用系统</p>
+                            </div>
+                        {% endif %}
                     </div>
-                    <div class="text-center mt-3">
-                        <a href="{{ url_for('tasks') }}" class="btn btn-outline-primary">
-                            查看所有任务
-                        </a>
-                    </div>
-                {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">暂无任务</p>
-                        <p class="small text-muted">创建第一个抓取任务开始使用系统</p>
-                    </div>
-                {% endif %}
+                </div>
             </div>
-        </div>
-    </div>
+            
+            <!-- 快速导航 -->
+            <div class="col-12">
+                <div class="modern-card">
+                    <div class="card-header">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="fas fa-link me-2" style="color: #667eea;"></i>
+                            快速导航
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <a href="{{ url_for('tasks') }}" class="btn btn-outline-primary btn-modern w-100">
+                                    <i class="fas fa-tasks me-2"></i>任务管理
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ url_for('data') }}" class="btn btn-outline-success btn-modern w-100">
+                                    <i class="fas fa-database me-2"></i>数据查看
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ url_for('config') }}" class="btn btn-outline-warning btn-modern w-100">
+                                    <i class="fas fa-cog me-2"></i>系统配置
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ url_for('about') }}" class="btn btn-outline-info btn-modern w-100">
+                                    <i class="fas fa-user me-2"></i>关于我
+                                </a>
+                            </div>
+                     </div>
+                 </div>
+             </div>
+             
+             <!-- 系统信息 -->
+             <div class="col-12">
+                 <div class="modern-card">
+                     <div class="card-header">
+                         <h5 class="mb-0 fw-bold">
+                             <i class="fas fa-info-circle me-2" style="color: #667eea;"></i>
+                             系统信息
+                         </h5>
+                     </div>
+                     <div class="card-body">
+                         <div class="row g-3">
+                             <div class="col-6">
+                                 <div class="p-3 rounded" style="background: linear-gradient(135deg, #f8f9fa, #e9ecef);">
+                                     <i class="fas fa-server text-primary mb-2"></i>
+                                     <div class="small fw-semibold">运行时间</div>
+                                     <div class="small text-muted">{{ system_info.uptime if system_info else '未知' }}</div>
+                                 </div>
+                             </div>
+                             <div class="col-6">
+                                 <div class="p-3 rounded" style="background: linear-gradient(135deg, #f8f9fa, #e9ecef);">
+                                     <i class="fas fa-memory text-success mb-2"></i>
+                                     <div class="small fw-semibold">内存使用</div>
+                                     <div class="small text-muted">{{ system_info.memory_usage if system_info else '未知' }}</div>
+                                 </div>
+                             </div>
+                             <div class="col-6">
+                                 <div class="p-3 rounded" style="background: linear-gradient(135deg, #f8f9fa, #e9ecef);">
+                                     <i class="fab fa-python text-warning mb-2"></i>
+                                     <div class="small fw-semibold">Python版本</div>
+                                     <div class="small text-muted">{{ system_info.python_version if system_info else '未知' }}</div>
+                                 </div>
+                             </div>
+                             <div class="col-6">
+                                 <div class="p-3 rounded" style="background: linear-gradient(135deg, #f8f9fa, #e9ecef);">
+                                     <i class="fas fa-database text-info mb-2"></i>
+                                     <div class="small fw-semibold">数据库大小</div>
+                                     <div class="small text-muted">{{ system_info.database_size if system_info else '未知' }}</div>
+                                 </div>
+                             </div>
+                         </div>
+                         
+                         <hr class="my-3">
+                         
+                         <div class="row g-2">
+                             <div class="col-6">
+                                 <button class="btn btn-outline-primary btn-modern w-100" onclick="backupDatabase()">
+                                     <i class="fas fa-download me-2"></i>备份数据库
+                                 </button>
+                             </div>
+                             <div class="col-6">
+                                 <button class="btn btn-outline-warning btn-modern w-100" onclick="cleanExpiredData()">
+                                     <i class="fas fa-trash-alt me-2"></i>清理过期数据
+                                 </button>
+                             </div>
+                             <div class="col-6">
+                                 <button class="btn btn-outline-info btn-modern w-100" onclick="exportLogs()">
+                                     <i class="fas fa-file-export me-2"></i>导出日志
+                                 </button>
+                             </div>
+                             <div class="col-6">
+                                 <button class="btn btn-outline-danger btn-modern w-100" onclick="restartSystem()">
+                                     <i class="fas fa-redo me-2"></i>重启系统
+                                 </button>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+         </div>
+     </div>
+ </div>
 </div>
 
-<!-- 系统状态 -->
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-heartbeat me-2"></i>
-                    系统状态
-                    <span class="status-indicator float-end"></span>
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="d-flex align-items-center mb-2">
-                            <i class="fas fa-server text-primary me-2"></i>
-                            <span>系统运行时间</span>
-                        </div>
-                        <p class="text-muted mb-0">{{ system_info.uptime if system_info else '未知' }}</p>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="d-flex align-items-center mb-2">
-                            <i class="fas fa-memory text-success me-2"></i>
-                            <span>内存使用</span>
-                        </div>
-                        <p class="text-muted mb-0">{{ system_info.memory_usage if system_info else '未知' }}</p>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="d-flex align-items-center mb-2">
-                            <i class="fas fa-hdd text-info me-2"></i>
-                            <span>数据库大小</span>
-                        </div>
-                        <p class="text-muted mb-0">{{ system_info.db_size if system_info else '未知' }}</p>
-                    </div>
-                </div>
-                
-                <hr>
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>快速链接</h6>
-                        <div class="d-flex gap-2 flex-wrap">
-                            <a href="{{ url_for('tasks') }}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-tasks me-1"></i>任务管理
-                            </a>
-                            <a href="{{ url_for('data') }}" class="btn btn-sm btn-outline-success">
-                                <i class="fas fa-database me-1"></i>数据查看
-                            </a>
-                            <a href="{{ url_for('config') }}" class="btn btn-sm btn-outline-warning">
-                                <i class="fas fa-cog me-1"></i>系统配置
-                            </a>
-                        </div>
-                    </div>
-                    <!-- 高级数据导出功能 - 暂时注释，功能保留但不在首页显示 -->
-                    <!-- 
-                    <div class="col-md-6">
-                        <h6>数据导出</h6>
-                        <div class="d-flex gap-2 flex-wrap">
-                            <button onclick="exportData()" class="btn btn-sm btn-outline-info">
-                                <i class="fas fa-file-excel me-1"></i>导出数据
-                            </button>
-                            <button onclick="syncToFeishu()" class="btn btn-sm btn-outline-secondary">
-                                <i class="fas fa-cloud-upload-alt me-1"></i>同步飞书
-                            </button>
-                        </div>
-                    </div>
-                    -->
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <!-- 博主列表管理模态框 -->
 <div class="modal fade" id="influencerListModal" tabindex="-1" aria-labelledby="influencerListModalLabel" aria-hidden="true">
@@ -531,13 +769,13 @@
 {% block extra_js %}
 <script>
 // 博主管理相关变量
-let influencerList = [];
-let currentInfluencerPage = 1;
-let totalInfluencerPages = 1;
+var influencerList = [];
+        var currentInfluencerPage = 1;
+        var totalInfluencerPages = 1;
 
 // 页面加载时初始化
 $(document).ready(function() {
-    loadInfluencerOptions();
+    // loadInfluencerOptions(); // 暂时注释掉，功能保留但不在首页使用
 });
 
 // 数据导出相关函数 - 暂时注释，功能保留但不在首页使用
@@ -548,15 +786,15 @@ function exportData() {
 }
 
 function syncToFeishu() {
-    const button = event.target;
-    const originalText = showLoading(button);
+    var button = event.target;
+            var originalText = showLoading(button);
     
     $.post('/sync_feishu')
         .done(function(response) {
             showAlert('数据已成功同步到飞书文档！', 'success');
         })
         .fail(function(xhr) {
-            const error = xhr.responseJSON ? xhr.responseJSON.error : '同步失败';
+            var error = xhr.responseJSON ? xhr.responseJSON.error : '同步失败';
             showAlert('同步失败: ' + error, 'danger');
         })
         .always(function() {
@@ -568,87 +806,83 @@ function syncToFeishu() {
 // 博主管理相关函数 - 暂时注释，功能保留但不在首页使用
 /*
 // 添加博主
-async function addInfluencer() {
-    const url = document.getElementById('influencerUrl').value.trim();
-    const name = document.getElementById('influencerName').value.trim();
-    const category = document.getElementById('influencerCategory').value;
-    const description = document.getElementById('influencerDescription').value.trim();
+function addInfluencer() {
+    var url = document.getElementById('influencerUrl').value.trim();
+    var name = document.getElementById('influencerName').value.trim();
+    var category = document.getElementById('influencerCategory').value;
+    var description = document.getElementById('influencerDescription').value.trim();
     
     if (!url || !name) {
         alert('请填写博主URL和名称');
         return;
     }
     
-    try {
-        const response = await fetch('/api/influencers', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                name: name,
-                profile_url: url,
-                category: category,
-                description: description
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            alert('博主添加成功！');
-            // 清空表单
-            document.getElementById('influencerUrl').value = '';
-            document.getElementById('influencerName').value = '';
-            document.getElementById('influencerDescription').value = '';
-            // 重新加载博主选项
-            loadInfluencerOptions();
-        } else {
-            alert('添加失败: ' + result.error);
+    $.ajax({
+        url: '/api/influencers',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            name: name,
+            profile_url: url,
+            category: category,
+            description: description
+        }),
+        success: function(result) {
+            if (result.success) {
+                alert('博主添加成功！');
+                // 清空表单
+                document.getElementById('influencerUrl').value = '';
+                document.getElementById('influencerName').value = '';
+                document.getElementById('influencerDescription').value = '';
+                // 重新加载博主选项
+                loadInfluencerOptions();
+            } else {
+                alert('添加失败: ' + result.error);
+            }
+        },
+        error: function(xhr) {
+            var error = xhr.responseJSON ? xhr.responseJSON.error : '添加博主失败';
+            alert('添加失败: ' + error);
         }
-    } catch (error) {
-        console.error('添加博主失败:', error);
-        alert('添加博主失败: ' + error.message);
-    }
+    });
 }
 
 // 加载博主选项到下拉框
-async function loadInfluencerOptions() {
-    try {
-        const response = await fetch('/api/influencers?per_page=100');
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const result = await response.json();
-        
-        if (result.success && result.data && result.data.influencers) {
-            const select = document.getElementById('selectedInfluencers');
-            if (select) {
-                select.innerHTML = '';
-                
-                result.data.influencers.forEach(influencer => {
-                    if (influencer.is_active) {
-                        const option = document.createElement('option');
-                        option.value = influencer.id;
-                        option.textContent = `${influencer.name} (@${influencer.username}) - ${influencer.category}`;
-                        select.appendChild(option);
-                    }
-                });
+function loadInfluencerOptions() {
+    $.ajax({
+        url: '/api/influencers?per_page=100',
+        method: 'GET',
+        success: function(result) {
+            if (result.success && result.data && result.data.influencers) {
+                var select = document.getElementById('selectedInfluencers');
+                if (select) {
+                    select.innerHTML = '';
+                    
+                    result.data.influencers.forEach(function(influencer) {
+                        if (influencer.is_active) {
+                            var option = document.createElement('option');
+                            option.value = influencer.id;
+                            option.textContent = influencer.name + ' (@' + influencer.username + ') - ' + influencer.category;
+                            select.appendChild(option);
+                        }
+                    });
+                }
+            } else {
+                console.error('API返回数据格式错误:', result);
+                var select = document.getElementById('selectedInfluencers');
+                if (select) {
+                    select.innerHTML = '<option value="">数据格式错误</option>';
+                }
             }
-        } else {
-            console.error('API返回数据格式错误:', result);
-            throw new Error(result.error || '数据格式错误');
+        },
+        error: function(xhr) {
+            console.error('加载博主选项失败:', xhr.responseText);
+            var select = document.getElementById('selectedInfluencers');
+            if (select) {
+                select.innerHTML = '<option value="">加载失败，请刷新重试</option>';
+            }
         }
-    } catch (error) {
-        console.error('加载博主选项失败:', error);
-        // 显示用户友好的错误信息
-        const select = document.getElementById('selectedInfluencers');
-        if (select) {
-            select.innerHTML = '<option value="">加载失败，请刷新重试</option>';
-        }
-    }
+    });
 }
 
 // 显示博主列表管理
@@ -659,97 +893,83 @@ function showInfluencerList() {
 }
 
 // 加载博主列表
-async function loadInfluencerList(page = 1, search = '', category = '') {
-    try {
-        const params = new URLSearchParams({
-            page: page,
-            per_page: 10
-        });
-        
-        if (search) params.append('search', search);
-        if (category) params.append('category', category);
-        
-        const response = await fetch(`/api/influencers?${params}`);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+function loadInfluencerList(page, search, category) {
+    page = page || 1;
+    search = search || '';
+    category = category || '';
+    
+    var params = {
+        page: page,
+        per_page: 10
+    };
+    
+    if (search) params.search = search;
+    if (category) params.category = category;
+    
+    $.ajax({
+        url: '/api/influencers',
+        method: 'GET',
+        data: params,
+        success: function(result) {
+            if (result.success && result.data) {
+                displayInfluencerList(result.data);
+                updateInfluencerPagination(result.data);
+            } else {
+                var container = document.getElementById('influencerListContainer');
+                if (container) {
+                    container.innerHTML = '<div class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><p>数据格式错误</p></div>';
+                }
+            }
+        },
+        error: function(xhr) {
+            console.error('加载博主列表失败:', xhr.responseText);
+            var container = document.getElementById('influencerListContainer');
+            if (container) {
+                container.innerHTML = '<div class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><p>加载失败</p><button class="btn btn-outline-primary btn-sm mt-2" onclick="loadInfluencerList()">重试</button></div>';
+            }
         }
-        
-        const result = await response.json();
-        
-        if (result.success && result.data) {
-            displayInfluencerList(result.data);
-            updateInfluencerPagination(result.data);
-        } else {
-            throw new Error(result.error || '数据格式错误');
-        }
-    } catch (error) {
-        console.error('加载博主列表失败:', error);
-        const container = document.getElementById('influencerListContainer');
-        if (container) {
-            container.innerHTML = `
-                <div class="text-center py-4 text-danger">
-                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-                    <p>加载失败: ${error.message || 'undefined'}</p>
-                    <button class="btn btn-outline-primary btn-sm mt-2" onclick="loadInfluencerList()">重试</button>
-                </div>
-            `;
-        }
-    }
+    });
 }
 
 // 显示博主列表
 function displayInfluencerList(data) {
-    const container = document.getElementById('influencerListContainer');
+    var container = document.getElementById('influencerListContainer');
     
     if (data.influencers.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-4 text-muted">
-                <i class="fas fa-users fa-2x mb-2"></i>
-                <p>暂无博主数据</p>
-            </div>
-        `;
+        container.innerHTML = '<div class="text-center py-4 text-muted"><i class="fas fa-users fa-2x mb-2"></i><p>暂无博主数据</p></div>';
         return;
     }
     
-    let html = '<div class="list-group">';
+    var html = '<div class="list-group">';
     
-    data.influencers.forEach(influencer => {
-        const statusBadge = influencer.is_active ? 
+    for (var i = 0; i < data.influencers.length; i++) {
+        var influencer = data.influencers[i];
+        var statusBadge = influencer.is_active ? 
             '<span class="badge bg-success">启用</span>' : 
             '<span class="badge bg-secondary">禁用</span>';
         
-        const lastScraped = influencer.last_scraped ? 
+        var lastScraped = influencer.last_scraped ? 
             new Date(influencer.last_scraped).toLocaleString() : '从未抓取';
         
-        html += `
-            <div class="list-group-item">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1">
-                            ${influencer.name}
-                            <span class="badge bg-primary ms-2">${influencer.category}</span>
-                            ${statusBadge}
-                        </h6>
-                        <p class="mb-1 text-muted">@${influencer.username}</p>
-                        <p class="mb-1 small">${influencer.description || '无描述'}</p>
-                        <small class="text-muted">最后抓取: ${lastScraped}</small>
-                    </div>
-                    <div class="btn-group" role="group">
-                        <button class="btn btn-sm btn-outline-primary" onclick="editInfluencer(${influencer.id})">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-success" onclick="scrapeInfluencer(${influencer.id})">
-                            <i class="fas fa-download"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteInfluencer(${influencer.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
+        html += '<div class="list-group-item">' +
+            '<div class="d-flex justify-content-between align-items-start">' +
+            '<div class="flex-grow-1">' +
+            '<h6 class="mb-1">' + influencer.name +
+            '<span class="badge bg-primary ms-2">' + influencer.category + '</span>' +
+            statusBadge + '</h6>' +
+            '<p class="mb-1 text-muted">@' + influencer.username + '</p>' +
+            '<p class="mb-1 small">' + (influencer.description || '无描述') + '</p>' +
+            '<small class="text-muted">最后抓取: ' + lastScraped + '</small>' +
+            '</div>' +
+            '<div class="btn-group" role="group">' +
+            '<button class="btn btn-sm btn-outline-primary" onclick="editInfluencer(' + influencer.id + ')">' +
+            '<i class="fas fa-edit"></i></button>' +
+            '<button class="btn btn-sm btn-outline-success" onclick="scrapeInfluencer(' + influencer.id + ')">' +
+            '<i class="fas fa-download"></i></button>' +
+            '<button class="btn btn-sm btn-outline-danger" onclick="deleteInfluencer(' + influencer.id + ')">' +
+            '<i class="fas fa-trash"></i></button>' +
+            '</div></div></div>';
+    }
     
     html += '</div>';
     container.innerHTML = html;
@@ -758,8 +978,8 @@ function displayInfluencerList(data) {
 // 更新分页 - 暂时注释，功能保留但不在首页使用
 /*
 function updateInfluencerPagination(data) {
-    const pagination = document.getElementById('influencerPagination');
-    const paginationList = document.getElementById('paginationList');
+    var pagination = document.getElementById('influencerPagination');
+    var paginationList = document.getElementById('paginationList');
     
     if (data.pages <= 1) {
         pagination.style.display = 'none';
@@ -770,22 +990,22 @@ function updateInfluencerPagination(data) {
     currentInfluencerPage = data.current_page;
     totalInfluencerPages = data.pages;
     
-    let html = '';
+    var html = '';
     
     // 上一页
     if (currentInfluencerPage > 1) {
-        html += `<li class="page-item"><a class="page-link" href="#" onclick="loadInfluencerList(${currentInfluencerPage - 1})">上一页</a></li>`;
+        html += '<li class="page-item"><a class="page-link" href="#" onclick="loadInfluencerList(' + (currentInfluencerPage - 1) + ')">上一页</a></li>';
     }
     
     // 页码
-    for (let i = Math.max(1, currentInfluencerPage - 2); i <= Math.min(totalInfluencerPages, currentInfluencerPage + 2); i++) {
-        const active = i === currentInfluencerPage ? 'active' : '';
-        html += `<li class="page-item ${active}"><a class="page-link" href="#" onclick="loadInfluencerList(${i})">${i}</a></li>`;
+    for (var i = Math.max(1, currentInfluencerPage - 2); i <= Math.min(totalInfluencerPages, currentInfluencerPage + 2); i++) {
+        var active = i === currentInfluencerPage ? 'active' : '';
+        html += '<li class="page-item ' + active + '"><a class="page-link" href="#" onclick="loadInfluencerList(' + i + ')">' + i + '</a></li>';
     }
     
     // 下一页
     if (currentInfluencerPage < totalInfluencerPages) {
-        html += `<li class="page-item"><a class="page-link" href="#" onclick="loadInfluencerList(${currentInfluencerPage + 1})">下一页</a></li>`;
+        html += '<li class="page-item"><a class="page-link" href="#" onclick="loadInfluencerList(' + (currentInfluencerPage + 1) + ')">下一页</a></li>';
     }
     
     paginationList.innerHTML = html;
@@ -793,218 +1013,205 @@ function updateInfluencerPagination(data) {
 
 // 搜索博主
 function searchInfluencers() {
-    const search = document.getElementById('influencerSearch').value;
-    const category = document.getElementById('influencerCategoryFilter').value;
+    var search = document.getElementById('influencerSearch').value;
+    var category = document.getElementById('influencerCategoryFilter').value;
     loadInfluencerList(1, search, category);
 }
 
 // 编辑博主
-async function editInfluencer(influencerId) {
-    try {
-        // 获取博主信息
-        const response = await fetch(`/api/influencers?per_page=100`);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const result = await response.json();
-        
-        if (result.success && result.data && result.data.influencers) {
-            const influencer = result.data.influencers.find(inf => inf.id === influencerId);
-            if (influencer) {
-                // 填充编辑表单
-                document.getElementById('editInfluencerId').value = influencer.id;
-                document.getElementById('editInfluencerName').value = influencer.name;
-                document.getElementById('editInfluencerCategory').value = influencer.category;
-                document.getElementById('editInfluencerDescription').value = influencer.description || '';
-                document.getElementById('editInfluencerActive').checked = influencer.is_active;
+function editInfluencer(influencerId) {
+    $.ajax({
+        url: '/api/influencers?per_page=100',
+        method: 'GET',
+        success: function(result) {
+            if (result.success && result.data && result.data.influencers) {
+                var influencer = null;
+                for (var i = 0; i < result.data.influencers.length; i++) {
+                    if (result.data.influencers[i].id === influencerId) {
+                        influencer = result.data.influencers[i];
+                        break;
+                    }
+                }
                 
-                // 显示编辑模态框
-                const modal = new bootstrap.Modal(document.getElementById('editInfluencerModal'));
-                modal.show();
+                if (influencer) {
+                    // 填充编辑表单
+                    document.getElementById('editInfluencerId').value = influencer.id;
+                    document.getElementById('editInfluencerName').value = influencer.name;
+                    document.getElementById('editInfluencerCategory').value = influencer.category;
+                    document.getElementById('editInfluencerDescription').value = influencer.description || '';
+                    document.getElementById('editInfluencerActive').checked = influencer.is_active;
+                    
+                    // 显示编辑模态框
+                    var modal = new bootstrap.Modal(document.getElementById('editInfluencerModal'));
+                    modal.show();
+                } else {
+                    alert('未找到指定的博主');
+                }
             } else {
-                throw new Error('未找到指定的博主');
+                alert('获取博主信息失败');
             }
-        } else {
-            throw new Error(result.error || '获取博主信息失败');
+        },
+        error: function(xhr) {
+            console.error('获取博主信息失败:', xhr.responseText);
+            alert('获取博主信息失败');
         }
-    } catch (error) {
-        console.error('获取博主信息失败:', error);
-        alert('获取博主信息失败: ' + (error.message || 'undefined'));
-    }
+    });
 }
 */
 
 // 更新博主信息 - 暂时注释，功能保留但不在首页使用
 /*
-async function updateInfluencer() {
-    const influencerId = document.getElementById('editInfluencerId').value;
-    const name = document.getElementById('editInfluencerName').value.trim();
-    const category = document.getElementById('editInfluencerCategory').value;
-    const description = document.getElementById('editInfluencerDescription').value.trim();
-    const isActive = document.getElementById('editInfluencerActive').checked;
+function updateInfluencer() {
+    var influencerId = document.getElementById('editInfluencerId').value;
+    var name = document.getElementById('editInfluencerName').value.trim();
+    var category = document.getElementById('editInfluencerCategory').value;
+    var description = document.getElementById('editInfluencerDescription').value.trim();
+    var isActive = document.getElementById('editInfluencerActive').checked;
     
     if (!name) {
         alert('请填写博主名称');
         return;
     }
     
-    try {
-        const response = await fetch(`/api/influencers/${influencerId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                name: name,
-                category: category,
-                description: description,
-                is_active: isActive
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            alert('博主信息更新成功！');
-            // 关闭编辑模态框
-            const modal = bootstrap.Modal.getInstance(document.getElementById('editInfluencerModal'));
-            modal.hide();
-            // 重新加载列表
-            loadInfluencerList(currentInfluencerPage);
-            loadInfluencerOptions();
-        } else {
-            alert('更新失败: ' + result.error);
+    $.ajax({
+        url: '/api/influencers/' + influencerId,
+        method: 'PUT',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            name: name,
+            category: category,
+            description: description,
+            is_active: isActive
+        }),
+        success: function(result) {
+            if (result.success) {
+                alert('博主信息更新成功！');
+                // 关闭编辑模态框
+                var modal = bootstrap.Modal.getInstance(document.getElementById('editInfluencerModal'));
+                modal.hide();
+                // 重新加载列表
+                loadInfluencerList(currentInfluencerPage);
+                loadInfluencerOptions();
+            } else {
+                alert('更新失败: ' + result.error);
+            }
+        },
+        error: function(xhr) {
+            var error = xhr.responseJSON ? xhr.responseJSON.error : '更新博主失败';
+            alert('更新失败: ' + error);
         }
-    } catch (error) {
-        console.error('更新博主失败:', error);
-        alert('更新博主失败: ' + error.message);
-    }
+    });
 }
 
 // 删除博主
-async function deleteInfluencer(influencerId) {
+function deleteInfluencer(influencerId) {
     if (!confirm('确定要删除这个博主吗？')) {
         return;
     }
     
-    try {
-        const response = await fetch(`/api/influencers/${influencerId}`, {
-            method: 'DELETE'
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            alert('博主删除成功！');
-            loadInfluencerList(currentInfluencerPage);
-            loadInfluencerOptions();
-        } else {
-            alert('删除失败: ' + result.error);
+    $.ajax({
+        url: '/api/influencers/' + influencerId,
+        method: 'DELETE',
+        success: function(result) {
+            if (result.success) {
+                alert('博主删除成功！');
+                loadInfluencerList(currentInfluencerPage);
+                loadInfluencerOptions();
+            } else {
+                alert('删除失败: ' + result.error);
+            }
+        },
+        error: function(xhr) {
+            var error = xhr.responseJSON ? xhr.responseJSON.error : '删除博主失败';
+            alert('删除失败: ' + error);
         }
-    } catch (error) {
-        console.error('删除博主失败:', error);
-        alert('删除博主失败: ' + error.message);
-    }
+    });
 }
 
 // 抓取单个博主
-async function scrapeInfluencer(influencerId) {
+function scrapeInfluencer(influencerId) {
     if (!confirm('确定要开始抓取这个博主的推文吗？')) {
         return;
     }
     
-    try {
-        const response = await fetch('/api/influencers/batch-scrape', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                influencer_ids: [influencerId],
-                max_tweets: 50,
-                min_likes: 0,
-                min_retweets: 0,
-                min_comments: 0
-            })
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    $.ajax({
+        url: '/api/influencers/batch-scrape',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            influencer_ids: [influencerId],
+            max_tweets: 50,
+            min_likes: 0,
+            min_retweets: 0,
+            min_comments: 0
+        }),
+        success: function(result) {
+            if (result.success) {
+                alert('抓取任务已启动！请在任务管理页面查看进度。');
+            } else {
+                alert('启动抓取任务失败: ' + result.error);
+            }
+        },
+        error: function(xhr) {
+            var error = xhr.responseJSON ? xhr.responseJSON.error : '抓取博主失败';
+            alert('抓取博主失败: ' + error);
         }
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            alert('抓取任务已启动！请在任务管理页面查看进度。');
-        } else {
-            alert('启动抓取任务失败: ' + result.error);
-        }
-    } catch (error) {
-        console.error('抓取博主失败:', error);
-        alert('抓取博主失败: ' + (error.message || 'undefined'));
-    }
+    });
 }
 */
 
 // 抓取选中的博主 - 暂时注释，功能保留但不在首页使用
 /*
-async function startInfluencerScraping() {
-    const selectedOptions = document.getElementById('selectedInfluencers').selectedOptions;
+function startInfluencerScraping() {
+    var selectedOptions = document.getElementById('selectedInfluencers').selectedOptions;
     
     if (selectedOptions.length === 0) {
         alert('请选择要抓取的博主');
         return;
     }
     
-    const selectedIds = Array.from(selectedOptions).map(option => parseInt(option.value));
+    var selectedIds = [];
+    for (var i = 0; i < selectedOptions.length; i++) {
+        selectedIds.push(parseInt(selectedOptions[i].value));
+    }
     
-    if (!confirm(`确定要开始抓取选中的 ${selectedIds.length} 个博主的推文吗？`)) {
+    if (!confirm('确定要开始抓取选中的 ' + selectedIds.length + ' 个博主的推文吗？')) {
         return;
     }
     
-    try {
-        const response = await fetch('/api/influencers/batch-scrape', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                influencer_ids: selectedIds,
-                max_tweets: 50,
-                min_likes: 0,
-                min_retweets: 0,
-                min_comments: 0
-            })
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    $.ajax({
+        url: '/api/influencers/batch-scrape',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            influencer_ids: selectedIds,
+            max_tweets: 50,
+            min_likes: 0,
+            min_retweets: 0,
+            min_comments: 0
+        }),
+        success: function(result) {
+            if (result.success) {
+                alert('批量抓取任务已启动！将抓取 ' + selectedIds.length + ' 个博主的内容，请在任务管理页面查看进度。');
+            } else {
+                alert('启动批量抓取任务失败: ' + result.error);
+            }
+        },
+        error: function(xhr) {
+            var error = xhr.responseJSON ? xhr.responseJSON.error : '批量抓取博主失败';
+            alert('批量抓取博主失败: ' + error);
         }
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            alert(`批量抓取任务已启动！将抓取 ${selectedIds.length} 个博主的内容，请在任务管理页面查看进度。`);
-        } else {
-            alert('启动批量抓取任务失败: ' + result.error);
-        }
-    } catch (error) {
-        console.error('批量抓取博主失败:', error);
-        alert('批量抓取博主失败: ' + (error.message || 'undefined'));
-    }
+    });
 }
-*/
 */
 
 // 启动优化抓取 - 暂时注释，功能保留但不在首页使用
 /*
-async function startOptimizedScraping() {
-    const targetAccounts = document.getElementById('optimizedTargetAccounts').value.trim();
-    const keywords = document.getElementById('optimizedKeywords').value.trim();
-    const maxTweets = parseInt(document.getElementById('optimizedMaxTweets').value) || 100;
-    const maxWindows = parseInt(document.getElementById('optimizedMaxWindows').value) || 3;
+function startOptimizedScraping() {
+    var targetAccounts = document.getElementById('optimizedTargetAccounts').value.trim();
+    var keywords = document.getElementById('optimizedKeywords').value.trim();
+    var maxTweets = parseInt(document.getElementById('optimizedMaxTweets').value) || 100;
+    var maxWindows = parseInt(document.getElementById('optimizedMaxWindows').value) || 3;
     
     // 验证输入
     if (!targetAccounts && !keywords) {
@@ -1017,55 +1224,49 @@ async function startOptimizedScraping() {
         return;
     }
     
-    if (!confirm(`确定要启动优化抓取吗？\n目标账号: ${targetAccounts || '无'}\n关键词: ${keywords || '无'}\n最大推文数: ${maxTweets}\n窗口数: ${maxWindows}`)) {
+    if (!confirm('确定要启动优化抓取吗？\n目标账号: ' + (targetAccounts || '无') + '\n关键词: ' + (keywords || '无') + '\n最大推文数: ' + maxTweets + '\n窗口数: ' + maxWindows)) {
         return;
     }
     
-    const button = document.querySelector('#optimizedScrapingCard button');
-    const originalText = button.textContent;
+    var button = document.querySelector('#optimizedScrapingCard button');
+    var originalText = button.textContent;
     
-    try {
-        // 显示加载状态
-        button.disabled = true;
-        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>启动中...';
-        
-        const response = await fetch('/api/start-optimized-scraping', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                target_accounts: targetAccounts,
-                keywords: keywords,
-                max_tweets: maxTweets,
-                max_windows: maxWindows
-            })
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    // 显示加载状态
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>启动中...';
+    
+    $.ajax({
+        url: '/api/start-optimized-scraping',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            target_accounts: targetAccounts,
+            keywords: keywords,
+            max_tweets: maxTweets,
+            max_windows: maxWindows
+        }),
+        success: function(result) {
+            if (result.success) {
+                alert('优化抓取任务已启动！\n任务ID: ' + result.task_id + '\n请在任务管理页面查看进度。');
+                // 清空表单
+                document.getElementById('optimizedTargetAccounts').value = '';
+                document.getElementById('optimizedKeywords').value = '';
+                document.getElementById('optimizedMaxTweets').value = '100';
+                document.getElementById('optimizedMaxWindows').value = '3';
+            } else {
+                alert('启动优化抓取任务失败: ' + result.error);
+            }
+        },
+        error: function(xhr) {
+            var error = xhr.responseJSON ? xhr.responseJSON.error : '启动优化抓取失败';
+            alert('启动优化抓取失败: ' + error);
+        },
+        complete: function() {
+            // 恢复按钮状态
+            button.disabled = false;
+            button.textContent = originalText;
         }
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            alert('优化抓取任务已启动！\n任务ID: ' + result.task_id + '\n请在任务管理页面查看进度。');
-            // 清空表单
-            document.getElementById('optimizedTargetAccounts').value = '';
-            document.getElementById('optimizedKeywords').value = '';
-            document.getElementById('optimizedMaxTweets').value = '100';
-            document.getElementById('optimizedMaxWindows').value = '3';
-        } else {
-            alert('启动优化抓取任务失败: ' + result.error);
-        }
-    } catch (error) {
-        console.error('启动优化抓取失败:', error);
-        alert('启动优化抓取失败: ' + (error.message || 'undefined'));
-    } finally {
-        // 恢复按钮状态
-        button.disabled = false;
-        button.textContent = originalText;
-    }
+    });
 }
 */
 
@@ -1074,11 +1275,11 @@ function updateQueueStatus() {
     $.get('/api/queue/status')
         .done(function(response) {
             if (response.success) {
-                const data = response.data;
-                const queueLength = data.queue_length;
-                const estimatedWaitTime = data.estimated_wait_time;
-                const queuePositionInfo = data.queue_position_info;
-                const concurrentInfo = data.concurrent_info;
+                var data = response.data;
+                var queueLength = data.queue_length;
+                var estimatedWaitTime = data.estimated_wait_time;
+                var queuePositionInfo = data.queue_position_info;
+                var concurrentInfo = data.concurrent_info;
                 
                 // 更新队列数量显示
                 $('#queuedTasksCount').text(queueLength);
@@ -1086,12 +1287,12 @@ function updateQueueStatus() {
                 // 更新队列状态信息
                 if (queueLength > 0) {
                     $('#queueStatusRow').show();
-                    $('#queueStatusText').text(`${queuePositionInfo} - ${concurrentInfo}`);
+                    $('#queueStatusText').text(queuePositionInfo + ' - ' + concurrentInfo);
                     $('#clearQueueBtn').show();
                     
                     if (estimatedWaitTime > 0) {
-                        const minutes = Math.ceil(estimatedWaitTime / 60);
-                        $('#queueEstimatedTime').text(`预计等待时间: ${minutes} 分钟`);
+                        var minutes = Math.ceil(estimatedWaitTime / 60);
+                        $('#queueEstimatedTime').text('预计等待时间: ' + minutes + ' 分钟');
                     } else {
                         $('#queueEstimatedTime').text('');
                     }
@@ -1111,7 +1312,7 @@ function updateTaskManagerStatus() {
     $.get('/api/task-manager/status')
         .done(function(response) {
             if (response.success) {
-                const data = response.data;
+                var data = response.data;
                 $('#runningTasksCount').text(data.active_tasks || 0);
                 $('#availableSlotsCount').text(data.available_slots || 0);
                 $('#queuedTasksCount').text(data.queue_size || 0);
@@ -1119,7 +1320,7 @@ function updateTaskManagerStatus() {
                 // 更新队列状态显示
                 if (data.is_queue_active) {
                     $('#queueStatusRow').show();
-                    $('#queueStatusText').text(`队列中有 ${data.queue_size} 个任务等待执行`);
+                    $('#queueStatusText').text('队列中有 ' + data.queue_size + ' 个任务等待执行');
                     $('#clearQueueBtn').show();
                 } else {
                     $('#queueStatusRow').hide();
@@ -1170,8 +1371,8 @@ $(document).ready(function() {
 $('form').on('submit', function(e) {
     // 检查是否是创建任务表单
     if ($(this).attr('action') && $(this).attr('action').includes('create_task')) {
-        const keywords = $('#keywords').val().trim();
-        const targetAccounts = $('#target_accounts').val().trim();
+        var keywords = $('#keywords').val().trim();
+        var targetAccounts = $('#target_accounts').val().trim();
         
         // 验证关键词和目标账号至少填写一个
         if (!keywords && !targetAccounts) {
@@ -1181,8 +1382,83 @@ $('form').on('submit', function(e) {
         }
     }
     
-    const submitBtn = $(this).find('button[type="submit"]');
+    var submitBtn = $(this).find('button[type="submit"]');
     showLoading(submitBtn[0]);
 });
+
+// 系统管理功能
+function backupDatabase() {
+    if (confirm('确定要备份数据库吗？')) {
+        fetch('/api/backup-database', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('数据库备份成功！');
+            } else {
+                alert('数据库备份失败：' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('备份过程中发生错误：' + error);
+        });
+    }
+}
+
+function cleanExpiredData() {
+    if (confirm('确定要清理过期数据吗？此操作不可撤销！')) {
+        fetch('/api/clean-expired-data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('过期数据清理成功！清理了 ' + data.count + ' 条记录。');
+                location.reload();
+            } else {
+                alert('清理失败：' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('清理过程中发生错误：' + error);
+        });
+    }
+}
+
+function exportLogs() {
+    window.open('/api/export-logs', '_blank');
+}
+
+function restartSystem() {
+    if (confirm('确定要重启系统吗？这将中断所有正在运行的任务！')) {
+        fetch('/api/restart-system', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('系统将在5秒后重启...');
+                setTimeout(() => {
+                    location.reload();
+                }, 5000);
+            } else {
+                alert('重启失败：' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('重启过程中发生错误：' + error);
+        });
+    }
+}
 </script>
 {% endblock %}

@@ -404,12 +404,12 @@ function syncToFeishu() {
     showAlert('正在检查重复内容...', 'info');
     
     // 构建请求数据 - 使用FormData格式，因为后端期望form数据
-    const formData = new FormData();
+    var formData = new FormData();
     formData.append('task_id', taskId);
     console.log('📦 [飞书同步] 构建请求数据完成');
     
     // 更新进度提示
-    setTimeout(() => {
+    setTimeout(function() {
         console.log('🔄 [飞书同步] 更新进度提示为"正在同步中..."');
         // 移除之前的提示
         $('.alert').remove();
@@ -432,28 +432,28 @@ function syncToFeishu() {
             if (response.success) {
                 console.log('🎉 [飞书同步] 同步成功');
                 // 检查是否有新数据同步
-                const report = response.report || {};
+                var report = response.report || {};
                 console.log('📊 [飞书同步] 同步报告:', report);
-                let message = '';
+                var message = '';
                 
                 if (report.to_sync === 0) {
                     // 没有新数据需要同步
-                    message = `同步完成！任务 ${taskId} 的所有数据（${report.total_tweets || 0} 条）都已经同步过了。`;
+                    message = '同步完成！任务 ' + taskId + ' 的所有数据（' + (report.total_tweets || 0) + ' 条）都已经同步过了。';
                     console.log('ℹ️ [飞书同步] 无新数据需要同步');
                 } else {
                     // 有新数据同步
-                    message = `同步完成！成功同步了 ${report.synced_count || report.to_sync || 0} 条新数据到飞书。`;
+                    message = '同步完成！成功同步了 ' + (report.synced_count || report.to_sync || 0) + ' 条新数据到飞书。';
                     if (report.already_synced > 0) {
-                        message += `另有 ${report.already_synced} 条数据之前已同步。`;
+                        message += '另有 ' + report.already_synced + ' 条数据之前已同步。';
                     }
-                    console.log(`📈 [飞书同步] 成功同步 ${report.synced_count || report.to_sync || 0} 条新数据`);
+                    console.log('📈 [飞书同步] 成功同步 ' + (report.synced_count || report.to_sync || 0) + ' 条新数据');
                 }
                 
                 console.log('💬 [飞书同步] 显示成功消息:', message);
                 showAlert(message, 'success');
                 
                 // 询问是否刷新页面
-                setTimeout(() => {
+                setTimeout(function() {
                     console.log('🔄 [飞书同步] 询问是否刷新页面');
                     if (confirm('是否刷新页面查看最新状态？')) {
                         console.log('🔄 [飞书同步] 用户确认刷新页面');
@@ -476,13 +476,13 @@ function syncToFeishu() {
             // 清除进度提示
             $('.alert').remove();
             
-            let errorMessage = '同步失败';
+            var errorMessage = '同步失败';
             if (xhr.responseJSON) {
                 console.error('📊 [飞书同步] 解析到JSON错误响应:', xhr.responseJSON);
                 errorMessage += ': ' + (xhr.responseJSON.message || xhr.responseJSON.error || '未知错误');
             } else if (xhr.responseText) {
                 try {
-                    const errorData = JSON.parse(xhr.responseText);
+                    var errorData = JSON.parse(xhr.responseText);
                     console.error('📊 [飞书同步] 手动解析JSON错误响应:', errorData);
                     errorMessage += ': ' + (errorData.message || errorData.error || '未知错误');
                 } catch (e) {
@@ -500,8 +500,8 @@ function syncToFeishu() {
 }
 
 function copyTweet(tweetId) {
-    const tweetCard = $(`[onclick="copyTweet('${tweetId}')"]`).closest('.card');
-    const content = tweetCard.find('.tweet-content p').text();
+    var tweetCard = $("[onclick=\"copyTweet('" + tweetId + "')\"]").closest('.card');
+    var content = tweetCard.find('.tweet-content p').text();
     
     navigator.clipboard.writeText(content).then(function() {
         showAlert('推文内容已复制到剪贴板', 'success');
@@ -513,15 +513,15 @@ function copyTweet(tweetId) {
 function deleteTweet(tweetId) {
     if (confirm('确定要删除这条推文吗？此操作不可恢复！')) {
         $.ajax({
-            url: `/data/${tweetId}`,
+            url: '/data/' + tweetId,
             type: 'DELETE'
         })
         .done(function(response) {
             showAlert('推文已删除！', 'success');
-            setTimeout(() => location.reload(), 1000);
+            setTimeout(function() { location.reload(); }, 1000);
         })
         .fail(function(xhr) {
-            const error = xhr.responseJSON ? xhr.responseJSON.error : '删除失败';
+            var error = xhr.responseJSON ? xhr.responseJSON.error : '删除失败';
             showAlert('删除失败: ' + error, 'danger');
         });
     }
@@ -535,7 +535,7 @@ $(document).ready(function() {
         $.get('/api/chart_data')
             .done(function(data) {
                 // 每日推文数量图表
-                const dailyCtx = document.getElementById('dailyTweetsChart').getContext('2d');
+                var dailyCtx = document.getElementById('dailyTweetsChart').getContext('2d');
                 new Chart(dailyCtx, {
                     type: 'line',
                     data: {
@@ -560,7 +560,7 @@ $(document).ready(function() {
                 });
                 
                 // 热门话题标签图表
-                const hashtagsCtx = document.getElementById('hashtagsChart').getContext('2d');
+                var hashtagsCtx = document.getElementById('hashtagsChart').getContext('2d');
                 new Chart(hashtagsCtx, {
                     type: 'doughnut',
                     data: {
@@ -580,7 +580,7 @@ $(document).ready(function() {
                 });
                 
                 // 互动数据趋势图表
-                const engagementCtx = document.getElementById('engagementChart').getContext('2d');
+                var engagementCtx = document.getElementById('engagementChart').getContext('2d');
                 new Chart(engagementCtx, {
                     type: 'line',
                     data: {

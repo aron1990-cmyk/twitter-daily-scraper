@@ -282,7 +282,7 @@
 {% block extra_js %}
 <script>
 function copyTweetContent() {
-    const content = `{{ tweet.content | replace('"', '\\"') | replace('\n', '\\n') }}`;
+    var content = "{{ tweet.content | replace('"', '\\"') | replace('\n', '\\n') }}";
     navigator.clipboard.writeText(content).then(function() {
         showAlert('推文内容已复制到剪贴板', 'success');
     }).catch(function() {
@@ -293,15 +293,15 @@ function copyTweetContent() {
 function deleteTweet(tweetId) {
     if (confirm('确定要删除这条推文吗？此操作不可恢复！')) {
         $.ajax({
-            url: `/data/${tweetId}`,
+            url: '/data/' + tweetId,
             type: 'DELETE'
         })
         .done(function(response) {
             showAlert('推文已删除！', 'success');
-            setTimeout(() => window.location.href = '{{ url_for("data") }}', 1000);
+            setTimeout(function() { window.location.href = '{{ url_for("data") }}'; }, 1000);
         })
         .fail(function(xhr) {
-            const error = xhr.responseJSON ? xhr.responseJSON.error : '删除失败';
+            var error = xhr.responseJSON ? xhr.responseJSON.error : '删除失败';
             showAlert('删除失败: ' + error, 'danger');
         });
     }

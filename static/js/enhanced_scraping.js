@@ -1,321 +1,336 @@
-// 增强推文抓取页面交互逻辑
+/**
+ * 增强推文抓取页面JavaScript
+ * 实现推文抓取的交互逻辑
+ * 兼容ES5语法
+ */
 
-let currentTaskId = null;
-let progressInterval = null;
+// 全局变量
+var progressInterval = null;
+var isProgressRunning = false;
 
 // 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', function() {
-    initializePage();
-    bindEvents();
-    loadStatistics();
+$(document).ready(function() {
+    try {
+        initializePage();
+        bindEvents();
+        loadStats();
+    } catch (error) {
+        console.error('页面初始化错误:', error);
+        showAlert('页面初始化失败，请刷新页面重试', 'danger');
+    }
 });
 
+/**
+ * 初始化页面
+ */
 function initializePage() {
     console.log('增强推文抓取页面初始化');
-}
-
-function bindEvents() {
-    // 绑定表单提交事件
-    document.getElementById('enhancedScrapingForm').addEventListener('submit', handleFormSubmit);
-}
-
-function handleFormSubmit(event) {
-    event.preventDefault();
     
-    if (currentTaskId) {
-        showAlert('当前有任务正在运行，请等待完成后再启动新任务', 'warning');
-        return;
-    }
+    // 检查必要的元素是否存在
+    var requiredElements = [
+        '#enhancedScrapeForm',
+        '#alertContainer',
+        '#progressContainer',
+        '#dataPreview'
+    ];
     
-    startEnhancedScraping();
-}
-
-function startEnhancedScraping() {
-    // 获取表单数据
-    const targetAccounts = document.getElementById('targetAccounts').value
-        .split('\n')
-        .map(account => account.trim())
-        .filter(account => account.length > 0);
-    
-    const targetKeywords = document.getElementById('targetKeywords').value
-        .split('\n')
-        .map(keyword => keyword.trim())
-        .filter(keyword => keyword.length > 0);
-    
-    const maxTweets = parseInt(document.getElementById('maxTweets').value) || 20;
-    const enableDetails = document.getElementById('enableDetails').checked;
-    const taskName = document.getElementById('taskName').value.trim();
-    
-    // 验证输入
-    if (targetAccounts.length === 0 && targetKeywords.length === 0) {
-        showAlert('请至少输入一个目标账号或关键词', 'danger');
-        return;
-    }
-    
-    // 准备请求数据
-    const requestData = {
-        target_accounts: targetAccounts,
-        target_keywords: targetKeywords,
-        max_tweets: maxTweets,
-        enable_details: enableDetails,
-        task_name: taskName
-    };
-    
-    // 显示加载状态
-    const startButton = document.getElementById('startButton');
-    startButton.disabled = true;
-    startButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 启动中...';
-    
-    // 发送请求
-    fetch('/api/start-enhanced-scraping', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            currentTaskId = data.task_id;
-            showAlert(data.message, 'success');
-            showProgressContainer();
-            startProgressMonitoring();
-        } else {
-            showAlert('启动失败: ' + data.error, 'danger');
-            resetStartButton();
+    for (var i = 0; i < requiredElements.length; i++) {
+        var selector = requiredElements[i];
+        if ($(selector).length === 0) {
+            console.error('必要元素不存在: ' + selector);
         }
-    })
-    .catch(error => {
-        console.error('启动增强抓取失败:', error);
-        showAlert('启动失败: ' + error.message, 'danger');
-        resetStartButton();
+    }
+    
+    // 隐藏进度容器
+    $('#progressContainer').hide();
+}
+
+/**
+ * 绑定事件
+ */
+function bindEvents() {
+    // 表单提交
+    $('#enhancedScrapeForm').submit(function(e) {
+        e.preventDefault();
+        startEnhancedScraping();
+    });
+    
+    // 停止按钮
+    $('#stopScrapeBtn').click(function() {
+        stopProgressMonitoring();
+        showAlert('抓取已停止', 'warning');
     });
 }
 
-function showProgressContainer() {
-    document.getElementById('progressContainer').style.display = 'block';
-    document.getElementById('dataPreview').style.display = 'block';
-}
-
-function startProgressMonitoring() {
-    if (progressInterval) {
-        clearInterval(progressInterval);
+/**
+ * 启动增强抓取
+ */
+function startEnhancedScraping() {
+    console.log('启动增强抓取');
+    
+    // 获取表单数据
+    var formData = {
+        keywords: $('#keywords').val().trim(),
+        max_tweets: parseInt($('#maxTweets').val()) || 100,
+        min_likes: parseInt($('#minLikes').val()) || 0,
+        min_retweets: parseInt($('#minRetweets').val()) || 0,
+        min_comments: parseInt($('#minComments').val()) || 0,
+        date_from: $('#dateFrom').val(),
+        date_to: $('#dateTo').val(),
+        language: $('#language').val() || 'zh',
+        include_replies: $('#includeReplies').is(':checked'),
+        include_retweets: $('#includeRetweets').is(':checked')
+    };
+    
+    // 验证必填字段
+    if (!formData.keywords) {
+        showAlert('请输入搜索关键词', 'warning');
+        return;
     }
     
-    progressInterval = setInterval(() => {
-        if (currentTaskId) {
-            updateProgress();
-        }
-    }, 10000); // 每10秒更新一次（减少服务器负载）
+    // 禁用开始按钮
+    var $startBtn = $('#startScrapeBtn');
+    $startBtn.prop('disabled', true);
+    $startBtn.html('<i class="fas fa-spinner fa-spin"></i> 启动中...');
     
-    // 立即更新一次
-    updateProgress();
+    // 发送抓取请求
+    $.ajax({
+        url: '/api/enhanced-scrape',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(formData)
+    })
+        .done(function(response) {
+            if (response && response.success) {
+                showAlert('抓取任务已启动', 'success');
+                showProgressContainer();
+                startProgressMonitoring();
+            } else {
+                var errorMsg = response && response.error ? response.error : '启动失败';
+                showAlert('启动抓取失败: ' + errorMsg, 'danger');
+                resetStartButton();
+            }
+        })
+        .fail(function(xhr, status, error) {
+            console.error('请求失败:', status, error);
+            showAlert('网络错误，请稍后重试', 'danger');
+            resetStartButton();
+        });
 }
 
-function updateProgress() {
-    if (!currentTaskId) return;
+/**
+ * 显示进度容器
+ */
+function showProgressContainer() {
+    $('#progressContainer').show();
+    $('#dataPreview').show();
+}
+
+/**
+ * 启动进度监控
+ */
+function startProgressMonitoring() {
+    if (isProgressRunning) {
+        return;
+    }
     
-    fetch(`/api/enhanced-scraping-progress/${currentTaskId}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const taskData = data.data;
-                updateProgressDisplay(taskData);
+    isProgressRunning = true;
+    updateProgress();
+    
+    // 每2秒更新一次进度
+    progressInterval = setInterval(function() {
+        updateProgress();
+    }, 2000);
+}
+
+/**
+ * 更新进度
+ */
+function updateProgress() {
+    $.ajax({
+        url: '/api/scrape-progress',
+        method: 'GET',
+        dataType: 'json'
+    })
+        .done(function(response) {
+            if (response && response.success) {
+                updateProgressDisplay(response.data);
+                updateDataPreview(response.data);
                 
-                if (taskData.status === 'completed' || taskData.status === 'failed') {
+                // 如果抓取完成，停止监控
+                if (response.data.status === 'completed' || response.data.status === 'failed') {
                     stopProgressMonitoring();
                     resetStartButton();
                     
-                    if (taskData.status === 'completed') {
-                        showAlert(`抓取完成！共收集 ${taskData.collected_count} 条推文，其中 ${taskData.details_scraped} 条进行了详情抓取`, 'success');
-                        loadStatistics(); // 重新加载统计数据
+                    if (response.data.status === 'completed') {
+                        showAlert('抓取完成！', 'success');
                     } else {
-                        showAlert('抓取失败: ' + taskData.error, 'danger');
+                        showAlert('抓取失败', 'danger');
                     }
                 }
             }
         })
-        .catch(error => {
-            console.error('获取进度失败:', error);
+        .fail(function() {
+            console.error('获取进度失败');
         });
 }
 
-function updateProgressDisplay(taskData) {
-    // 更新数字显示
-    document.getElementById('collectedCount').textContent = taskData.collected_count || 0;
-    document.getElementById('detailsScraped').textContent = taskData.details_scraped || 0;
-    document.getElementById('targetCount').textContent = taskData.target_count || 0;
-    
-    // 计算进度百分比
-    const progress = taskData.target_count > 0 ? 
-        Math.round((taskData.collected_count / taskData.target_count) * 100) : 0;
-    document.getElementById('progressPercent').textContent = progress + '%';
+/**
+ * 更新进度显示
+ */
+function updateProgressDisplay(data) {
+    var progress = data.progress || 0;
+    var status = data.status || 'unknown';
+    var message = data.message || '处理中...';
     
     // 更新进度条
-    const progressBar = document.getElementById('progressBar');
-    progressBar.style.width = progress + '%';
-    progressBar.setAttribute('aria-valuenow', progress);
+    $('#progressBar').css('width', progress + '%');
+    $('#progressBar').attr('aria-valuenow', progress);
+    $('#progressText').text(Math.round(progress) + '%');
     
-    // 更新状态徽章
-    const statusBadge = document.getElementById('statusBadge');
-    const statusMap = {
-        'running': { text: '运行中', class: 'bg-primary' },
-        'completed': { text: '已完成', class: 'bg-success' },
-        'failed': { text: '失败', class: 'bg-danger' }
-    };
+    // 更新状态
+    $('#statusText').text(message);
     
-    const status = statusMap[taskData.status] || statusMap['running'];
-    statusBadge.textContent = status.text;
-    statusBadge.className = `badge ${status.class} ms-2`;
-    
-    // 显示错误信息
-    const errorMessage = document.getElementById('errorMessage');
-    if (taskData.error) {
-        errorMessage.textContent = taskData.error;
-        errorMessage.style.display = 'block';
-    } else {
-        errorMessage.style.display = 'none';
-    }
-    
-    // 更新最新数据预览
-    if (taskData.latest_data && taskData.latest_data.length > 0) {
-        updateDataPreview(taskData.latest_data);
+    // 更新统计
+    if (data.stats) {
+        $('#totalTweets').text(data.stats.total || 0);
+        $('#processedTweets').text(data.stats.processed || 0);
+        $('#savedTweets').text(data.stats.saved || 0);
     }
 }
 
-function updateDataPreview(tweets) {
-    const container = document.getElementById('latestTweets');
-    container.innerHTML = '';
+/**
+ * 更新数据预览
+ */
+function updateDataPreview(data) {
+    if (!data.preview || data.preview.length === 0) {
+        $('#dataPreview').html('<p class="text-muted">暂无预览数据</p>');
+        return;
+    }
     
-    tweets.forEach(tweet => {
-        const tweetElement = createTweetPreview(tweet);
-        container.appendChild(tweetElement);
-    });
+    var html = '<h6>最新抓取的推文预览：</h6>';
+    for (var i = 0; i < Math.min(data.preview.length, 3); i++) {
+        var tweet = data.preview[i];
+        html += createTweetPreview(tweet);
+    }
+    
+    $('#dataPreview').html(html);
 }
 
+/**
+ * 创建推文预览元素
+ */
 function createTweetPreview(tweet) {
-    const div = document.createElement('div');
-    div.className = 'tweet-preview';
+    var mediaIcon = getMediaIcon(tweet.media_type);
+    var createdAt = tweet.created_at ? new Date(tweet.created_at).toLocaleString() : '未知时间';
     
-    // 构建推文HTML
-    let html = `
-        <div class="d-flex justify-content-between align-items-start mb-2">
-            <div>
-                <strong>@${tweet.username || '未知用户'}</strong>
-                ${tweet.has_detailed_content ? '<span class="enhancement-badge">增强</span>' : ''}
-            </div>
-            <small class="text-muted">${tweet.source || ''}</small>
-        </div>
-        <div class="mb-2">
-            ${tweet.full_content || tweet.content || '无内容'}
-        </div>
-    `;
-    
-    // 添加多媒体内容
-    if (tweet.media && tweet.media.length > 0) {
-        html += '<div class="mb-2">';
-        tweet.media.forEach(media => {
-            html += `<span class="media-item">
-                <i class="fas fa-${getMediaIcon(media.type)}"></i> ${media.type}
-            </span>`;
-        });
-        html += '</div>';
-    }
-    
-    // 添加线程指示
-    if (tweet.thread && tweet.thread.length > 0) {
-        html += `<div class="thread-indicator">
-            <i class="fas fa-list"></i> 包含 ${tweet.thread.length} 条线程推文
-        </div>`;
-    }
-    
-    // 添加引用推文
-    if (tweet.quoted_tweet) {
-        html += `<div class="quoted-tweet">
-            <small><i class="fas fa-quote-left"></i> 引用推文:</small><br>
-            <strong>@${tweet.quoted_tweet.username}</strong>: ${tweet.quoted_tweet.content}
-        </div>`;
-    }
-    
-    // 添加统计信息
-    html += `
-        <div class="d-flex justify-content-between text-muted small">
-            <div>
-                <i class="fas fa-heart"></i> ${tweet.likes || 0}
-                <i class="fas fa-comment ms-2"></i> ${tweet.comments || 0}
-                <i class="fas fa-retweet ms-2"></i> ${tweet.retweets || 0}
-                ${tweet.account_type ? `<span class="account-type ${tweet.account_type} ms-2" title="账号类型">${tweet.account_type}</span>` : ''}
-            </div>
-            <div>${tweet.publish_time || ''}</div>
-        </div>
-    `;
-    
-    div.innerHTML = html;
-    return div;
+    return '<div class="card mb-2">' +
+           '<div class="card-body p-3">' +
+           '<div class="d-flex align-items-start">' +
+           '<div class="me-3">' +
+           '<img src="' + (tweet.user_avatar || '/static/default-avatar.png') + '" ' +
+           'class="rounded-circle" width="40" height="40" alt="头像">' +
+           '</div>' +
+           '<div class="flex-grow-1">' +
+           '<div class="d-flex justify-content-between align-items-start mb-2">' +
+           '<div>' +
+           '<strong>' + (tweet.user_name || '未知用户') + '</strong>' +
+           '<span class="text-muted ms-2">@' + (tweet.username || 'unknown') + '</span>' +
+           '</div>' +
+           '<small class="text-muted">' + createdAt + '</small>' +
+           '</div>' +
+           '<p class="mb-2">' + (tweet.content || '无内容') + '</p>' +
+           '<div class="d-flex justify-content-between text-muted small">' +
+           '<span><i class="fas fa-heart"></i> ' + (tweet.likes_count || 0) + '</span>' +
+           '<span><i class="fas fa-retweet"></i> ' + (tweet.retweets_count || 0) + '</span>' +
+           '<span><i class="fas fa-comment"></i> ' + (tweet.comments_count || 0) + '</span>' +
+           mediaIcon +
+           '</div>' +
+           '</div>' +
+           '</div>' +
+           '</div>' +
+           '</div>';
 }
 
+/**
+ * 获取媒体图标
+ */
 function getMediaIcon(mediaType) {
-    const iconMap = {
-        'image': 'image',
-        'video': 'video',
-        'gif': 'film'
-    };
-    return iconMap[mediaType] || 'file';
+    if (!mediaType || mediaType === 'none') {
+        return '';
+    }
+    
+    var iconClass = '';
+    switch (mediaType) {
+        case 'photo':
+            iconClass = 'fa-image';
+            break;
+        case 'video':
+            iconClass = 'fa-video';
+            break;
+        case 'gif':
+            iconClass = 'fa-file-image';
+            break;
+        default:
+            iconClass = 'fa-paperclip';
+    }
+    
+    return '<span><i class="fas ' + iconClass + '"></i></span>';
 }
 
+/**
+ * 停止进度监控
+ */
 function stopProgressMonitoring() {
     if (progressInterval) {
         clearInterval(progressInterval);
         progressInterval = null;
     }
-    currentTaskId = null;
+    isProgressRunning = false;
 }
 
+/**
+ * 重置开始按钮
+ */
 function resetStartButton() {
-    const startButton = document.getElementById('startButton');
-    startButton.disabled = false;
-    startButton.innerHTML = '<i class="fas fa-play"></i> 开始抓取';
+    var $startBtn = $('#startScrapeBtn');
+    $startBtn.prop('disabled', false);
+    $startBtn.html('<i class="fas fa-play"></i> 开始抓取');
 }
 
-function loadStatistics() {
-    // 加载统计数据
-    fetch('/api/tasks')
-        .then(response => response.json())
-        .then(tasks => {
-            document.getElementById('totalTasks').textContent = tasks.length;
-            
-            // 计算总推文数
-            const totalTweets = tasks.reduce((sum, task) => sum + (task.result_count || 0), 0);
-            document.getElementById('totalTweets').textContent = totalTweets;
+/**
+ * 加载统计数据
+ */
+function loadStats() {
+    $.ajax({
+        url: '/api/stats',
+        method: 'GET',
+        dataType: 'json'
+    })
+        .done(function(response) {
+            if (response && response.success) {
+                $('#totalTweetsCount').text(response.data.total_tweets || 0);
+                $('#todayTweetsCount').text(response.data.today_tweets || 0);
+                $('#activeInfluencersCount').text(response.data.active_influencers || 0);
+            }
         })
-        .catch(error => {
-            console.error('加载统计数据失败:', error);
+        .fail(function() {
+            console.error('加载统计数据失败');
         });
 }
 
-function showAlert(message, type = 'info') {
-    // 创建警告框
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-    alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
+/**
+ * 显示警告框
+ */
+function showAlert(message, type) {
+    var alertHtml = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+                    message +
+                    '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                    '</div>';
+    $('#alertContainer').html(alertHtml);
     
-    // 插入到页面顶部
-    const container = document.querySelector('.container');
-    container.insertBefore(alertDiv, container.firstChild);
-    
-    // 3秒后自动消失
-    setTimeout(() => {
-        if (alertDiv.parentNode) {
-            alertDiv.remove();
-        }
-    }, 3000);
+    // 5秒后自动隐藏
+    setTimeout(function() {
+        $('.alert').alert('close');
+    }, 5000);
 }
-
-// 页面卸载时清理
-window.addEventListener('beforeunload', function() {
-    stopProgressMonitoring();
-});

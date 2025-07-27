@@ -939,6 +939,8 @@ except Exception as e:
 def index():
     """首页"""
     from datetime import datetime, date
+    import sys
+    import psutil
     
     # 计算统计数据
     today = date.today()
@@ -953,7 +955,52 @@ def index():
     # 获取最近的任务
     recent_tasks = ScrapingTask.query.order_by(ScrapingTask.created_at.desc()).limit(5).all()
     
-    return render_template('index.html', stats=stats, recent_tasks=recent_tasks)
+    # 获取系统信息
+    try:
+        # 计算运行时间
+        import time
+        start_time = getattr(app, 'start_time', time.time())
+        uptime_seconds = int(time.time() - start_time)
+        uptime_hours = uptime_seconds // 3600
+        uptime_minutes = (uptime_seconds % 3600) // 60
+        uptime = f"{uptime_hours}小时{uptime_minutes}分钟"
+        
+        # 获取内存使用情况
+        memory = psutil.virtual_memory()
+        memory_usage = f"{memory.percent}% ({memory.used // (1024**3):.1f}GB/{memory.total // (1024**3):.1f}GB)"
+        
+        # 获取Python版本
+        python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        
+        # 获取数据库大小
+        db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+        if os.path.exists(db_path):
+            db_size_bytes = os.path.getsize(db_path)
+            if db_size_bytes < 1024**2:
+                db_size = f"{db_size_bytes / 1024:.1f} KB"
+            elif db_size_bytes < 1024**3:
+                db_size = f"{db_size_bytes / (1024**2):.1f} MB"
+            else:
+                db_size = f"{db_size_bytes / (1024**3):.1f} GB"
+        else:
+            db_size = "未知"
+        
+        system_info = {
+            'uptime': uptime,
+            'memory_usage': memory_usage,
+            'python_version': python_version,
+            'db_size': db_size
+        }
+    except Exception as e:
+        app.logger.error(f"获取系统信息失败: {e}")
+        system_info = {
+            'uptime': '未知',
+            'memory_usage': '未知',
+            'python_version': '未知',
+            'db_size': '未知'
+        }
+    
+    return render_template('index.html', stats=stats, recent_tasks=recent_tasks, system_info=system_info)
 
 @app.route('/tasks')
 def tasks():
@@ -1124,6 +1171,11 @@ def data():
                          data_stats=data_stats, 
                          tasks=tasks)
 
+@app.route('/about')
+def about():
+    """关于我页面"""
+    return render_template('about.html')
+
 @app.route('/config')
 def config():
     """配置页面"""
@@ -1206,13 +1258,17 @@ def update_config():
                     )
                     db.session.add(config)
             
+            # 根据多窗口用户ID列表自动计算并发任务数
+            multi_user_ids_list = [uid.strip() for uid in adspower_configs['adspower_multi_user_ids'].split('\n') if uid.strip()]
+            auto_concurrent_tasks = max(1, len(multi_user_ids_list))
+            
             # 更新全局配置（用于当前会话）
             global ADS_POWER_CONFIG
             ADS_POWER_CONFIG.update({
                 'local_api_url': adspower_configs['adspower_api_url'],
                 'user_id': adspower_configs['adspower_user_id'],
-                'multi_user_ids': [uid.strip() for uid in adspower_configs['adspower_multi_user_ids'].split('\n') if uid.strip()],
-                'max_concurrent_tasks': int(adspower_configs['max_concurrent_tasks']),
+                'multi_user_ids': multi_user_ids_list,
+                'max_concurrent_tasks': auto_concurrent_tasks,  # 使用自动计算的值
                 'task_timeout': int(adspower_configs['task_timeout']),
                 'browser_startup_delay': float(adspower_configs['browser_startup_delay']),
                 'request_interval': float(adspower_configs['request_interval']),
@@ -1222,11 +1278,24 @@ def update_config():
                 'health_check': adspower_configs['adspower_health_check']
             })
             
+            # 同时更新数据库中的max_concurrent_tasks值
+            max_concurrent_config = SystemConfig.query.filter_by(key='max_concurrent_tasks').first()
+            if max_concurrent_config:
+                max_concurrent_config.value = str(auto_concurrent_tasks)
+                max_concurrent_config.updated_at = datetime.utcnow()
+            else:
+                max_concurrent_config = SystemConfig(
+                    key='max_concurrent_tasks',
+                    value=str(auto_concurrent_tasks),
+                    description='AdsPower配置: max_concurrent_tasks'
+                )
+                db.session.add(max_concurrent_config)
+            
             # 更新任务管理器的配置
             if hasattr(task_manager, 'max_concurrent_tasks'):
-                task_manager.max_concurrent_tasks = int(adspower_configs['max_concurrent_tasks'])
+                task_manager.max_concurrent_tasks = auto_concurrent_tasks  # 使用自动计算的值
             if hasattr(task_manager, 'user_id_pool'):
-                task_manager.user_id_pool = [uid.strip() for uid in adspower_configs['adspower_multi_user_ids'].split('\n') if uid.strip()]
+                task_manager.user_id_pool = multi_user_ids_list
             if hasattr(task_manager, 'request_interval'):
                 task_manager.request_interval = float(adspower_configs['request_interval'])
             if hasattr(task_manager, 'user_switch_interval'):
@@ -3554,6 +3623,73 @@ def api_toggle_influencer_status(influencer_id):
         db.session.rollback()
         return jsonify({'success': False, 'error': f'切换状态失败: {str(e)}'}), 500
 
+@app.route('/api/influencers/stats', methods=['GET'])
+def api_get_influencer_stats():
+    """获取博主统计数据API"""
+    try:
+        from datetime import datetime, timedelta
+        import json
+        
+        # 从任务中提取所有使用过的博主
+        all_tasks = ScrapingTask.query.all()
+        task_influencers = set()
+        
+        for task in all_tasks:
+            if task.target_accounts:
+                try:
+                    accounts = json.loads(task.target_accounts)
+                    for account in accounts:
+                        # 清理用户名，去除@符号
+                        clean_username = account.lstrip('@') if account.startswith('@') else account
+                        task_influencers.add(clean_username.lower())
+                except:
+                    continue
+        
+        # 总博主数（任务中使用的博主数量）
+        total_influencers = len(task_influencers)
+        
+        # TwitterInfluencer表中的博主数
+        managed_influencers = TwitterInfluencer.query.count()
+        
+        # 启用博主数（TwitterInfluencer表中启用的）
+        active_influencers = TwitterInfluencer.query.filter(TwitterInfluencer.is_active == True).count()
+        
+        # 分类数量（有博主的分类）
+        categories_with_influencers = db.session.query(TwitterInfluencer.category).filter(
+            TwitterInfluencer.category.isnot(None)
+        ).distinct().count()
+        
+        # 今日抓取数量（最近24小时内有任务的博主数）
+        today_start = datetime.now() - timedelta(days=1)
+        recent_tasks = ScrapingTask.query.filter(
+            ScrapingTask.created_at >= today_start
+        ).all()
+        
+        scraped_today = set()
+        for task in recent_tasks:
+            if task.target_accounts:
+                try:
+                    accounts = json.loads(task.target_accounts)
+                    for account in accounts:
+                        clean_username = account.lstrip('@') if account.startswith('@') else account
+                        scraped_today.add(clean_username.lower())
+                except:
+                    continue
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'total_influencers': total_influencers,  # 任务中使用的博主总数
+                'active_influencers': active_influencers,  # 管理表中启用的博主数
+                'managed_influencers': managed_influencers,  # 管理表中的博主总数
+                'total_categories': categories_with_influencers,
+                'scraped_today': len(scraped_today)  # 今日任务涉及的博主数
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'获取统计数据失败: {str(e)}'}), 500
+
 @app.route('/api/influencers/categories', methods=['GET'])
 def api_get_influencer_categories():
     """获取博主分类列表API"""
@@ -3612,6 +3748,148 @@ def debug_adspower():
     with open('debug_adspower.html', 'r', encoding='utf-8') as f:
         return f.read()
 
+# 系统管理API端点
+@app.route('/api/backup-database', methods=['POST'])
+def api_backup_database():
+    """备份数据库API"""
+    try:
+        import shutil
+        from datetime import datetime
+        
+        # 获取数据库文件路径
+        db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+        if not os.path.exists(db_path):
+            return jsonify({'success': False, 'error': '数据库文件不存在'}), 404
+        
+        # 创建备份目录
+        backup_dir = './backups'
+        os.makedirs(backup_dir, exist_ok=True)
+        
+        # 生成备份文件名
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_filename = f'twitter_scraper_backup_{timestamp}.db'
+        backup_path = os.path.join(backup_dir, backup_filename)
+        
+        # 复制数据库文件
+        shutil.copy2(db_path, backup_path)
+        
+        return jsonify({
+            'success': True,
+            'message': f'数据库备份成功，文件保存为: {backup_filename}',
+            'backup_path': backup_path
+        })
+        
+    except Exception as e:
+        app.logger.error(f"数据库备份失败: {e}")
+        return jsonify({'success': False, 'error': f'备份失败: {str(e)}'}), 500
+
+@app.route('/api/clean-expired-data', methods=['POST'])
+def api_clean_expired_data():
+    """清理过期数据API"""
+    try:
+        from datetime import datetime, timedelta
+        
+        # 清理30天前的推文数据
+        cutoff_date = datetime.now() - timedelta(days=30)
+        expired_tweets = TweetData.query.filter(TweetData.scraped_at < cutoff_date).all()
+        count = len(expired_tweets)
+        
+        for tweet in expired_tweets:
+            db.session.delete(tweet)
+        
+        # 清理已完成的任务（保留最近7天）
+        task_cutoff_date = datetime.now() - timedelta(days=7)
+        expired_tasks = ScrapingTask.query.filter(
+            ScrapingTask.status.in_(['completed', 'failed']),
+            ScrapingTask.created_at < task_cutoff_date
+        ).all()
+        
+        task_count = len(expired_tasks)
+        for task in expired_tasks:
+            db.session.delete(task)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'count': count + task_count,
+            'message': f'清理完成：删除了 {count} 条推文数据和 {task_count} 个过期任务'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"清理过期数据失败: {e}")
+        return jsonify({'success': False, 'error': f'清理失败: {str(e)}'}), 500
+
+@app.route('/api/export-logs', methods=['GET'])
+def api_export_logs():
+    """导出日志API"""
+    try:
+        import zipfile
+        from flask import send_file
+        import tempfile
+        
+        # 创建临时zip文件
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.zip')
+        
+        with zipfile.ZipFile(temp_file.name, 'w') as zipf:
+            # 添加应用日志
+            log_files = ['twitter_scraper.log', 'app.log']
+            for log_file in log_files:
+                if os.path.exists(log_file):
+                    zipf.write(log_file, log_file)
+            
+            # 添加系统信息
+            import sys
+            import psutil
+            system_info = f"""系统信息导出
+时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Python版本: {sys.version}
+内存使用: {psutil.virtual_memory().percent}%
+磁盘使用: {psutil.disk_usage('/').percent}%
+"""
+            zipf.writestr('system_info.txt', system_info)
+        
+        return send_file(
+            temp_file.name,
+            as_attachment=True,
+            download_name=f'twitter_scraper_logs_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip',
+            mimetype='application/zip'
+        )
+        
+    except Exception as e:
+        app.logger.error(f"导出日志失败: {e}")
+        return jsonify({'success': False, 'error': f'导出失败: {str(e)}'}), 500
+
+@app.route('/api/restart-system', methods=['POST'])
+def api_restart_system():
+    """重启系统API"""
+    try:
+        # 停止所有运行中的任务
+        running_tasks = ScrapingTask.query.filter_by(status='running').all()
+        for task in running_tasks:
+            task.status = 'pending'
+        db.session.commit()
+        
+        # 延迟重启，给前端时间显示消息
+        def delayed_restart():
+            import time
+            time.sleep(3)
+            os._exit(0)  # 强制退出，由进程管理器重启
+        
+        import threading
+        restart_thread = threading.Thread(target=delayed_restart)
+        restart_thread.start()
+        
+        return jsonify({
+            'success': True,
+            'message': '系统将在3秒后重启...'
+        })
+        
+    except Exception as e:
+        app.logger.error(f"重启系统失败: {e}")
+        return jsonify({'success': False, 'error': f'重启失败: {str(e)}'}), 500
+
 # 确保在模块加载时初始化
 try:
     init_db()
@@ -3619,6 +3897,10 @@ except Exception as e:
     print(f"⚠️ 初始化失败: {e}")
 
 if __name__ == '__main__':
+    # 记录应用启动时间
+    import time
+    app.start_time = time.time()
+    
     # 初始化数据库
     init_db()
     
@@ -3626,4 +3908,4 @@ if __name__ == '__main__':
     task_executor = ScrapingTaskExecutor()
     
     # 启动Web应用
-    app.run(debug=True, host='0.0.0.0', port=8089)
+    app.run(debug=True, host='0.0.0.0', port=8090)
