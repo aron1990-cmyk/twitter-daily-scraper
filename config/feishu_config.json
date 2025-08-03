@@ -4,6 +4,8 @@
   "spreadsheet_token": "V862biEswatwnRsGalochUI6n6d",
   "table_id": "tblicDZl35dn2vZ9",
   "enabled": true,
+  "auto_sync": true,
+  "base_url": "https://open.feishu.cn/open-apis",
   "description": {
     "app_id": "cli_a8f94354c178900b",
     "app_secret": "HGQGTQyvr2QsWVmPMdY8Oe7A67J3ihVV",

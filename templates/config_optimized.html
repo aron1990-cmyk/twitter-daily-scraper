@@ -1,0 +1,620 @@
+{% extends "base_optimized.html" %}
+
+{% block title %}系统配置{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-cog me-2"></i>系统配置</h2>
+        <div class="btn-group">
+            <button type="button" class="btn btn-success" onclick="saveAllConfig()">
+                <i class="fas fa-save me-1"></i>保存所有配置
+            </button>
+        </div>
+    </div>
+
+    <!-- 配置表单 -->
+    <form id="configForm" action="/update_config" method="POST">
+        <!-- AdsPower 配置 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-browser me-2"></i>AdsPower 浏览器配置</h5>
+            </div>
+            <div class="card-body">
+
+                
+                <!-- AdsPower 配置说明 -->
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>配置说明：</strong>AdsPower 配置已通过配置文件管理，如需修改请联系系统管理员。
+                    <br><br>
+                    <strong>当前状态：</strong>
+                    <ul class="mb-2">
+                        <li>API地址：<code>http://localhost:50325</code></li>
+                        <li>配置文件：<code>config/adspower_config.py</code></li>
+                    </ul>
+                    <strong>故障排查：</strong>
+                    <ul class="mb-0">
+                        <li>确认 AdsPower 已启动且登录</li>
+                        <li>检查 AdsPower 设置中是否启用本地 API 服务</li>
+                        <li>验证本地防火墙是否放行 50325 端口</li>
+                    </ul>
+                </div>
+                
+                <div class="text-center">
+                    <button type="button" class="btn btn-info" onclick="testConnection()">
+                        <i class="fas fa-plug me-1"></i>测试 AdsPower 连接
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 飞书配置 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-cloud me-2"></i>飞书同步配置</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>配置说明：</strong>飞书配置已通过配置文件管理，如需修改请联系系统管理员。
+                    <br><br>
+                    <strong>当前状态：</strong>
+                    <ul class="mb-2">
+                        <li>飞书同步：<span class="badge bg-success">已配置</span></li>
+                        <li>异步同步：<span class="badge bg-success">已启用</span></li>
+                        <li>配置文件：<code>config/feishu_config.py</code></li>
+                    </ul>
+                    <strong>故障排查：</strong>
+                    <ul class="mb-0">
+                        <li>确认飞书应用权限已正确配置</li>
+                        <li>检查表格Token和数据表ID是否正确</li>
+                        <li>验证网络连接是否正常</li>
+                    </ul>
+                </div>
+                
+                <div class="text-center">
+                    <button type="button" class="btn btn-info" onclick="testFeishuConnection()">
+                        <i class="fas fa-plug me-1"></i>测试飞书连接
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 抓取配置 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-spider me-2"></i>抓取配置</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="default_max_tweets" class="form-label">默认最大推文数</label>
+                            <input type="number" class="form-control" id="default_max_tweets" name="default_max_tweets" 
+                                   value="{{ config.get('default_max_tweets', '50') }}" min="1" max="1000">
+                            <div class="form-text">每个任务默认抓取的最大推文数</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="default_min_likes" class="form-label">默认最小点赞数</label>
+                            <input type="number" class="form-control" id="default_min_likes" name="default_min_likes" 
+                                   value="{{ config.get('default_min_likes', '0') }}" min="0">
+                            <div class="form-text">推文的最小点赞数过滤条件</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="default_min_retweets" class="form-label">默认最小转发数</label>
+                            <input type="number" class="form-control" id="default_min_retweets" name="default_min_retweets" 
+                                   value="{{ config.get('default_min_retweets', '0') }}" min="0">
+                            <div class="form-text">推文的最小转发数过滤条件</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="scraping_timeout" class="form-label">抓取超时时间（秒）</label>
+                            <input type="number" class="form-control" id="scraping_timeout" name="scraping_timeout" 
+                                   value="{{ config.get('scraping_timeout', '300') }}" min="60" max="3600">
+                            <div class="form-text">单个抓取任务的超时时间</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="max_concurrent_tasks" class="form-label">最大并发任务数</label>
+                            <input type="number" class="form-control" id="max_concurrent_tasks" name="max_concurrent_tasks" 
+                                   value="{{ config.get('max_concurrent_tasks', '2') }}" min="1" max="10">
+                            <div class="form-text">同时运行的最大任务数量</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 导出配置 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-download me-2"></i>导出配置</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">导出字段</label>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="export_content" name="export_fields" value="content" 
+                                       {% if 'content' in config.get('export_fields', []) %}checked{% endif %}>
+                                <label class="form-check-label" for="export_content">推文内容</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="export_username" name="export_fields" value="username" 
+                                       {% if 'username' in config.get('export_fields', []) %}checked{% endif %}>
+                                <label class="form-check-label" for="export_username">用户名</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="export_likes" name="export_fields" value="likes_count" 
+                                       {% if 'likes_count' in config.get('export_fields', []) %}checked{% endif %}>
+                                <label class="form-check-label" for="export_likes">点赞数</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="export_retweets" name="export_fields" value="retweets_count" 
+                                       {% if 'retweets_count' in config.get('export_fields', []) %}checked{% endif %}>
+                                <label class="form-check-label" for="export_retweets">转发数</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="export_created_at" name="export_fields" value="created_at" 
+                                       {% if 'created_at' in config.get('export_fields', []) %}checked{% endif %}>
+                                <label class="form-check-label" for="export_created_at">创建时间</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="export_hashtags" name="export_fields" value="hashtags" 
+                                       {% if 'hashtags' in config.get('export_fields', []) %}checked{% endif %}>
+                                <label class="form-check-label" for="export_hashtags">话题标签</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="export_link" name="export_fields" value="link" 
+                                       {% if 'link' in config.get('export_fields', []) %}checked{% endif %}>
+                                <label class="form-check-label" for="export_link">推文链接</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="export_content_type" name="export_fields" value="content_type" 
+                                       {% if 'content_type' in config.get('export_fields', []) %}checked{% endif %}>
+                                <label class="form-check-label" for="export_content_type">内容类型</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 系统配置 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-server me-2"></i>系统配置</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="log_level" class="form-label">日志级别</label>
+                            <select class="form-select" id="log_level" name="log_level">
+                                <option value="DEBUG" {% if config.get('log_level', 'INFO') == 'DEBUG' %}selected{% endif %}>DEBUG</option>
+                                <option value="INFO" {% if config.get('log_level', 'INFO') == 'INFO' %}selected{% endif %}>INFO</option>
+                                <option value="WARNING" {% if config.get('log_level', 'INFO') == 'WARNING' %}selected{% endif %}>WARNING</option>
+                                <option value="ERROR" {% if config.get('log_level', 'INFO') == 'ERROR' %}selected{% endif %}>ERROR</option>
+                            </select>
+                            <div class="form-text">系统日志记录级别</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="data_retention_days" class="form-label">数据保留天数</label>
+                            <input type="number" class="form-control" id="data_retention_days" name="data_retention_days" 
+                                   value="{{ config.get('data_retention_days', '30') }}" min="1" max="365">
+                            <div class="form-text">自动清理多少天前的数据</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="auto_backup" name="auto_backup" 
+                                       {% if config.get('auto_backup', 'false') == 'true' %}checked{% endif %}>
+                                <label class="form-check-label" for="auto_backup">
+                                    启用自动备份
+                                </label>
+                            </div>
+                            <div class="form-text">是否启用数据库自动备份</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="enable_notifications" name="enable_notifications" 
+                                       {% if config.get('enable_notifications', 'true') == 'true' %}checked{% endif %}>
+                                <label class="form-check-label" for="enable_notifications">
+                                    启用通知
+                                </label>
+                            </div>
+                            <div class="form-text">是否启用任务完成通知</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- 测试连接模态框 -->
+<div class="modal fade" id="testModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">连接测试</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="testResults">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">测试中...</span>
+                        </div>
+                        <p class="mt-2">正在测试连接...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 保存所有配置
+function saveAllConfig() {
+    const form = document.getElementById('configForm');
+    const formData = new FormData(form);
+    
+    // AdsPower 用户ID现在由配置文件管理，不再从表单获取
+    
+    // 处理复选框字段
+    const exportFields = [];
+    document.querySelectorAll('input[name="export_fields"]:checked').forEach(cb => {
+        exportFields.push(cb.value);
+    });
+    formData.set('export_fields', exportFields.join(','));
+    
+    // 处理其他复选框
+    ['feishu_enabled', 'feishu_async_enabled', 'auto_backup', 'enable_notifications'].forEach(field => {
+        const checkbox = document.getElementById(field);
+        formData.set(field, checkbox.checked ? 'true' : 'false');
+    });
+    
+    fetch('/update_config', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('✅ 配置保存成功', 'success');
+        } else {
+            showAlert('❌ 错误原因：' + (data.message || '未知错误'), 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('保存配置失败:', error);
+        showAlert('❌ 错误原因：网络错误', 'danger');
+    });
+}
+
+// 添加用户ID输入框
+function addUserId() {
+    const container = document.getElementById('userIdContainer');
+    const newGroup = document.createElement('div');
+    newGroup.className = 'input-group mb-2 user-id-group';
+    newGroup.innerHTML = `
+        <input type="text" class="form-control user-id-input" 
+               placeholder="k1x2xxxx" disabled>
+        <button type="button" class="btn btn-outline-danger" onclick="removeUserId(this)">
+            <i class="fas fa-trash"></i>
+        </button>
+    `;
+    container.appendChild(newGroup);
+}
+
+// 移除用户ID输入框
+function removeUserId(button) {
+    const container = document.getElementById('userIdContainer');
+    const groups = container.querySelectorAll('.user-id-group');
+    
+    // 至少保留一个输入框
+    if (groups.length > 1) {
+        button.closest('.user-id-group').remove();
+    } else {
+        // 如果只有一个，清空内容
+        const input = button.closest('.user-id-group').querySelector('.user-id-input');
+        input.value = '';
+    }
+}
+
+// 测试连接
+function testConnection() {
+    const modal = new bootstrap.Modal(document.getElementById('testModal'));
+    modal.show();
+    
+    // 重置测试结果
+    document.getElementById('testResults').innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">测试中...</span>
+            </div>
+            <p class="mt-2">正在测试连接...</p>
+        </div>
+    `;
+    
+    // 测试 AdsPower 连接（使用配置文件中的参数）
+    const adsPowerTestData = {};
+    
+    // 创建超时控制器
+    const adsPowerController = new AbortController();
+    const feishuController = new AbortController();
+    const timeoutId1 = setTimeout(() => adsPowerController.abort(), 15000); // 15秒超时
+    const timeoutId2 = setTimeout(() => feishuController.abort(), 15000); // 15秒超时
+    
+    Promise.all([
+        fetch('/api/test_adspower_connection', { 
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(adsPowerTestData),
+            signal: adsPowerController.signal
+        }),
+        fetch('/api/config/feishu/test', { 
+            method: 'POST',
+            signal: feishuController.signal
+        })
+    ])
+    .then(responses => {
+        // 清理定时器
+        clearTimeout(timeoutId1);
+        clearTimeout(timeoutId2);
+        return Promise.all(responses.map(r => r.json()));
+    })
+    .then(([adsPowerResult, feishuResult]) => {
+        let html = '<div class="test-results">';
+        
+        // AdsPower 测试结果
+        html += `
+            <div class="mb-3">
+                <h6><i class="fas fa-browser me-2"></i>AdsPower 连接</h6>
+                <div class="alert alert-${adsPowerResult.success ? 'success' : 'danger'}">
+                    <i class="fas fa-${adsPowerResult.success ? 'check-circle' : 'times-circle'} me-2"></i>
+                    ${adsPowerResult.message || (adsPowerResult.success ? '连接成功' : '连接失败')}
+                </div>
+                ${adsPowerResult.user_validation ? `
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <strong>用户ID验证:</strong><br>
+                            ${adsPowerResult.user_validation.valid_count > 0 && adsPowerResult.user_validation.valid_ids ? 
+                                `✅ 有效: ${adsPowerResult.user_validation.valid_ids.join(', ')}<br>` : ''}
+                            ${adsPowerResult.user_validation.invalid_count > 0 && adsPowerResult.user_validation.invalid_ids ? 
+                                `❌ 无效: ${adsPowerResult.user_validation.invalid_ids.join(', ')}<br>` : ''}
+                            总计: ${adsPowerResult.user_validation.total_count} 个用户ID
+                        </small>
+                    </div>
+                ` : ''}
+                ${!adsPowerResult.success && adsPowerResult.diagnosis ? `
+                    <div class="mt-3">
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning bg-opacity-10">
+                                <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>连接诊断</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>连接状态:</strong> ${adsPowerResult.diagnosis.reachable ? '✅ 可达' : '❌ 不可达'}<br>
+                                        <strong>尝试主机:</strong> ${adsPowerResult.diagnosis.tried_hosts ? adsPowerResult.diagnosis.tried_hosts.join(', ') : '无'}<br>
+                                        <strong>端口状态:</strong> ${adsPowerResult.diagnosis.port_open ? '✅ 开放' : '❌ 关闭'}<br>
+                                        <strong>端口监听:</strong> ${adsPowerResult.diagnosis.port_listening ? '✅ 正在监听' : '❌ 未监听'}<br>
+                                        <strong>错误类型:</strong> ${adsPowerResult.diagnosis.error_type || '未知'}
+                                        ${adsPowerResult.diagnosis.port_process ? `<br><strong>端口进程:</strong> ${adsPowerResult.diagnosis.port_process}` : ''}
+                                        ${adsPowerResult.diagnosis.system_info ? `<br><strong>系统平台:</strong> ${adsPowerResult.diagnosis.system_info.platform}` : ''}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>建议解决方案:</strong><br>
+                                        <small class="text-muted">${adsPowerResult.diagnosis.recommendation}</small>
+                                    </div>
+                                </div>
+                                ${adsPowerResult.diagnosis.api_enabled_check && adsPowerResult.diagnosis.api_enabled_check.length > 0 ? `
+                                    <div class="mt-3">
+                                        <h6 class="mb-2">🔧 API 启用检查</h6>
+                                        <div class="row">
+                                            ${adsPowerResult.diagnosis.api_enabled_check.map(check => `
+                                                <div class="col-md-6 mb-2">
+                                                    <div class="card border-${check.status === 'failed' ? 'danger' : check.status === 'passed' ? 'success' : 'secondary'} h-100">
+                                                        <div class="card-body p-2">
+                                                            <h6 class="card-title mb-1">
+                                                                ${check.status === 'failed' ? '❌' : check.status === 'passed' ? '✅' : '❓'} 
+                                                                ${check.item}
+                                                            </h6>
+                                                            <p class="card-text small mb-0">${check.description}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                ${adsPowerResult.diagnosis.suggestions ? `
+                                    <div class="mt-3">
+                                        <strong>检查清单:</strong>
+                                        <ul class="list-unstyled mt-2">
+                                            ${adsPowerResult.diagnosis.suggestions.map(suggestion => 
+                                                `<li><small>${suggestion}</small></li>`
+                                            ).join('')}
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                                ${!adsPowerResult.diagnosis.reachable ? `
+                                    <div class="alert alert-warning mt-3 mb-2">
+                                        <h6 class="alert-heading">❌ AdsPower连接失败，系统无法访问 http://127.0.0.1:${adsPowerResult.diagnosis.system_info ? adsPowerResult.diagnosis.system_info.port : '50325'}</h6>
+                                        <p class="mb-2">请确认以下内容：</p>
+                                        <ul class="mb-2">
+                                            <li>✅ AdsPower 已打开并登录</li>
+                                            <li>✅ 已在 AdsPower 设置中启用本地 API 服务</li>
+                                            <li>✅ API 配置允许 HTTP 请求</li>
+                                            <li>✅ 当前未开启系统防火墙屏蔽 ${adsPowerResult.diagnosis.system_info ? adsPowerResult.diagnosis.system_info.port : '50325'} 端口</li>
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+                ${!adsPowerResult.success && adsPowerResult.download_url ? `
+                    <div class="mt-2">
+                        <a href="${adsPowerResult.download_url}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            👉 如尚未安装 AdsPower，请点击下载
+                        </a>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        
+        // 飞书测试结果
+        html += `
+            <div class="mb-3">
+                <h6><i class="fas fa-cloud me-2"></i>飞书连接</h6>
+                <div class="alert alert-${feishuResult.success ? 'success' : 'danger'}">
+                    <i class="fas fa-${feishuResult.success ? 'check-circle' : 'times-circle'} me-2"></i>
+                    ${feishuResult.message || (feishuResult.success ? '连接成功' : '连接失败')}
+                </div>
+            </div>
+        `;
+        
+        html += '</div>';
+        document.getElementById('testResults').innerHTML = html;
+    })
+    .catch(error => {
+        // 清理定时器
+        clearTimeout(timeoutId1);
+        clearTimeout(timeoutId2);
+        
+        console.error('测试连接失败:', error);
+        
+        let errorMessage = '网络错误';
+        if (error.name === 'AbortError') {
+            errorMessage = '连接超时（15秒），请检查AdsPower是否正常运行';
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        
+        document.getElementById('testResults').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-times-circle me-2"></i>
+                测试失败：${errorMessage}
+            </div>
+        `;
+    });
+}
+
+// 显示提示消息
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.container-fluid');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    // 3秒后自动消失
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 3000);
+}
+
+// 测试飞书连接
+function testFeishuConnection() {
+    var button = event.target;
+    var originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 测试中...';
+    button.disabled = true;
+    
+    fetch('/api/config/feishu/test', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('飞书连接测试成功！', 'success');
+        } else {
+            showAlert('连接测试失败: ' + (data.error || '未知错误'), 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('飞书连接测试失败:', error);
+        showAlert('连接测试失败: 网络错误', 'danger');
+    })
+    .finally(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+// 页面加载完成后的初始化
+document.addEventListener('DOMContentLoaded', function() {
+    // 表单验证
+    const form = document.getElementById('configForm');
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        saveAllConfig();
+    });
+    
+    // 实时验证输入
+    document.querySelectorAll('input[type="number"]').forEach(input => {
+        input.addEventListener('input', function() {
+            const min = parseInt(this.min);
+            const max = parseInt(this.max);
+            const value = parseInt(this.value);
+            
+            if (value < min) {
+                this.value = min;
+            } else if (max && value > max) {
+                this.value = max;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

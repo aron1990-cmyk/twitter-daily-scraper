@@ -1,0 +1,351 @@
+{% extends "base_optimized.html" %}
+
+{% block title %}数据查看{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-database me-2"></i>数据查看</h2>
+        <div class="btn-group">
+            <a href="/api/data/export" class="btn btn-success">
+                <i class="fas fa-download me-1"></i>导出数据
+            </a>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ data_stats.total_tweets }}</h4>
+                            <p class="card-text">总推文数</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-comments fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ data_stats.today_tweets }}</h4>
+                            <p class="card-text">今日推文</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-calendar-day fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ data_stats.avg_likes }}</h4>
+                            <p class="card-text">平均点赞数</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-heart fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ data_stats.avg_retweets }}</h4>
+                            <p class="card-text">平均转发数</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-retweet fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 筛选和搜索 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-filter me-2"></i>筛选和搜索</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label for="search" class="form-label">搜索内容</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ request.args.get('search', '') }}" placeholder="搜索推文内容或用户名">
+                </div>
+                <div class="col-md-2">
+                    <label for="task_id" class="form-label">任务</label>
+                    <select class="form-select" id="task_id" name="task_id">
+                        <option value="">所有任务</option>
+                        {% for task in tasks %}
+                        <option value="{{ task.id }}" 
+                                {% if request.args.get('task_id')|int == task.id %}selected{% endif %}>
+                            {{ task.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="min_likes" class="form-label">最小点赞数</label>
+                    <input type="number" class="form-control" id="min_likes" name="min_likes" 
+                           value="{{ request.args.get('min_likes', '') }}" min="0">
+                </div>
+                <div class="col-md-2">
+                    <label for="min_retweets" class="form-label">最小转发数</label>
+                    <input type="number" class="form-control" id="min_retweets" name="min_retweets" 
+                           value="{{ request.args.get('min_retweets', '') }}" min="0">
+                </div>
+                <div class="col-md-2">
+                    <label for="sort" class="form-label">排序</label>
+                    <select class="form-select" id="sort" name="sort">
+                        <option value="created_desc" {% if request.args.get('sort', 'created_desc') == 'created_desc' %}selected{% endif %}>最新优先</option>
+                        <option value="created_asc" {% if request.args.get('sort') == 'created_asc' %}selected{% endif %}>最旧优先</option>
+                        <option value="likes_desc" {% if request.args.get('sort') == 'likes_desc' %}selected{% endif %}>点赞数降序</option>
+                        <option value="retweets_desc" {% if request.args.get('sort') == 'retweets_desc' %}selected{% endif %}>转发数降序</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary d-block w-100">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 推文列表 -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-list me-2"></i>推文列表</h5>
+            <span class="badge bg-secondary">共 {{ pagination.total }} 条</span>
+        </div>
+        <div class="card-body p-0">
+            {% if tweets %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>用户</th>
+                            <th>内容</th>
+                            <th>互动数据</th>
+                            <th>发布时间</th>
+                            <th>抓取时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tweet in tweets %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                        {{ tweet.username[0].upper() }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">{{ tweet.username }}</div>
+                                        {% if tweet.content_type %}
+                                        <span class="badge bg-info">{{ tweet.content_type }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="tweet-content">
+                                    {{ tweet.content[:150] }}{% if tweet.content|length > 150 %}...{% endif %}
+                                </div>
+                                {% if tweet.hashtags %}
+                                <div class="mt-1">
+                                    {% for hashtag in tweet.hashtags.split(',') %}
+                                    <span class="badge bg-light text-dark me-1">#{{ hashtag.strip() }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="small">
+                                    <div><i class="fas fa-heart text-danger me-1"></i>{{ tweet.likes or 0 }}</div>
+                                    <div><i class="fas fa-comment text-primary me-1"></i>{{ tweet.comments or 0 }}</div>
+                                    <div><i class="fas fa-retweet text-success me-1"></i>{{ tweet.retweets or 0 }}</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small text-muted">
+                                    {{ tweet.publish_time or '未知' }}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small text-muted">
+                                    {{ tweet.scraped_at.strftime('%Y-%m-%d %H:%M') if tweet.scraped_at else '未知' }}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    {% if tweet.link %}
+                                    <a href="{{ tweet.link }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-external-link-alt"></i>
+                                    </a>
+                                    {% endif %}
+                                    <a href="/data/{{ tweet.id }}" class="btn btn-outline-info btn-sm">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            {% if pagination.pages > 1 %}
+            <div class="card-footer">
+                <nav aria-label="推文分页">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if pagination.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('data', page=pagination.prev_num, **request.args) }}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for page_num in pagination.iter_pages() %}
+                        {% if page_num %}
+                        {% if page_num != pagination.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('data', page=page_num, **request.args) }}">{{ page_num }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% endif %}
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">…</span>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+                        
+                        {% if pagination.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('data', page=pagination.next_num, **request.args) }}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">暂无数据</h5>
+                <p class="text-muted">请先创建并运行抓取任务</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+}
+
+.tweet-content {
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+}
+</style>
+
+<script>
+// 页面可见性检测
+let isPageVisible = true;
+let dataRefreshInterval;
+
+// 监听页面可见性变化
+document.addEventListener('visibilitychange', function() {
+    isPageVisible = !document.hidden;
+    if (isPageVisible) {
+        // 页面变为可见时，立即更新一次数据
+        updateDataStats();
+        startDataRefresh();
+    } else {
+        // 页面隐藏时，停止定时更新
+        stopDataRefresh();
+    }
+});
+
+// 更新数据统计
+function updateDataStats() {
+    if (!isPageVisible) return;
+    
+    fetch('/api/status')
+        .then(response => response.json())
+        .then(data => {
+            // 这里可以更新统计数据，但由于数据页面的统计相对静态，
+            // 我们只在必要时更新
+        })
+        .catch(error => {
+            console.error('更新数据统计失败:', error);
+        });
+}
+
+// 开始数据刷新
+function startDataRefresh() {
+    if (dataRefreshInterval) {
+        clearInterval(dataRefreshInterval);
+    }
+    // 每2分钟更新一次数据统计（数据页面更新频率较低）
+    dataRefreshInterval = setInterval(updateDataStats, 120000);
+}
+
+// 停止数据刷新
+function stopDataRefresh() {
+    if (dataRefreshInterval) {
+        clearInterval(dataRefreshInterval);
+        dataRefreshInterval = null;
+    }
+}
+
+// 页面加载完成后开始定时更新
+document.addEventListener('DOMContentLoaded', function() {
+    startDataRefresh();
+});
+
+// 页面卸载时清理定时器
+window.addEventListener('beforeunload', function() {
+    stopDataRefresh();
+});
+</script>
+{% endblock %}

@@ -94,25 +94,24 @@ class TwitterDailyScraper:
             api_host = None
             api_port = None
             
+            # AdsPower 配置现在由配置文件管理
+            from config.adspower_config import get_config as get_adspower_config
+            adspower_config = get_adspower_config()
+            
+            # 从配置文件获取配置信息
+            config_dict['local_api_url'] = adspower_config.local_api_url
+            config_dict['api_key'] = adspower_config.api_key
+            config_dict['user_id'] = adspower_config.user_ids[0] if adspower_config.user_ids else ''
+            
+            # 处理其他配置项
             for key, value in configs:
-                if key == 'adspower_api_host':
-                    api_host = value
-                elif key == 'adspower_api_port':
-                    api_port = value
-                elif key == 'adspower_user_id':
-                    config_dict['user_id'] = value
+                if key == 'adspower_user_id':
+                    # 兼容性处理，但优先使用配置文件
+                    if not config_dict['user_id']:
+                        config_dict['user_id'] = value
                 elif key == 'adspower_group_id':
                     config_dict['group_id'] = value
-                elif key == 'adspower_api_status':
-                    config_dict['api_status'] = value
-                elif key == 'adspower_api_key':
-                    config_dict['api_key'] = value
-            
-            # 构建完整的API URL
-            if api_host and api_port:
-                config_dict['local_api_url'] = f"http://{api_host}:{api_port}"
-            else:
-                config_dict['local_api_url'] = 'http://local.adspower.net:50325'
+                # api_status 配置现在由配置文件管理，不再从数据库获取
             
             conn.close()
             

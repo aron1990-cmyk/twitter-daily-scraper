@@ -3,7 +3,15 @@
 """
 Twitter抓取Web管理系统
 提供Web界面进行关键词配置、任务管理和数据查看
+
+注意：此文件已被注释掉，请使用 web_app_optimized.py
 """
+
+# 整个文件已被注释掉，请使用 web_app_optimized.py
+# 以下代码已停用
+
+'''
+原始代码已注释掉，请使用优化版本 web_app_optimized.py
 
 import os
 import json
@@ -87,7 +95,14 @@ FEISHU_CONFIG = {
     'app_secret': '',
     'spreadsheet_token': '',
     'table_id': '',
-    'enabled': True  # 默认启用飞书同步
+    'enabled': True,  # 默认启用飞书同步
+    # 自动同步功能已注释掉 - 不再需要
+    # 'auto_sync': False,  # 自动同步
+    'async_enabled': True,  # 异步同步启用（默认开启）
+    'async_max_workers': 2,  # 异步工作线程数
+    'async_max_queue_size': 100,  # 异步队列最大大小
+    'async_max_retries': 3,  # 异步重试次数
+    'async_priority': 2  # 异步任务优先级（普通优先级）
 }
 
 # AdsPower配置信息
@@ -102,16 +117,27 @@ ADS_POWER_CONFIG = {
     'health_check': True
 }
 from models import TweetModel, ScrapingConfig
-from ads_browser_launcher import AdsPowerLauncher
-from twitter_parser import TwitterParser
+from utils.ads_browser_launcher import AdsPowerLauncher
+from core.twitter_parser import TwitterParser
 # from enhanced_twitter_parser import MultiWindowEnhancedScraper
 # from optimized_scraping_engine import OptimizedScrapingEngine
-from cloud_sync import CloudSyncManager
-from excel_writer import ExcelWriter
-from refactored_task_manager import RefactoredTaskManager
+from utils.cloud_sync import CloudSyncManager
+from utils.excel_writer import ExcelWriter
+from core.refactored_task_manager import RefactoredTaskManager
+
+# 导入异步飞书同步模块
+from core.async_feishu_sync import get_async_sync_manager, init_async_sync_service, shutdown_async_sync_service
+
+# 导入定时任务调度器
+from scheduler import TaskScheduler, PredefinedTasks
+
+# P0+优化：导入系统监控和资源调度组件
+from utils.system_monitor import SystemMonitor
+from utils.resource_scheduler import ResourceScheduler
+from utils.async_task_manager import AsyncTaskManager
 
 # 创建Flask应用
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.debug = True
 app.config['SECRET_KEY'] = 'twitter-scraper-web-2024'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////Users/aron/twitter-daily-scraper/instance/twitter_scraper.db'
@@ -128,8 +154,8 @@ logging.basicConfig(
 )
 app.logger.setLevel(logging.INFO)
 
-# 减少werkzeug HTTP请求日志输出
-logging.getLogger('werkzeug').setLevel(logging.WARNING)
+# 启用werkzeug HTTP请求日志输出用于调试
+logging.getLogger('werkzeug').setLevel(logging.INFO)
 
 @app.after_request
 def after_request(response):
@@ -151,22 +177,9 @@ def load_config_from_database():
         # 加载AdsPower配置
         if 'adspower_api_url' in config_dict:
             ADS_POWER_CONFIG['local_api_url'] = config_dict['adspower_api_url']
-        if 'adspower_api_status' in config_dict:
-            ADS_POWER_CONFIG['api_status'] = config_dict['adspower_api_status']
-        if 'adspower_api_key' in config_dict:
-            ADS_POWER_CONFIG['api_key'] = config_dict['adspower_api_key']
-        if 'adspower_user_id' in config_dict:
-            ADS_POWER_CONFIG['user_id'] = config_dict['adspower_user_id']
-        if 'adspower_group_id' in config_dict:
-            ADS_POWER_CONFIG['group_id'] = config_dict['adspower_group_id']
-        if 'adspower_multi_user_ids' in config_dict:
-            multi_ids = config_dict['adspower_multi_user_ids']
-            ADS_POWER_CONFIG['multi_user_ids'] = [uid.strip() for uid in multi_ids.split('\n') if uid.strip()] if multi_ids else []
-            # 设置user_ids用于任务管理器
-            if ADS_POWER_CONFIG['multi_user_ids']:
-                ADS_POWER_CONFIG['user_ids'] = ADS_POWER_CONFIG['multi_user_ids']
-            else:
-                ADS_POWER_CONFIG['user_ids'] = [ADS_POWER_CONFIG['user_id']]
+        # 注意：AdsPower API 状态配置现在由配置文件管理，不再从数据库加载
+        # 注意：AdsPower API Key、用户ID、多用户ID列表等配置现在由配置文件管理
+        # 这些字段已从Web界面中移除，不再从数据库加载
         if 'max_concurrent_tasks' in config_dict:
             ADS_POWER_CONFIG['max_concurrent_tasks'] = int(config_dict['max_concurrent_tasks'])
         if 'task_timeout' in config_dict:
@@ -205,8 +218,23 @@ def load_config_from_database():
             FEISHU_CONFIG['table_id'] = config_dict['feishu_table_id']
         if 'feishu_enabled' in config_dict:
             FEISHU_CONFIG['enabled'] = config_dict['feishu_enabled'].lower() == 'true'
-        if 'feishu_auto_sync' in config_dict:
-            FEISHU_CONFIG['auto_sync'] = config_dict['feishu_auto_sync'].lower() == 'true'
+        # 自动同步功能已注释掉 - 不再需要
+        # if 'feishu_auto_sync' in config_dict:
+        #     FEISHU_CONFIG['auto_sync'] = config_dict['feishu_auto_sync'].lower() == 'true'
+        
+        # 加载异步飞书配置（默认开启）
+        if 'async_enabled' in config_dict:
+            FEISHU_CONFIG['async_enabled'] = config_dict['async_enabled'].lower() == 'true'
+        else:
+            FEISHU_CONFIG['async_enabled'] = True  # 默认开启异步同步
+        if 'async_max_workers' in config_dict:
+            FEISHU_CONFIG['async_max_workers'] = int(config_dict['async_max_workers'])
+        if 'async_max_queue_size' in config_dict:
+            FEISHU_CONFIG['async_max_queue_size'] = int(config_dict['async_max_queue_size'])
+        if 'async_max_retries' in config_dict:
+            FEISHU_CONFIG['async_max_retries'] = int(config_dict['async_max_retries'])
+        if 'async_priority' in config_dict:
+            FEISHU_CONFIG['async_priority'] = int(config_dict['async_priority'])
         
         print("✅ 配置已从数据库加载完成")
         
@@ -295,11 +323,21 @@ class ScrapingTask(db.Model):
         return self.result_count or 0
     
     def to_dict(self):
+        try:
+            target_accounts = json.loads(self.target_accounts or '[]')
+        except (json.JSONDecodeError, TypeError):
+            target_accounts = []
+            
+        try:
+            target_keywords = json.loads(self.target_keywords or '[]')
+        except (json.JSONDecodeError, TypeError):
+            target_keywords = []
+            
         return {
             'id': self.id,
             'name': self.name,
-            'target_accounts': json.loads(self.target_accounts or '[]'),
-            'target_keywords': json.loads(self.target_keywords or '[]'),
+            'target_accounts': target_accounts,
+            'target_keywords': target_keywords,
             'max_tweets': self.max_tweets,
             'min_likes': self.min_likes,
             'min_retweets': self.min_retweets,
@@ -701,8 +739,8 @@ class ScrapingTaskExecutor:
                         print(f"搜索关键词 {keyword} 失败: {e}")
                         continue
             
-            # 保存到数据库
-            saved_count = self._save_tweets_to_db(all_tweets, task_id)
+            # 保存到数据库（支持异步插入）
+            saved_count = self._save_tweets_to_db(all_tweets, task_id, async_insert=True)
             
             # 更新任务状态
             task.status = 'completed'
@@ -744,8 +782,62 @@ class ScrapingTaskExecutor:
                 filtered.append(tweet)
         return filtered
     
-    def _save_tweets_to_db(self, tweets: List[Dict], task_id: int) -> int:
-        """保存推文到数据库"""
+    def _save_tweets_to_db(self, tweets: List[Dict], task_id: int, async_insert: bool = False) -> int:
+        """保存推文到数据库，支持异步插入"""
+        if not tweets:
+            return 0
+            
+        # 判断是否使用异步插入
+        use_async = async_insert or len(tweets) > 500  # 数据量大于500条时自动异步
+        
+        if use_async:
+            try:
+                # 使用异步任务管理器进行数据库插入
+                task_manager = get_task_manager()
+                if task_manager:
+                    # 准备插入数据
+                    insert_data = []
+                    for tweet in tweets:
+                        tweet_record = {
+                            'task_id': task_id,
+                            'username': tweet.get('username', ''),
+                            'content': tweet.get('content', ''),
+                            'likes': tweet.get('likes', 0),
+                            'comments': tweet.get('comments', 0),
+                            'retweets': tweet.get('retweets', 0),
+                            'publish_time': tweet.get('publish_time', ''),
+                            'link': tweet.get('link', ''),
+                            'hashtags': json.dumps(tweet.get('hashtags', [])),
+                            'content_type': classify_content_type(tweet.get('content', '')),
+                            'full_content': tweet.get('full_content', ''),
+                            'media_content': json.dumps(tweet.get('media', {'images': [], 'videos': []})),
+                            'thread_tweets': json.dumps(tweet.get('thread_tweets', [])),
+                            'quoted_tweet': json.dumps(tweet.get('quoted_tweet')) if tweet.get('quoted_tweet') else None,
+                            'has_detailed_content': tweet.get('has_detailed_content', False),
+                            'detail_error': tweet.get('detail_error'),
+                            'scraped_at': datetime.utcnow().isoformat(),
+                            'synced_to_feishu': False
+                        }
+                        insert_data.append(tweet_record)
+                    
+                    # 获取数据库路径
+                    db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+                    
+                    # 提交异步插入任务
+                    async_task_id = task_manager.submit_sqlite_insert(
+                        db_path=db_path,
+                        table='tweet_data',
+                        data=insert_data
+                    )
+                    
+                    print(f"✅ [异步插入] 推文数据已提交到异步队列，任务ID: {async_task_id}，数据量: {len(insert_data)} 条")
+                    return len(insert_data)  # 返回预期插入数量
+                    
+            except Exception as e:
+                print(f"❌ [异步插入] 异步插入失败: {e}，回退到同步方式")
+                # 回退到同步方式
+        
+        # 同步方式插入（原有逻辑）
         saved_count = 0
         for tweet in tweets:
             try:
@@ -777,7 +869,13 @@ class ScrapingTaskExecutor:
         return saved_count
     
     def _check_auto_sync_feishu(self, task_id: int):
-        """检查是否需要自动同步到飞书"""
+        """检查是否需要自动同步到飞书（已注释掉 - 不再需要）"""
+        # 自动同步功能已注释掉 - 不再需要
+        print(f"[调试] 自动同步功能已禁用，跳过任务 {task_id} 的自动同步")
+        return
+        
+        # 以下代码已注释掉 - 自动同步功能不再需要
+        """
         try:
             print(f"[调试] 开始检查任务 {task_id} 的自动同步...")
             
@@ -800,12 +898,27 @@ class ScrapingTaskExecutor:
             
             print(f"开始自动同步任务 {task_id} 的数据到飞书...")
             
-            # 获取任务数据
-            tweets = TweetData.query.filter_by(task_id=task_id).all()
+            # 获取未同步的任务数据
+            tweets = TweetData.query.filter_by(task_id=task_id, synced_to_feishu=False).all()
             if not tweets:
-                print("没有数据需要同步")
+                print("没有新数据需要同步")
                 return
             
+            # 检查是否启用异步同步
+            if FEISHU_CONFIG.get('async_enabled', True):
+                print(f"[异步同步] 使用异步方式同步 {len(tweets)} 条数据")
+                self._submit_async_sync_task(task_id, tweets)
+            else:
+                print(f"[同步同步] 使用同步方式同步 {len(tweets)} 条数据")
+                self._sync_feishu_synchronously(task_id, tweets)
+                
+        except Exception as e:
+            print(f"自动同步到飞书时发生错误: {e}")
+        """
+    
+    def _submit_async_sync_task(self, task_id: int, tweets: List):
+        """提交异步同步任务"""
+        try:
             # 准备同步数据
             sync_data = []
             for tweet in tweets:
@@ -815,7 +928,84 @@ class ScrapingTaskExecutor:
                 except:
                     hashtags = []
                 
-                # 不再需要时间戳转换，让飞书自动处理时间字段
+                # 处理发布时间
+                publish_time = ''
+                if tweet.publish_time:
+                    try:
+                        if isinstance(tweet.publish_time, str):
+                            from dateutil import parser
+                            dt = parser.parse(tweet.publish_time)
+                            publish_time = int(dt.timestamp())
+                        else:
+                            publish_time = int(tweet.publish_time.timestamp())
+                        
+                        # 验证时间戳合理性
+                        if publish_time < 946684800:  # 2000年1月1日
+                            publish_time = int(datetime.now().timestamp())
+                    except Exception as e:
+                        print(f"发布时间解析失败: {e}")
+                        publish_time = int(datetime.now().timestamp())
+                else:
+                    publish_time = int(datetime.now().timestamp())
+                
+                # 处理创建时间
+                if tweet.scraped_at:
+                    create_time = int(tweet.scraped_at.timestamp())
+                else:
+                    create_time = int(datetime.now().timestamp())
+                
+                # 验证创建时间戳合理性
+                if create_time < 946684800:
+                    create_time = int(datetime.now().timestamp())
+                
+                sync_data.append({
+                    '推文原文内容': tweet.content or '',
+                    '发布时间': publish_time,
+                    '作者（账号）': tweet.username or '',
+                    '推文链接': tweet.link or '',
+                    '话题标签（Hashtag）': ', '.join(hashtags),
+                    '类型标签': tweet.content_type or '',
+                    '评论': tweet.comments or 0,
+                    '点赞': tweet.likes or 0,
+                    '转发': tweet.retweets or 0,
+                    '创建时间': create_time
+                })
+            
+            # 获取异步同步管理器
+            async_manager = get_async_sync_manager()
+            
+            # 提交异步任务
+            task_name = f"task_{task_id}"
+            success = async_manager.submit_sync_task(
+                task_id=task_name,
+                data=sync_data,
+                spreadsheet_token=FEISHU_CONFIG['spreadsheet_token'],
+                table_id=FEISHU_CONFIG['table_id'],
+                priority=FEISHU_CONFIG.get('async_priority', 1),
+                max_retries=FEISHU_CONFIG.get('async_max_retries', 3)
+            )
+            
+            if success:
+                print(f"✅ [异步同步] 任务 {task_id} 已提交到异步队列，数据量: {len(sync_data)} 条")
+            else:
+                print(f"❌ [异步同步] 任务 {task_id} 提交失败，回退到同步方式")
+                self._sync_feishu_synchronously(task_id, tweets)
+                
+        except Exception as e:
+            print(f"❌ [异步同步] 提交异步任务失败: {e}，回退到同步方式")
+            self._sync_feishu_synchronously(task_id, tweets)
+    
+    def _sync_feishu_synchronously(self, task_id: int, tweets: List):
+        """同步方式执行飞书同步（保留原有逻辑作为备用）"""
+        try:
+            # 准备同步数据
+            sync_data = []
+            for tweet in tweets:
+                # 解析hashtags
+                try:
+                    hashtags = json.loads(tweet.hashtags) if tweet.hashtags else []
+                except:
+                    hashtags = []
                 
                 sync_data.append({
                     '推文原文内容': tweet.content or '',
@@ -828,7 +1018,7 @@ class ScrapingTaskExecutor:
                     '转发': tweet.retweets or 0
                 })
             
-            # 创建云同步管理器并同步（统一初始化方式，与API同步保持一致）
+            # 创建云同步管理器并同步
             from cloud_sync import CloudSyncManager
             sync_config = {
                 'feishu': {
@@ -842,7 +1032,7 @@ class ScrapingTaskExecutor:
             }
             sync_manager = CloudSyncManager(sync_config)
             
-            # 直接执行同步（不调用setup_feishu，保持配置完整性）
+            # 执行同步
             success = sync_manager.sync_to_feishu(
                 sync_data,
                 FEISHU_CONFIG['spreadsheet_token'],
@@ -854,34 +1044,12 @@ class ScrapingTaskExecutor:
                 for tweet in tweets:
                     tweet.synced_to_feishu = True
                 db.session.commit()
-                print(f"任务 {task_id} 自动同步到飞书成功，已更新 {len(tweets)} 条记录的同步状态")
-                
-                # 执行数据验证
-                print(f"🔍 [AUTO_SYNC] 开始数据验证...")
-                try:
-                    from feishu_data_validator import FeishuDataValidator
-                    validator = FeishuDataValidator()
-                    validation_result = validator.validate_sync_data(task_id=task_id)
-                    
-                    if validation_result.get('success'):
-                        comparison = validation_result['comparison_result']
-                        summary = comparison['summary']
-                        print(f"✅ [AUTO_SYNC] 数据验证完成")
-                        print(f"📊 [AUTO_SYNC] 验证结果: 同步准确率 {summary['sync_accuracy']:.2f}%")
-                        print(f"📊 [AUTO_SYNC] 匹配记录: {summary['matched_count']}/{summary['total_local']}")
-                        
-                        if summary['sync_accuracy'] < 95:
-                            print(f"⚠️ [AUTO_SYNC] 发现 {summary['field_mismatch_count']} 条字段不匹配，建议检查")
-                    else:
-                        print(f"⚠️ [AUTO_SYNC] 数据验证失败: {validation_result.get('error', '未知错误')}")
-                        
-                except Exception as e:
-                    print(f"❌ [AUTO_SYNC] 数据验证异常: {e}")
+                print(f"✅ [同步同步] 任务 {task_id} 同步成功，已更新 {len(tweets)} 条记录的同步状态")
             else:
-                print(f"任务 {task_id} 自动同步到飞书失败")
+                print(f"❌ [同步同步] 任务 {task_id} 同步失败")
                 
         except Exception as e:
-            print(f"自动同步到飞书时发生错误: {e}")
+            print(f"❌ [同步同步] 同步执行失败: {e}")
     
     def stop_task(self):
         """停止当前任务"""
@@ -890,6 +1058,14 @@ class ScrapingTaskExecutor:
 # 全局并行任务管理器（将在配置加载后初始化）
 task_manager = None
 optimized_scraper = None
+
+# 全局定时任务调度器
+task_scheduler = None
+
+# P0+优化：全局系统监控和资源管理组件
+system_monitor = None
+resource_scheduler = None
+async_task_manager = None
 
 def init_task_manager():
     """初始化任务管理器"""
@@ -930,9 +1106,114 @@ def init_task_manager():
     print(f"✅ 用户ID池大小: {len(user_ids)}")
     print(f"✅ OptimizedScraper已初始化，支持多窗口并发抓取")
 
+def init_task_scheduler():
+    """初始化定时任务调度器"""
+    global task_scheduler
+    
+    if task_scheduler is not None:
+        print("⚠️ TaskScheduler已经初始化，跳过重复初始化")
+        return
+    
+    try:
+        task_scheduler = TaskScheduler()
+        
+        # 添加预定义的定时任务
+        # 每日Twitter采集任务（每天早上9点执行）
+        task_scheduler.add_task(
+            task_id="daily_twitter_scraping",
+            name="每日Twitter采集",
+            schedule_time="09:00",
+            task_function=PredefinedTasks.daily_twitter_scraping,
+            description="每日自动执行Twitter数据采集任务",
+            max_retries=3,
+            timeout_minutes=120
+        )
+        
+        # 系统健康检查任务（每2小时执行一次）
+        task_scheduler.add_task(
+            task_id="system_health_check",
+            name="系统健康检查",
+            schedule_time="every 2 hours",
+            task_function=PredefinedTasks.system_health_check,
+            description="定期检查系统运行状态",
+            max_retries=1,
+            timeout_minutes=10
+        )
+        
+        # 数据备份任务（每天凌晨2点执行）
+        task_scheduler.add_task(
+            task_id="data_backup",
+            name="数据备份",
+            schedule_time="02:00",
+            task_function=PredefinedTasks.data_backup,
+            description="每日自动备份数据库",
+            max_retries=2,
+            timeout_minutes=30
+        )
+        
+        # 启动调度器
+        task_scheduler.start_scheduler()
+        
+        print("✅ TaskScheduler已初始化并启动")
+        
+    except Exception as e:
+        print(f"⚠️ TaskScheduler初始化失败: {e}")
+
+def init_system_monitor():
+    """P0+优化：初始化系统监控器"""
+    global system_monitor
+    
+    if system_monitor is not None:
+        print("⚠️ SystemMonitor已经初始化，跳过重复初始化")
+        return
+    
+    try:
+        system_monitor = SystemMonitor()
+        system_monitor.start_monitoring()
+        print("✅ SystemMonitor已初始化并启动")
+    except Exception as e:
+        print(f"⚠️ SystemMonitor初始化失败: {e}")
+
+def init_resource_scheduler():
+    """P0+优化：初始化资源调度器"""
+    global resource_scheduler
+    
+    if resource_scheduler is not None:
+        print("⚠️ ResourceScheduler已经初始化，跳过重复初始化")
+        return
+    
+    try:
+        resource_scheduler = ResourceScheduler()
+        print("✅ ResourceScheduler已初始化")
+    except Exception as e:
+        print(f"⚠️ ResourceScheduler初始化失败: {e}")
+
+def init_async_task_manager():
+    """P0+优化：初始化异步任务管理器"""
+    global async_task_manager
+    
+    if async_task_manager is not None:
+        print("⚠️ AsyncTaskManager已经初始化，跳过重复初始化")
+        return
+    
+    try:
+        async_task_manager = AsyncTaskManager()
+        print("✅ AsyncTaskManager已初始化")
+    except Exception as e:
+        print(f"⚠️ AsyncTaskManager初始化失败: {e}")
+
 # 在模块加载时初始化
 try:
     init_database()
+    init_task_scheduler()
+    # 确保任务管理器也被初始化
+    if task_manager is None:
+        init_task_manager()
+    
+    # P0+优化：初始化系统监控和资源管理组件
+    init_system_monitor()
+    init_resource_scheduler()
+    init_async_task_manager()
 except Exception as e:
     print(f"⚠️ 初始化失败: {e}")
 
@@ -943,21 +1224,39 @@ def index():
     from datetime import datetime, date
     import sys
     import psutil
+    from sqlalchemy import func
     
-    # 计算统计数据
+    # 优化统计数据查询 - 使用单个查询获取多个统计信息
     today = date.today()
+    
+    # 使用子查询优化统计数据获取
+    task_stats = db.session.query(
+        func.count().label('total'),
+        func.sum(db.case((ScrapingTask.status == 'running', 1), else_=0)).label('running'),
+        func.sum(db.case((ScrapingTask.status == 'completed', 1), else_=0)).label('completed')
+    ).first()
+    
+    # 获取推文统计（限制查询范围以提升性能）
+    tweet_stats = db.session.query(
+        func.count().label('total'),
+        func.sum(db.case((func.date(TweetData.scraped_at) == today, 1), else_=0)).label('today')
+    ).first()
+    
     stats = {
-        'total_tasks': ScrapingTask.query.count(),
-        'total_tweets': TweetData.query.count(),
-        'running_tasks': ScrapingTask.query.filter_by(status='running').count(),
-        'completed_tasks': ScrapingTask.query.filter_by(status='completed').count(),
-        'today_tweets': TweetData.query.filter(db.func.date(TweetData.scraped_at) == today).count()
+        'total_tasks': task_stats.total or 0,
+        'total_tweets': tweet_stats.total or 0,
+        'running_tasks': task_stats.running or 0,
+        'completed_tasks': task_stats.completed or 0,
+        'today_tweets': tweet_stats.today or 0
     }
     
-    # 获取最近的任务
-    recent_tasks = ScrapingTask.query.order_by(ScrapingTask.created_at.desc()).limit(5).all()
+    # 获取最近的任务（只获取必要字段）
+    recent_tasks = ScrapingTask.query.with_entities(
+        ScrapingTask.id, ScrapingTask.name, ScrapingTask.status, 
+        ScrapingTask.created_at, ScrapingTask.result_count
+    ).order_by(ScrapingTask.created_at.desc()).limit(5).all()
     
-    # 获取系统信息
+    # 获取系统信息（简化版本，减少性能开销）
     try:
         # 计算运行时间
         import time
@@ -967,25 +1266,18 @@ def index():
         uptime_minutes = (uptime_seconds % 3600) // 60
         uptime = f"{uptime_hours}小时{uptime_minutes}分钟"
         
-        # 获取内存使用情况
-        memory = psutil.virtual_memory()
-        memory_usage = f"{memory.percent}% ({memory.used // (1024**3):.1f}GB/{memory.total // (1024**3):.1f}GB)"
+        # 简化内存信息获取
+        try:
+            memory = psutil.virtual_memory()
+            memory_usage = f"{memory.percent:.1f}%"
+        except:
+            memory_usage = "未知"
         
         # 获取Python版本
         python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
         
-        # 获取数据库大小
-        db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
-        if os.path.exists(db_path):
-            db_size_bytes = os.path.getsize(db_path)
-            if db_size_bytes < 1024**2:
-                db_size = f"{db_size_bytes / 1024:.1f} KB"
-            elif db_size_bytes < 1024**3:
-                db_size = f"{db_size_bytes / (1024**2):.1f} MB"
-            else:
-                db_size = f"{db_size_bytes / (1024**3):.1f} GB"
-        else:
-            db_size = "未知"
+        # 简化数据库大小获取（缓存结果）
+        db_size = "计算中..."
         
         system_info = {
             'uptime': uptime,
@@ -1002,7 +1294,7 @@ def index():
             'db_size': '未知'
         }
     
-    return render_template('index.html', stats=stats, recent_tasks=recent_tasks, system_info=system_info)
+    return render_template('index_optimized.html', stats=stats, recent_tasks=recent_tasks, system_info=system_info)
 
 @app.route('/tasks')
 def tasks():
@@ -1019,7 +1311,7 @@ def tasks():
         'queued': len([t for t in tasks if t.status == 'queued'])
     }
     
-    return render_template('tasks.html', tasks=tasks, task_stats=task_stats)
+    return render_template('tasks_optimized.html', tasks=tasks, stats=task_stats)
 
 @app.route('/create_task', methods=['GET', 'POST'])
 def create_task():
@@ -1167,7 +1459,7 @@ def data():
     # 获取所有任务用于筛选
     tasks = ScrapingTask.query.order_by(ScrapingTask.created_at.desc()).all()
     
-    return render_template('data.html', 
+    return render_template('data_optimized.html', 
                          tweets=tweets.items, 
                          pagination=tweets, 
                          data_stats=data_stats, 
@@ -1177,6 +1469,21 @@ def data():
 def about():
     """关于我页面"""
     return render_template('about.html')
+
+@app.route('/test-simple')
+def test_simple():
+    """简单测试页面"""
+    return render_template('test_simple.html')
+
+@app.route('/minimal')
+def minimal():
+    """最小化测试页面"""
+    return render_template('index_minimal.html')
+
+@app.route('/local')
+def local_index():
+    """本地化首页 - 无外部依赖"""
+    return render_template('index_local.html')
 
 @app.route('/config')
 def config():
@@ -1189,24 +1496,7 @@ def config():
     for cfg in configs:
         config_data[cfg.key] = cfg.value
     
-    # 处理AdsPower API地址的向后兼容性
-    if 'adspower_api_url' in config_data and ('adspower_api_host' not in config_data or 'adspower_api_port' not in config_data):
-        # 从完整URL中解析主机和端口
-        api_url = config_data['adspower_api_url']
-        if api_url.startswith('http://'):
-            url_parts = api_url.replace('http://', '').split(':')
-            if len(url_parts) == 2:
-                config_data['adspower_api_host'] = url_parts[0]
-                config_data['adspower_api_port'] = url_parts[1]
-            else:
-                config_data['adspower_api_host'] = 'localhost'
-                config_data['adspower_api_port'] = '50325'
-    
-    # 设置默认值
-    if 'adspower_api_host' not in config_data:
-        config_data['adspower_api_host'] = 'localhost'
-    if 'adspower_api_port' not in config_data:
-        config_data['adspower_api_port'] = '50325'
+    # AdsPower配置现在完全由配置文件管理，无需前端输入
     
     # 处理导出字段配置
     if 'export_fields' in config_data:
@@ -1214,7 +1504,7 @@ def config():
     else:
         config_data['export_fields'] = ['content', 'username', 'created_at', 'likes_count', 'retweets_count', 'hashtags']
     
-    return render_template('config.html', config=config_data)
+    return render_template('config_optimized.html', config=config_data)
 
 @app.route('/update_config', methods=['POST'])
 def update_config():
@@ -1223,90 +1513,9 @@ def update_config():
         config_type = request.form.get('config_type')
         
         if config_type == 'adspower':
-            # 处理AdsPower配置
-            api_host = request.form.get('adspower_api_host', 'local.adspower.net')
-            api_port = request.form.get('adspower_api_port', '50325')
-            api_url = f'http://{api_host}:{api_port}'
-            
-            adspower_configs = {
-                'adspower_api_host': api_host,
-                'adspower_api_port': api_port,
-                'adspower_api_url': api_url,  # 保持向后兼容
-                'adspower_api_status': request.form.get('adspower_api_status', ''),
-                'adspower_api_key': request.form.get('adspower_api_key', ''),
-                'adspower_user_id': request.form.get('adspower_user_id', ''),
-                'adspower_multi_user_ids': request.form.get('adspower_multi_user_ids', ''),
-                'max_concurrent_tasks': request.form.get('max_concurrent_tasks', '2'),
-                'task_timeout': request.form.get('task_timeout', '900'),
-                'browser_startup_delay': request.form.get('browser_startup_delay', '2'),
-                'request_interval': request.form.get('request_interval', '2.0'),
-                'user_switch_interval': request.form.get('user_switch_interval', '30'),
-                'adspower_headless': 'adspower_headless' in request.form,
-                'adspower_health_check': 'adspower_health_check' in request.form,
-                'user_rotation_enabled': 'user_rotation_enabled' in request.form
-            }
-            
-            # 更新或创建配置记录
-            for key, value in adspower_configs.items():
-                config = SystemConfig.query.filter_by(key=key).first()
-                if config:
-                    config.value = str(value)
-                    config.updated_at = datetime.utcnow()
-                else:
-                    config = SystemConfig(
-                        key=key,
-                        value=str(value),
-                        description=f'AdsPower配置: {key}'
-                    )
-                    db.session.add(config)
-            
-            # 根据多窗口用户ID列表自动计算并发任务数
-            multi_user_ids_list = [uid.strip() for uid in adspower_configs['adspower_multi_user_ids'].split('\n') if uid.strip()]
-            auto_concurrent_tasks = max(1, len(multi_user_ids_list))
-            
-            # 更新全局配置（用于当前会话）
-            global ADS_POWER_CONFIG
-            ADS_POWER_CONFIG.update({
-                'local_api_url': adspower_configs['adspower_api_url'],
-                'user_id': adspower_configs['adspower_user_id'],
-                'multi_user_ids': multi_user_ids_list,
-                'max_concurrent_tasks': auto_concurrent_tasks,  # 使用自动计算的值
-                'task_timeout': int(adspower_configs['task_timeout']),
-                'browser_startup_delay': float(adspower_configs['browser_startup_delay']),
-                'request_interval': float(adspower_configs['request_interval']),
-                'user_switch_interval': int(adspower_configs['user_switch_interval']),
-                'user_rotation_enabled': adspower_configs['user_rotation_enabled'],
-                'headless': adspower_configs['adspower_headless'],
-                'health_check': adspower_configs['adspower_health_check']
-            })
-            
-            # 同时更新数据库中的max_concurrent_tasks值
-            max_concurrent_config = SystemConfig.query.filter_by(key='max_concurrent_tasks').first()
-            if max_concurrent_config:
-                max_concurrent_config.value = str(auto_concurrent_tasks)
-                max_concurrent_config.updated_at = datetime.utcnow()
-            else:
-                max_concurrent_config = SystemConfig(
-                    key='max_concurrent_tasks',
-                    value=str(auto_concurrent_tasks),
-                    description='AdsPower配置: max_concurrent_tasks'
-                )
-                db.session.add(max_concurrent_config)
-            
-            # 更新任务管理器的配置
-            if hasattr(task_manager, 'max_concurrent_tasks'):
-                task_manager.max_concurrent_tasks = auto_concurrent_tasks  # 使用自动计算的值
-            if hasattr(task_manager, 'user_id_pool'):
-                task_manager.user_id_pool = multi_user_ids_list
-            if hasattr(task_manager, 'request_interval'):
-                task_manager.request_interval = float(adspower_configs['request_interval'])
-            if hasattr(task_manager, 'user_switch_interval'):
-                task_manager.user_switch_interval = int(adspower_configs['user_switch_interval'])
-            if hasattr(task_manager, 'user_rotation_enabled'):
-                task_manager.user_rotation_enabled = adspower_configs['user_rotation_enabled']
-            
-            db.session.commit()
-            flash('AdsPower配置已更新', 'success')
+            # AdsPower配置现在完全由配置文件管理，不再接受前端表单输入
+            flash('AdsPower配置已移至配置文件管理，如需修改请联系系统管理员', 'info')
+            return redirect(url_for('config'))
             
         elif config_type == 'general':
             # 处理基础设置
@@ -1368,8 +1577,15 @@ def update_config():
                 'feishu_spreadsheet_token': request.form.get('feishu_spreadsheet_token', ''),
                 'feishu_table_id': request.form.get('feishu_table_id', ''),
                 'feishu_enabled': 'feishu_enabled' in request.form,
-                'feishu_auto_sync': 'feishu_auto_sync' in request.form,
-                'sync_interval': request.form.get('sync_interval', '24')
+                # 自动同步功能已注释掉 - 不再需要
+                # 'feishu_auto_sync': 'feishu_auto_sync' in request.form,
+                # 'sync_interval': request.form.get('sync_interval', '24'),
+                # 异步同步配置
+                'async_enabled': 'async_enabled' in request.form,
+                'async_priority': int(request.form.get('async_priority', '2')),
+                'async_max_workers': int(request.form.get('async_max_workers', '2')),
+                'async_max_queue_size': int(request.form.get('async_max_queue_size', '100')),
+                'async_max_retries': int(request.form.get('async_max_retries', '3'))
             }
             
             for key, value in feishu_configs.items():
@@ -1392,7 +1608,15 @@ def update_config():
                 'app_secret': feishu_configs['feishu_app_secret'],
                 'spreadsheet_token': feishu_configs['feishu_spreadsheet_token'],
                 'table_id': feishu_configs['feishu_table_id'],
-                'enabled': feishu_configs['feishu_enabled']
+                'enabled': feishu_configs['feishu_enabled'],
+                # 自动同步功能已注释掉
+                # 'auto_sync': feishu_configs['feishu_auto_sync'],
+                # 异步同步配置
+                'async_enabled': feishu_configs['async_enabled'],
+                'async_priority': feishu_configs['async_priority'],
+                'async_max_workers': feishu_configs['async_max_workers'],
+                'async_max_queue_size': feishu_configs['async_max_queue_size'],
+                'async_max_retries': feishu_configs['async_max_retries']
             })
             
             db.session.commit()
@@ -1433,19 +1657,21 @@ def update_config():
 @app.route('/influencers')
 def influencers():
     """博主管理页面"""
-    return render_template('influencers.html')
+    return render_template('influencers_optimized.html')
 
 @app.route('/sync_feishu', methods=['POST'])
 def sync_feishu():
-    """同步数据到飞书（支持全部同步或按任务ID同步）"""
+    """同步数据到飞书（异步版本）"""
     print("\n" + "="*60)
-    print("🚀 [后端] 开始处理飞书同步请求")
+    print("🚀 [后端] 开始处理飞书异步同步请求")
     try:
         # 获取请求参数
         data = request.form.to_dict()
         task_id = data.get('task_id')
+        force_sync = data.get('force_sync', 'false').lower() == 'true'
         print(f"📋 [后端] 接收到请求参数: {data}")
         print(f"📋 [后端] 任务ID: {task_id}")
+        print(f"📋 [后端] 强制同步: {force_sync}")
         
         # 检查飞书配置
         print(f"🔧 [后端] 检查飞书配置状态")
@@ -1473,42 +1699,29 @@ def sync_feishu():
         else:
             print(f"   - 查询所有任务的数据")
         
-        # 获取所有相关推文数据（包括已同步和未同步的）
-        print(f"📊 [后端] 执行数据库查询")
-        all_tweets = query.all()
-        print(f"📊 [后端] 查询到总推文数: {len(all_tweets)}")
+        # 根据是否强制同步决定查询条件
+        if force_sync:
+            all_tweets = query.all()
+            unsynced_tweets = all_tweets  # 强制同步时，所有数据都视为未同步
+            synced_tweets = []
+            print(f"🔄 [后端] 强制同步模式：将重新同步所有数据")
+        else:
+            all_tweets = query.all()
+            synced_tweets = [t for t in all_tweets if t.synced_to_feishu]
+            unsynced_tweets = [t for t in all_tweets if not t.synced_to_feishu]
+            print(f"📊 [后端] 增量同步模式：只同步未同步的数据")
         
-        # 分别统计已同步和未同步的数据
-        synced_tweets = [t for t in all_tweets if t.synced_to_feishu]
-        unsynced_tweets = [t for t in all_tweets if not t.synced_to_feishu]
+        print(f"📊 [后端] 查询到总推文数: {len(all_tweets)}")
         print(f"📊 [后端] 数据统计:")
         print(f"   - 已同步推文数: {len(synced_tweets)}")
-        print(f"   - 未同步推文数: {len(unsynced_tweets)}")
-        
-        # 检查重复内容（基于推文内容和链接）
-        print(f"🔍 [后端] 开始检查重复内容")
-        duplicate_check = {}
-        potential_duplicates = []
-        
-        for tweet in unsynced_tweets:
-            # 创建内容指纹（基于内容前100字符和链接）
-            content_fingerprint = (tweet.content[:100] if tweet.content else '') + (tweet.link or '')
-            if content_fingerprint in duplicate_check:
-                potential_duplicates.append({
-                    'current': tweet,
-                    'existing': duplicate_check[content_fingerprint]
-                })
-            else:
-                duplicate_check[content_fingerprint] = tweet
-        
-        print(f"🔍 [后端] 重复内容检查完成，发现 {len(potential_duplicates)} 组潜在重复")
+        print(f"   - 待同步推文数: {len(unsynced_tweets)}")
         
         # 构建详细的同步报告
         sync_report = {
             'total_tweets': len(all_tweets),
             'already_synced': len(synced_tweets),
             'to_sync': len(unsynced_tweets),
-            'potential_duplicates': len(potential_duplicates)
+            'force_sync': force_sync
         }
         print(f"📊 [后端] 同步报告: {sync_report}")
         
@@ -1525,166 +1738,16 @@ def sync_feishu():
                 'report': sync_report
             })
         
-        # 如果发现潜在重复内容，记录但继续同步
-        if potential_duplicates:
-            print(f"⚠️ [后端] 发现 {len(potential_duplicates)} 组潜在重复内容，但将继续同步")
-            for dup in potential_duplicates[:3]:  # 只打印前3个
-                print(f"   - 重复内容: {dup['current'].content[:50]}...")
+        # 检查是否启用异步同步
+        async_enabled = FEISHU_CONFIG.get('async_enabled', True)
+        print(f"🔧 [后端] 异步同步状态: {async_enabled}")
         
-        # 初始化同步管理器
-        print(f"🔧 [后端] 初始化云同步管理器")
-        sync_config = {
-            'feishu': {
-                'enabled': True,
-                'app_id': FEISHU_CONFIG['app_id'],
-                'app_secret': FEISHU_CONFIG['app_secret'],
-                'spreadsheet_token': FEISHU_CONFIG['spreadsheet_token'],
-                'table_id': FEISHU_CONFIG['table_id'],
-                'base_url': 'https://open.feishu.cn/open-apis'
-            }
-        }
-        print(f"🔧 [后端] 同步配置: {sync_config}")
-        sync_manager = CloudSyncManager(sync_config)
-        print(f"✅ [后端] 云同步管理器初始化完成")
-        
-        # 准备数据，按照飞书多维表格字段映射
-        print(f"🔄 [后端] 开始准备同步数据")
-        sync_data = []
-        for idx, tweet in enumerate(unsynced_tweets):
-            print(f"📝 [后端] 处理第 {idx + 1}/{len(unsynced_tweets)} 条推文")
-            # 使用用户设置的类型标签，如果为空则使用自动分类
-            content_type = tweet.content_type or classify_content_type(tweet.content)
-            print(f"   - 推文ID: {tweet.id}")
-            print(f"   - 内容类型: {content_type}")
-            
-            # 处理发布时间
-            print(f"   - 🕐 开始处理发布时间")
-            print(f"     - 原始发布时间: {tweet.publish_time} (类型: {type(tweet.publish_time)})")
-            
-            publish_time = ''
-            if tweet.publish_time:
-                try:
-                    if isinstance(tweet.publish_time, str):
-                        # 如果是字符串，尝试解析为datetime
-                        print(f"     - 发布时间为字符串，开始解析")
-                        from dateutil import parser
-                        dt = parser.parse(tweet.publish_time)
-                        publish_time = int(dt.timestamp())  # 使用秒级时间戳，不乘以1000
-                        print(f"     - 字符串解析成功: {publish_time} ({dt})")
-                    else:
-                        # 如果已经是datetime对象
-                        print(f"     - 发布时间为datetime对象")
-                        publish_time = int(tweet.publish_time.timestamp())  # 使用秒级时间戳，不乘以1000
-                        print(f"     - datetime转换成功: {publish_time} ({tweet.publish_time})")
-                    
-                    # 验证时间戳合理性
-                    if publish_time < 946684800:  # 2000年1月1日的时间戳
-                        print(f"     - ⚠️ 发布时间戳异常 ({publish_time})，可能是1970年问题")
-                        publish_time = int(datetime.now().timestamp())
-                        print(f"     - 修正为当前时间戳: {publish_time}")
-                    
-                    print(f"   - ✅ 最终发布时间: {publish_time} ({datetime.fromtimestamp(publish_time)})")
-                except Exception as e:
-                    print(f"   - ❌ 发布时间解析失败: {e}")
-                    publish_time = int(datetime.now().timestamp())
-                    print(f"   - 使用当前时间戳: {publish_time}")
-            else:
-                print(f"     - 发布时间为空，使用当前时间")
-                publish_time = int(datetime.now().timestamp())
-                print(f"   - 默认发布时间: {publish_time}")
-            
-            # 处理创建时间
-            print(f"   - 🕐 开始处理创建时间")
-            print(f"     - 原始创建时间: {tweet.scraped_at} (类型: {type(tweet.scraped_at)})")
-            
-            if tweet.scraped_at:
-                create_time = int(tweet.scraped_at.timestamp())
-                print(f"     - 创建时间转换成功: {create_time} ({tweet.scraped_at})")
-            else:
-                create_time = int(datetime.now().timestamp())
-                print(f"     - 创建时间为空，使用当前时间: {create_time}")
-            
-            # 验证创建时间戳合理性
-            if create_time < 946684800:  # 2000年1月1日的时间戳
-                print(f"     - ⚠️ 创建时间戳异常 ({create_time})，可能是1970年问题")
-                create_time = int(datetime.now().timestamp())
-                print(f"     - 修正为当前时间戳: {create_time}")
-            
-            print(f"   - ✅ 最终创建时间: {create_time} ({datetime.fromtimestamp(create_time)})")
-            
-            tweet_data = {
-                '推文原文内容': tweet.content,
-                '发布时间': publish_time,
-                '作者（账号）': tweet.username,
-                '推文链接': tweet.link or '',
-                '话题标签（Hashtag）': ', '.join(json.loads(tweet.hashtags) if tweet.hashtags else []),
-                '类型标签': content_type,
-                '评论': 0,  # Twitter API限制，暂时设为0
-                '点赞': tweet.likes,
-                '转发': tweet.retweets,
-                '创建时间': create_time
-            }
-            sync_data.append(tweet_data)
-            print(f"   - 数据字段数: {len(tweet_data)}")
-            print(f"   - 数据内容预览: {str(tweet_data)[:200]}...")
-        
-        print(f"✅ [后端] 数据准备完成，共 {len(sync_data)} 条记录")
-        
-        # 显示前3条数据的详细信息用于调试
-        print(f"📋 [后端] 准备同步的数据示例:")
-        for i, item in enumerate(sync_data[:3]):
-            print(f"   - 第{i+1}条数据:")
-            for key, value in item.items():
-                if key in ['发布时间', '创建时间']:
-                    if isinstance(value, (int, float)) and value > 0:
-                        readable_time = datetime.fromtimestamp(value)
-                        print(f"     - {key}: {value} ({readable_time})")
-                    else:
-                        print(f"     - {key}: {value} (无效时间戳)")
-                else:
-                    print(f"     - {key}: {str(value)[:50]}..." if len(str(value)) > 50 else f"     - {key}: {value}")
-        
-        # 同步到飞书多维表格
-        print(f"🚀 [后端] 开始执行飞书同步")
-        print(f"   - 表格Token: {FEISHU_CONFIG['spreadsheet_token'][:10]}...")
-        print(f"   - 表格ID: {FEISHU_CONFIG['table_id']}")
-        success = sync_manager.sync_to_feishu(
-            sync_data,
-            FEISHU_CONFIG['spreadsheet_token'],
-            FEISHU_CONFIG['table_id']
-        )
-        print(f"📊 [后端] 飞书同步结果: {success}")
-        
-        if success:
-            print(f"✅ [后端] 同步成功，更新数据库状态")
-            # 更新同步状态
-            for tweet in unsynced_tweets:
-                tweet.synced_to_feishu = True
-            db.session.commit()
-            print(f"✅ [后端] 数据库状态更新完成")
-            
-            # 构建详细的成功消息
-            message = f'成功同步 {len(unsynced_tweets)} 条新数据到飞书'
-            if task_id:
-                message += f'（任务 {task_id}）'
-            
-            if synced_tweets:
-                message += f'，另有 {len(synced_tweets)} 条数据之前已同步'
-            
-            if potential_duplicates:
-                message += f'\n注意：检测到 {len(potential_duplicates)} 组潜在重复内容，已一并同步'
-            
-            sync_report['synced_count'] = len(unsynced_tweets)
-            print(f"🎉 [后端] 同步完成，返回成功响应: {message}")
-            
-            return jsonify({
-                'success': True, 
-                'message': message,
-                'report': sync_report
-            })
+        if async_enabled:
+            print(f"🚀 [异步同步] 使用异步方式同步 {len(unsynced_tweets)} 条数据")
+            return _handle_async_sync(task_id, unsynced_tweets, sync_report, force_sync)
         else:
-            print(f"❌ [后端] 同步失败，返回错误响应")
-            return jsonify({'success': False, 'message': '同步到飞书失败，请检查网络连接和飞书配置'}), 500
+            print(f"🔄 [同步同步] 使用同步方式同步 {len(unsynced_tweets)} 条数据")
+            return _handle_sync_sync(task_id, unsynced_tweets, synced_tweets, sync_report)
             
     except Exception as e:
         print(f"❌ [后端] 飞书同步过程中发生异常")
@@ -1699,12 +1762,334 @@ def sync_feishu():
         print("="*60 + "\n")
         return jsonify({'success': False, 'message': f'同步失败: {str(e)}'}), 500
 
+def _handle_async_sync(task_id, unsynced_tweets, sync_report, force_sync=False):
+    """处理异步同步"""
+    try:
+        # 准备同步数据
+        sync_data = _prepare_sync_data(unsynced_tweets)
+        
+        # 获取异步任务管理器
+        from utils.async_task_manager import get_task_manager, TaskType, TaskPriority
+        task_manager = get_task_manager()
+        
+        # 生成任务名称
+        if task_id:
+            async_task_name = f"manual_task_{task_id}_{int(datetime.now().timestamp())}"
+        else:
+            async_task_name = f"manual_all_{int(datetime.now().timestamp())}"
+        
+        # 根据数据量动态设置优先级
+        data_count = len(unsynced_tweets)
+        if data_count > 1000:
+            priority = TaskPriority.LOW
+        elif data_count > 100:
+            priority = TaskPriority.NORMAL
+        else:
+            priority = TaskPriority.HIGH
+        
+        # 提交异步任务
+        success = task_manager.submit_feishu_sync(
+            data={
+                'sync_data': sync_data,
+                'spreadsheet_token': FEISHU_CONFIG['spreadsheet_token'],
+                'table_id': FEISHU_CONFIG['table_id'],
+                'tweet_ids': [tweet.id for tweet in unsynced_tweets],
+                'force_sync': force_sync
+            },
+            priority=priority,
+            max_retries=FEISHU_CONFIG.get('async_max_retries', 3)
+        )
+        
+        if success:
+            message = f'✅ 已提交 {len(unsynced_tweets)} 条数据到异步同步队列'
+            if task_id:
+                message += f'（任务 {task_id}）'
+            if force_sync:
+                message += '（强制重新同步）'
+            message += f'\n🔄 任务ID: {async_task_name}\n⏱️ 请稍后查看同步状态'
+            
+            sync_report['async_task_id'] = async_task_name
+            sync_report['submitted_count'] = len(unsynced_tweets)
+            
+            print(f"✅ [异步同步] 任务提交成功: {async_task_name}")
+            
+            return jsonify({
+                'success': True,
+                'message': message,
+                'report': sync_report,
+                'async_task_id': async_task_name,
+                'is_async': True
+            })
+        else:
+            print(f"❌ [异步同步] 任务提交失败，回退到同步方式")
+            return _handle_sync_sync(task_id, unsynced_tweets, [], sync_report)
+            
+    except Exception as e:
+        print(f"❌ [异步同步] 异步处理失败: {e}，回退到同步方式")
+        return _handle_sync_sync(task_id, unsynced_tweets, [], sync_report)
+
+def _handle_sync_sync(task_id, unsynced_tweets, synced_tweets, sync_report):
+    """处理同步方式的飞书同步（保留原有逻辑作为备用）"""
+    try:
+        # 准备同步数据
+        sync_data = _prepare_sync_data(unsynced_tweets)
+        
+        # 初始化同步管理器
+        print(f"🔧 [同步同步] 初始化云同步管理器")
+        sync_config = {
+            'feishu': {
+                'enabled': True,
+                'app_id': FEISHU_CONFIG['app_id'],
+                'app_secret': FEISHU_CONFIG['app_secret'],
+                'spreadsheet_token': FEISHU_CONFIG['spreadsheet_token'],
+                'table_id': FEISHU_CONFIG['table_id'],
+                'base_url': 'https://open.feishu.cn/open-apis'
+            }
+        }
+        sync_manager = CloudSyncManager(sync_config)
+        
+        # 执行同步
+        print(f"🚀 [同步同步] 开始执行飞书同步")
+        success = sync_manager.sync_to_feishu(
+            sync_data,
+            FEISHU_CONFIG['spreadsheet_token'],
+            FEISHU_CONFIG['table_id']
+        )
+        
+        if success:
+            # 更新同步状态
+            for tweet in unsynced_tweets:
+                tweet.synced_to_feishu = True
+            db.session.commit()
+            
+            # 构建成功消息
+            message = f'✅ 成功同步 {len(unsynced_tweets)} 条新数据到飞书'
+            if task_id:
+                message += f'（任务 {task_id}）'
+            
+            if synced_tweets:
+                message += f'，另有 {len(synced_tweets)} 条数据之前已同步'
+            
+            sync_report['synced_count'] = len(unsynced_tweets)
+            print(f"✅ [同步同步] 同步完成: {message}")
+            
+            return jsonify({
+                'success': True,
+                'message': message,
+                'report': sync_report,
+                'is_async': False
+            })
+        else:
+            print(f"❌ [同步同步] 同步失败")
+            return jsonify({'success': False, 'message': '同步到飞书失败，请检查网络连接和飞书配置'}), 500
+            
+    except Exception as e:
+        print(f"❌ [同步同步] 同步执行失败: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'同步失败: {str(e)}'}), 500
+
+def _prepare_sync_data(tweets):
+    """准备同步数据"""
+    sync_data = []
+    for idx, tweet in enumerate(tweets):
+        print(f"📝 [数据准备] 处理第 {idx + 1}/{len(tweets)} 条推文")
+        
+        # 使用用户设置的类型标签，如果为空则使用自动分类
+        content_type = tweet.content_type or classify_content_type(tweet.content)
+        
+        # 处理发布时间
+        publish_time = ''
+        if tweet.publish_time:
+            try:
+                if isinstance(tweet.publish_time, str):
+                    from dateutil import parser
+                    dt = parser.parse(tweet.publish_time)
+                    publish_time = int(dt.timestamp())
+                else:
+                    publish_time = int(tweet.publish_time.timestamp())
+                
+                # 验证时间戳合理性
+                if publish_time < 946684800:  # 2000年1月1日
+                    publish_time = int(datetime.now().timestamp())
+            except Exception as e:
+                print(f"发布时间解析失败: {e}")
+                publish_time = int(datetime.now().timestamp())
+        else:
+            publish_time = int(datetime.now().timestamp())
+        
+        # 处理创建时间
+        if tweet.scraped_at:
+            create_time = int(tweet.scraped_at.timestamp())
+        else:
+            create_time = int(datetime.now().timestamp())
+        
+        # 验证创建时间戳合理性
+        if create_time < 946684800:
+            create_time = int(datetime.now().timestamp())
+        
+        # 解析hashtags
+        try:
+            hashtags = json.loads(tweet.hashtags) if tweet.hashtags else []
+        except:
+            hashtags = []
+        
+        tweet_data = {
+            '推文原文内容': tweet.content or '',
+            '发布时间': publish_time,
+            '作者（账号）': tweet.username or '',
+            '推文链接': tweet.link or '',
+            '话题标签（Hashtag）': ', '.join(hashtags),
+            '类型标签': content_type,
+            '评论': tweet.comments or 0,
+            '点赞': tweet.likes or 0,
+            '转发': tweet.retweets or 0,
+            '创建时间': create_time
+        }
+        sync_data.append(tweet_data)
+    
+    print(f"✅ [数据准备] 数据准备完成，共 {len(sync_data)} 条记录")
+    return sync_data
+
 # API路由
 @app.route('/api/tasks', methods=['GET'])
 def api_get_tasks():
     """获取任务列表"""
     tasks = ScrapingTask.query.order_by(ScrapingTask.created_at.desc()).all()
     return jsonify([task.to_dict() for task in tasks])
+
+@app.route('/api/tasks/status', methods=['GET'])
+def api_get_async_tasks_status():
+    """获取异步任务状态列表"""
+    try:
+        # 获取查询参数
+        status_filter = request.args.get('status')
+        task_type_filter = request.args.get('task_type')
+        limit = request.args.get('limit', 100, type=int)
+        
+        # 获取异步任务管理器
+        from utils.async_task_manager import get_task_manager
+        async_task_manager = get_task_manager()
+        if async_task_manager is None:
+            return jsonify({
+                'success': False,
+                'error': '异步任务管理器未初始化'
+            }), 500
+        
+        # 转换过滤参数
+        from utils.async_task_manager import TaskStatus, TaskType
+        
+        status_enum = None
+        if status_filter:
+            try:
+                status_enum = TaskStatus(status_filter)
+            except ValueError:
+                return jsonify({
+                    'success': False,
+                    'error': f'无效的状态值: {status_filter}'
+                }), 400
+        
+        task_type_enum = None
+        if task_type_filter:
+            try:
+                task_type_enum = TaskType(task_type_filter)
+            except ValueError:
+                return jsonify({
+                    'success': False,
+                    'error': f'无效的任务类型: {task_type_filter}'
+                }), 400
+        
+        # 获取任务列表
+        tasks = async_task_manager.get_task_list(
+            status=status_enum,
+            task_type=task_type_enum,
+            limit=limit
+        )
+        
+        # 计算耗时
+        for task in tasks:
+            if task.get('started_at') and task.get('completed_at'):
+                from datetime import datetime
+                start_time = datetime.fromisoformat(task['started_at'])
+                end_time = datetime.fromisoformat(task['completed_at'])
+                duration = (end_time - start_time).total_seconds()
+                task['duration'] = f"{duration:.2f}s"
+            elif task.get('started_at') and task['status'] == 'running':
+                from datetime import datetime
+                start_time = datetime.fromisoformat(task['started_at'])
+                current_time = datetime.now()
+                duration = (current_time - start_time).total_seconds()
+                task['duration'] = f"{duration:.2f}s (运行中)"
+            else:
+                task['duration'] = '-'
+        
+        # 获取统计信息
+        stats = async_task_manager.get_statistics()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'tasks': tasks,
+                'total': len(tasks),
+                'statistics': stats
+            }
+        })
+        
+    except Exception as e:
+        app.logger.error(f"获取异步任务状态失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'获取任务状态失败: {str(e)}'
+        }), 500
+
+@app.route('/api/tasks/status/<task_id>', methods=['GET'])
+def api_get_async_task_detail(task_id):
+    """获取指定异步任务的详细信息"""
+    try:
+        # 获取异步任务管理器
+        from utils.async_task_manager import get_task_manager
+        async_task_manager = get_task_manager()
+        if async_task_manager is None:
+            return jsonify({
+                'success': False,
+                'error': '异步任务管理器未初始化'
+            }), 500
+        
+        # 获取任务状态
+        task_status = async_task_manager.get_task_status(task_id)
+        
+        if not task_status:
+            return jsonify({
+                'success': False,
+                'error': '任务不存在'
+            }), 404
+        
+        # 计算耗时
+        if task_status.get('started_at') and task_status.get('completed_at'):
+            from datetime import datetime
+            start_time = datetime.fromisoformat(task_status['started_at'])
+            end_time = datetime.fromisoformat(task_status['completed_at'])
+            duration = (end_time - start_time).total_seconds()
+            task_status['duration'] = f"{duration:.2f}s"
+        elif task_status.get('started_at') and task_status['status'] == 'running':
+            from datetime import datetime
+            start_time = datetime.fromisoformat(task_status['started_at'])
+            current_time = datetime.now()
+            duration = (current_time - start_time).total_seconds()
+            task_status['duration'] = f"{duration:.2f}s (运行中)"
+        else:
+            task_status['duration'] = '-'
+        
+        return jsonify({
+            'success': True,
+            'data': task_status
+        })
+        
+    except Exception as e:
+        app.logger.error(f"获取异步任务详情失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'获取任务详情失败: {str(e)}'
+        }), 500
 
 @app.route('/api/tasks', methods=['POST'])
 def api_create_task():
@@ -1724,28 +2109,159 @@ def api_create_task():
         if not target_keywords and not target_accounts:
             return jsonify({'success': False, 'error': '关键词和目标账号至少需要填写一个'}), 400
         
-        task = ScrapingTask(
-            name=task_name,
-            target_accounts=json.dumps(target_accounts),
-            target_keywords=json.dumps(target_keywords),
-            max_tweets=data.get('max_tweets', 50),
-            min_likes=data.get('min_likes', 0),
-            min_retweets=data.get('min_retweets', 0),
-            min_comments=data.get('min_comments', 0)
-        )
+        # 检查是否为多博主任务（多个目标账号）
+        if len(target_accounts) > 1:
+            app.logger.info(f"检测到多博主任务，将拆分为 {len(target_accounts)} 个子任务")
+            
+            # 创建主任务（用于统计和管理）
+            main_task = ScrapingTask(
+                name=f"{task_name} (主任务)",
+                target_accounts=json.dumps(target_accounts),
+                target_keywords=json.dumps(target_keywords),
+                max_tweets=data.get('max_tweets', 50),
+                min_likes=data.get('min_likes', 0),
+                min_retweets=data.get('min_retweets', 0),
+                min_comments=data.get('min_comments', 0),
+                description=f"多博主并行任务，包含 {len(target_accounts)} 个博主: {', '.join(target_accounts)}"
+            )
+            
+            db.session.add(main_task)
+            db.session.flush()  # 获取主任务ID
+            
+            # 为每个博主创建子任务
+            sub_task_ids = []
+            for i, account in enumerate(target_accounts, 1):
+                sub_task = ScrapingTask(
+                    name=f"{task_name} - {account}",
+                    target_accounts=json.dumps([account]),
+                    target_keywords=json.dumps(target_keywords),
+                    max_tweets=data.get('max_tweets', 50),
+                    min_likes=data.get('min_likes', 0),
+                    min_retweets=data.get('min_retweets', 0),
+                    min_comments=data.get('min_comments', 0),
+                    description=f"子任务 {i}/{len(target_accounts)} - 博主: {account}"
+                )
+                
+                db.session.add(sub_task)
+                db.session.flush()  # 获取子任务ID
+                sub_task_ids.append(sub_task.id)
+            
+            db.session.commit()
+            
+            app.logger.info(f"多博主任务创建成功: 主任务ID={main_task.id}, 子任务IDs={sub_task_ids}")
+            
+            return jsonify({
+                'success': True, 
+                'task_id': main_task.id,
+                'sub_task_ids': sub_task_ids,
+                'task_type': 'multi_blogger',
+                'message': f'成功创建多博主任务，包含 {len(target_accounts)} 个子任务'
+            })
         
-        db.session.add(task)
-        db.session.commit()
-        
-        return jsonify({'success': True, 'task_id': task.id})
+        else:
+            # 单博主任务，保持原有逻辑
+            task = ScrapingTask(
+                name=task_name,
+                target_accounts=json.dumps(target_accounts),
+                target_keywords=json.dumps(target_keywords),
+                max_tweets=data.get('max_tweets', 50),
+                min_likes=data.get('min_likes', 0),
+                min_retweets=data.get('min_retweets', 0),
+                min_comments=data.get('min_comments', 0)
+            )
+            
+            db.session.add(task)
+            db.session.commit()
+            
+            return jsonify({
+                'success': True, 
+                'task_id': task.id,
+                'task_type': 'single_blogger'
+            })
         
     except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"创建任务失败: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/api/tasks/<int:task_id>/start', methods=['POST'])
 def api_start_task(task_id):
     """启动任务"""
     app.logger.info(f"收到启动任务请求: task_id={task_id}")
+    
+    # 获取任务信息
+    task = ScrapingTask.query.get(task_id)
+    if not task:
+        return jsonify({'success': False, 'error': '任务不存在'}), 404
+    
+    # 检查是否为多博主主任务
+    is_multi_blogger_main = '(主任务)' in task.name and len(json.loads(task.target_accounts)) > 1
+    
+    if is_multi_blogger_main:
+        app.logger.info(f"检测到多博主主任务: {task_id}，开始启动子任务")
+        
+        # 查找所有相关的子任务
+        base_name = task.name.replace(' (主任务)', '')
+        target_accounts = json.loads(task.target_accounts)
+        
+        sub_tasks = []
+        for account in target_accounts:
+            sub_task_name = f"{base_name} - {account}"
+            sub_task = ScrapingTask.query.filter_by(name=sub_task_name).first()
+            if sub_task:
+                sub_tasks.append(sub_task)
+        
+        if not sub_tasks:
+            return jsonify({'success': False, 'error': '未找到相关的子任务'}), 400
+        
+        # 启动所有子任务
+        started_tasks = []
+        failed_tasks = []
+        queued_tasks = []
+        
+        for sub_task in sub_tasks:
+            if task_manager.is_task_running(sub_task.id):
+                app.logger.info(f"子任务 {sub_task.id} 已在运行中，跳过")
+                continue
+                
+            try:
+                if task_manager.can_start_task():
+                    success, message = task_manager.start_task(sub_task.id)
+                    if success:
+                        started_tasks.append(sub_task.id)
+                        app.logger.info(f"子任务 {sub_task.id} 启动成功")
+                    else:
+                        failed_tasks.append({'id': sub_task.id, 'error': message})
+                        app.logger.error(f"子任务 {sub_task.id} 启动失败: {message}")
+                else:
+                    # 加入队列
+                    success, message = task_manager.start_task(sub_task.id)  # 这会自动加入队列
+                    if success:
+                        queued_tasks.append(sub_task.id)
+                        app.logger.info(f"子任务 {sub_task.id} 已加入队列")
+                    else:
+                        failed_tasks.append({'id': sub_task.id, 'error': message})
+                        app.logger.error(f"子任务 {sub_task.id} 加入队列失败: {message}")
+            except Exception as e:
+                failed_tasks.append({'id': sub_task.id, 'error': str(e)})
+                app.logger.error(f"子任务 {sub_task.id} 启动异常: {str(e)}")
+        
+        # 返回启动结果
+        result = {
+            'success': True,
+            'task_type': 'multi_blogger',
+            'started_tasks': started_tasks,
+            'queued_tasks': queued_tasks,
+            'failed_tasks': failed_tasks,
+            'message': f'多博主任务启动完成: {len(started_tasks)} 个立即启动, {len(queued_tasks)} 个加入队列, {len(failed_tasks)} 个失败'
+        }
+        
+        if failed_tasks and not started_tasks and not queued_tasks:
+            result['success'] = False
+            result['error'] = '所有子任务启动失败'
+            return jsonify(result), 400
+        
+        return jsonify(result)
     
     # 检查任务是否已在运行
     if task_manager.is_task_running(task_id):
@@ -2157,19 +2673,21 @@ def api_chart_data():
 
 @app.route('/api/data/export')
 def api_export_data():
-    """导出数据为Excel文件"""
+    """导出数据为Excel文件（支持异步处理）"""
     try:
         from datetime import datetime
         import io
         import pandas as pd
         from flask import send_file
         import json
+        from utils.async_task_manager import get_task_manager, TaskType, TaskPriority
         
         # 获取筛选参数
         search = request.args.get('search', '')
         task_id = request.args.get('task_id', type=int)
         min_likes = request.args.get('min_likes', type=int)
         min_retweets = request.args.get('min_retweets', type=int)
+        async_export = request.args.get('async', 'false').lower() == 'true'
         
         # 构建查询（与data页面相同的筛选逻辑）
         query = TweetData.query.join(ScrapingTask, TweetData.task_id == ScrapingTask.id)
@@ -2200,6 +2718,52 @@ def api_export_data():
         
         if not tweets:
             return jsonify({'success': False, 'error': '没有数据可导出'}), 400
+        
+        # 根据数据量和用户选择决定是否使用异步处理
+        data_count = len(tweets)
+        should_use_async = async_export or data_count > 1000
+        
+        if should_use_async:
+            # 使用异步任务管理器处理大量数据导出
+            task_manager = get_task_manager()
+            
+            # 根据数据量设置优先级
+            if data_count > 5000:
+                priority = TaskPriority.LOW
+            elif data_count > 1000:
+                priority = TaskPriority.NORMAL
+            else:
+                priority = TaskPriority.HIGH
+            
+            # 生成异步任务ID
+            async_task_id = f"excel_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{data_count}"
+            
+            # 提交异步导出任务
+            success = task_manager.submit_excel_write(
+                file_path=f"./data/export_{async_task_id}.xlsx",
+                data={
+                    'tweets': [tweet.to_dict() for tweet in tweets],
+                    'search': search,
+                    'task_id': task_id,
+                    'min_likes': min_likes,
+                    'min_retweets': min_retweets,
+                    'export_type': 'filtered_data'
+                },
+                priority=priority,
+                max_retries=2
+            )
+            
+            if success:
+                return jsonify({
+                    'success': True,
+                    'message': f'已提交 {data_count} 条数据到异步导出队列',
+                    'async_task_id': async_task_id,
+                    'data_count': data_count,
+                    'is_async': True
+                })
+            else:
+                # 异步提交失败，回退到同步处理
+                pass
         
         # 准备导出数据 - 包含所有重要字段
         export_data = []
@@ -2372,7 +2936,7 @@ def api_export_task_data(task_id):
 
 @app.route('/api/data/sync_feishu/<int:task_id>', methods=['POST'])
 def api_sync_feishu(task_id):
-    """同步数据到飞书多维表格"""
+    """同步数据到飞书多维表格（支持异步）"""
     print(f"\n🔄 [FEISHU_SYNC] 开始同步任务 {task_id} 到飞书")
     print(f"⏰ [FEISHU_SYNC] 同步时间: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
     
@@ -2418,6 +2982,64 @@ def api_sync_feishu(task_id):
                 print(f"❌ [FEISHU_SYNC] 没有任何数据需要同步")
                 return jsonify({'success': False, 'error': '没有数据需要同步'}), 400
         
+        # 根据配置决定使用异步还是同步方式
+        if FEISHU_CONFIG.get('async_enabled', False):
+            return _handle_async_task_sync(task_id, tweets)
+        else:
+            return _handle_sync_task_sync(task_id, tweets)
+        
+    except Exception as e:
+        print(f"❌ [FEISHU_SYNC] 同步过程中发生异常: {str(e)}")
+        import traceback
+        print(f"📋 [FEISHU_SYNC] 异常详情: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def _handle_async_task_sync(task_id, tweets):
+    """处理异步任务同步"""
+    try:
+        print(f"🚀 [FEISHU_SYNC] 使用异步方式同步任务 {task_id}")
+        
+        # 准备同步数据
+        data = _prepare_sync_data(tweets)
+        
+        # 获取异步同步管理器
+        async_manager = get_async_sync_manager()
+        if not async_manager:
+            print(f"❌ [FEISHU_SYNC] 异步同步管理器未初始化，回退到同步方式")
+            return _handle_sync_task_sync(task_id, tweets)
+        
+        # 提交异步任务
+        feishu_credentials = {
+            'app_id': FEISHU_CONFIG['app_id'],
+            'app_secret': FEISHU_CONFIG['app_secret'],
+            'spreadsheet_token': FEISHU_CONFIG['spreadsheet_token'],
+            'table_id': FEISHU_CONFIG['table_id']
+        }
+        
+        priority = FEISHU_CONFIG.get('async_priority', 5)
+        sync_task_id = async_manager.submit_task(data, feishu_credentials, priority)
+        
+        if sync_task_id:
+            print(f"✅ [FEISHU_SYNC] 异步任务已提交，任务ID: {sync_task_id}")
+            return jsonify({
+                'success': True, 
+                'message': f'已提交 {len(data)} 条数据到异步同步队列',
+                'async_task_id': sync_task_id,
+                'data_count': len(data)
+            })
+        else:
+            print(f"❌ [FEISHU_SYNC] 异步任务提交失败，回退到同步方式")
+            return _handle_sync_task_sync(task_id, tweets)
+            
+    except Exception as e:
+        print(f"❌ [FEISHU_SYNC] 异步同步异常: {e}，回退到同步方式")
+        return _handle_sync_task_sync(task_id, tweets)
+
+def _handle_sync_task_sync(task_id, tweets):
+    """处理同步任务同步"""
+    try:
+        print(f"🔄 [FEISHU_SYNC] 使用同步方式同步任务 {task_id}")
+        
         # 初始化云同步管理器
         print(f"🔧 [FEISHU_SYNC] 初始化云同步管理器...")
         sync_config = {
@@ -2430,118 +3052,32 @@ def api_sync_feishu(task_id):
                 'base_url': 'https://open.feishu.cn/open-apis'
             }
         }
-        print(f"📋 [FEISHU_SYNC] 同步配置: {sync_config}")
         sync_manager = CloudSyncManager(sync_config)
         print(f"✅ [FEISHU_SYNC] 云同步管理器初始化完成")
         
-        # 准备数据，按照飞书多维表格字段映射
-        print(f"📝 [FEISHU_SYNC] 开始准备数据，共 {len(tweets)} 条推文...")
-        data = []
-        for i, tweet in enumerate(tweets):
-            print(f"📝 [FEISHU_SYNC] 处理第 {i+1}/{len(tweets)} 条推文 (ID: {tweet.id})")
-            
-            # 使用用户设置的类型标签，如果为空则使用自动分类
-            content_type = tweet.content_type or classify_content_type(tweet.content)
-            print(f"🏷️ [FEISHU_SYNC] 推文 {tweet.id} 类型标签: {content_type}")
-            
-            # 处理发布时间 - 修复时间戳转换问题，使用秒级时间戳与cloud_sync.py保持一致
-            print(f"⏰ [FEISHU_SYNC] 处理推文 {tweet.id} 的发布时间...")
-            print(f"⏰ [FEISHU_SYNC] 原始发布时间: {tweet.publish_time} (类型: {type(tweet.publish_time)})")
-            print(f"⏰ [FEISHU_SYNC] 抓取时间: {tweet.scraped_at} (类型: {type(tweet.scraped_at)})")
-            
-            publish_time = 0
-            if tweet.publish_time:
-                try:
-                    if isinstance(tweet.publish_time, str):
-                        # 如果是字符串，尝试解析为datetime
-                        from dateutil import parser
-                        dt = parser.parse(tweet.publish_time)
-                        # 转换为秒级时间戳（与cloud_sync.py保持一致）
-                        publish_time = int(dt.timestamp())
-                        print(f"⏰ [FEISHU_SYNC] 字符串时间解析成功: {dt} -> {publish_time}")
-                    else:
-                        # 如果已经是datetime对象
-                        publish_time = int(tweet.publish_time.timestamp())
-                        print(f"⏰ [FEISHU_SYNC] datetime对象转换成功: {tweet.publish_time} -> {publish_time}")
-                except Exception as e:
-                    # 如果解析失败，使用抓取时间作为备选
-                    print(f"❌ [FEISHU_SYNC] 发布时间解析失败: {e}, 使用抓取时间作为备选")
-                    publish_time = int(tweet.scraped_at.timestamp())
-                    print(f"⏰ [FEISHU_SYNC] 备选时间戳: {publish_time}")
-            else:
-                # 如果没有发布时间，使用抓取时间
-                print(f"⚠️ [FEISHU_SYNC] 没有发布时间，使用抓取时间")
-                publish_time = int(tweet.scraped_at.timestamp())
-                print(f"⏰ [FEISHU_SYNC] 抓取时间戳: {publish_time}")
-            
-            # 验证时间戳合理性，避免1970年问题
-            if publish_time < 946684800:  # 2000年1月1日的时间戳
-                print(f"⚠️ [FEISHU_SYNC] 发布时间戳异常 ({publish_time})，可能是1970年问题，修正为当前时间")
-                publish_time = int(datetime.now().timestamp())
-                print(f"⏰ [FEISHU_SYNC] 修正后时间戳: {publish_time}")
-            
-            # 根据飞书表格的实际字段名称进行精确映射
-            # 从用户提供的截图可以看到字段包括：推文原文内容、发布时间、作者（账号）、推文链接、话题标签（Hashtag）、类型标签、评论、点赞、转发
-            hashtags_str = ', '.join(json.loads(tweet.hashtags) if tweet.hashtags else [])
-            
-            # 转换为毫秒级时间戳（飞书API要求）
-            if publish_time < 10000000000:  # 秒级时间戳
-                publish_time_ms = publish_time * 1000
-            else:  # 已经是毫秒级
-                publish_time_ms = publish_time
-            
-            print(f"⏰ [FEISHU_SYNC] 发布时间戳转换: {publish_time} -> {publish_time_ms} (毫秒级)")
-            
-            tweet_data = {
-                '推文原文内容': tweet.content or '',
-                # 注意：移除发布时间字段，不同步时间戳
-                '作者（账号）': tweet.username or '',
-                '推文链接': tweet.link or '',
-                '话题标签（Hashtag）': hashtags_str,
-                '类型标签': content_type or '',
-                '评论': tweet.comments or 0,
-                '点赞': tweet.likes or 0,
-                '转发': tweet.retweets or 0
-                # 注意：移除创建时间字段，让飞书自动生成
-            }
-            
-            print(f"📊 [FEISHU_SYNC] 推文 {tweet.id} 数据映射完成:")
-            print(f"   - 内容: {(tweet.content or '')[:50]}...")
-            print(f"   - 作者: {tweet.username or ''}")
-            print(f"   - 链接: {tweet.link or ''}")
-            print(f"   - 标签: {hashtags_str}")
-            print(f"   - 类型: {content_type or ''}")
-            
-            data.append(tweet_data)
+        # 准备数据
+        data = _prepare_sync_data(tweets)
         
         # 同步到飞书多维表格
         print(f"🚀 [FEISHU_SYNC] 开始同步 {len(data)} 条数据到飞书多维表格...")
-        print(f"📋 [FEISHU_SYNC] 目标表格: {FEISHU_CONFIG['spreadsheet_token']}")
-        print(f"📋 [FEISHU_SYNC] 目标表ID: {FEISHU_CONFIG['table_id']}")
-        
         success = sync_manager.sync_to_feishu(
             data,
             FEISHU_CONFIG['spreadsheet_token'],
             FEISHU_CONFIG['table_id']
         )
         
-        print(f"📊 [FEISHU_SYNC] 同步结果: {'成功' if success else '失败'}")
-        
         if success:
             print(f"✅ [FEISHU_SYNC] 同步成功，开始更新数据库状态...")
-            # 更新同步状态和内容类型
-            for i, tweet in enumerate(tweets):
-                print(f"📝 [FEISHU_SYNC] 更新推文 {tweet.id} 同步状态")
-                # 使用1而不是True，因为SQLite中BOOLEAN存储为整数
+            # 更新同步状态
+            for tweet in tweets:
                 tweet.synced_to_feishu = 1
                 tweet.content_type = classify_content_type(tweet.content)
             
-            print(f"💾 [FEISHU_SYNC] 提交数据库更改...")
             db.session.commit()
             print(f"✅ [FEISHU_SYNC] 数据库更新完成")
             
             # 执行数据验证
-            print(f"🔍 [FEISHU_SYNC] 开始数据验证...")
+            validation_msg = ""
             try:
                 from feishu_data_validator import FeishuDataValidator
                 validator = FeishuDataValidator()
@@ -2550,32 +3086,20 @@ def api_sync_feishu(task_id):
                 if validation_result.get('success'):
                     comparison = validation_result['comparison_result']
                     summary = comparison['summary']
-                    print(f"✅ [FEISHU_SYNC] 数据验证完成")
-                    print(f"📊 [FEISHU_SYNC] 验证结果: 同步准确率 {summary['sync_accuracy']:.2f}%")
-                    print(f"📊 [FEISHU_SYNC] 匹配记录: {summary['matched_count']}/{summary['total_local']}")
-                    
-                    # 在返回消息中包含验证结果
                     validation_msg = f"，验证结果: 准确率 {summary['sync_accuracy']:.2f}% ({summary['matched_count']}/{summary['total_local']} 条匹配)"
                     if summary['sync_accuracy'] < 95:
                         validation_msg += f"，发现 {summary['field_mismatch_count']} 条字段不匹配"
                 else:
-                    print(f"⚠️ [FEISHU_SYNC] 数据验证失败: {validation_result.get('error', '未知错误')}")
                     validation_msg = "，数据验证失败"
-                    
             except Exception as e:
-                print(f"❌ [FEISHU_SYNC] 数据验证异常: {e}")
                 validation_msg = "，数据验证异常"
             
-            print(f"🎉 [FEISHU_SYNC] 任务 {task_id} 同步完成，共 {len(data)} 条数据")
             return jsonify({'success': True, 'message': f'成功同步 {len(data)} 条数据到飞书多维表格{validation_msg}'})
         else:
-            print(f"❌ [FEISHU_SYNC] 同步失败")
             return jsonify({'success': False, 'error': '飞书同步失败'}), 500
             
     except Exception as e:
-        print(f"❌ [FEISHU_SYNC] 同步过程中发生异常: {str(e)}")
-        import traceback
-        print(f"📋 [FEISHU_SYNC] 异常详情: {traceback.format_exc()}")
+        print(f"❌ [FEISHU_SYNC] 同步异常: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/status')
@@ -2610,6 +3134,15 @@ def api_status():
                     'started_at': task.started_at.isoformat() if task.started_at else None
                 })
         
+        # 获取异步同步状态
+        async_sync_status = {}
+        try:
+            async_manager = get_async_sync_manager()
+            if async_manager:
+                async_sync_status = async_manager.get_all_tasks_status()
+        except Exception as e:
+            print(f"获取异步同步状态失败: {e}")
+        
         return jsonify({
             'success': True,
             'data': {
@@ -2631,6 +3164,7 @@ def api_status():
                     'available_browsers': task_status['available_browsers'],
                     'current_tasks': current_tasks
                 },
+                'async_sync_status': async_sync_status,
                 'system_running': task_status['running_count'] > 0
             }
         })
@@ -2664,6 +3198,11 @@ def api_update_feishu_config():
             'feishu_table_id': data.get('table_id', FEISHU_CONFIG['table_id']),
             'feishu_enabled': str(data.get('enabled', FEISHU_CONFIG['enabled'])),
             'feishu_auto_sync': str(data.get('auto_sync', FEISHU_CONFIG.get('auto_sync', False))),
+            'feishu_async_enabled': str(data.get('async_enabled', FEISHU_CONFIG.get('async_enabled', False))),
+            'feishu_async_max_workers': str(data.get('async_max_workers', FEISHU_CONFIG.get('async_max_workers', 3))),
+            'feishu_async_max_queue_size': str(data.get('async_max_queue_size', FEISHU_CONFIG.get('async_max_queue_size', 100))),
+            'feishu_async_max_retries': str(data.get('async_max_retries', FEISHU_CONFIG.get('async_max_retries', 3))),
+            'feishu_async_priority': str(data.get('async_priority', FEISHU_CONFIG.get('async_priority', 5))),
             'sync_interval': str(data.get('sync_interval', 300))
         }
         
@@ -2690,13 +3229,234 @@ def api_update_feishu_config():
             'spreadsheet_token': feishu_configs['feishu_spreadsheet_token'],
             'table_id': feishu_configs['feishu_table_id'],
             'enabled': feishu_configs['feishu_enabled'].lower() == 'true',
-            'auto_sync': feishu_configs['feishu_auto_sync'].lower() == 'true'
+            'auto_sync': feishu_configs['feishu_auto_sync'].lower() == 'true',
+            'async_enabled': feishu_configs['feishu_async_enabled'].lower() == 'true',
+            'async_max_workers': int(feishu_configs['feishu_async_max_workers']),
+            'async_max_queue_size': int(feishu_configs['feishu_async_max_queue_size']),
+            'async_max_retries': int(feishu_configs['feishu_async_max_retries']),
+            'async_priority': int(feishu_configs['feishu_async_priority'])
         })
         
         return jsonify({'success': True, 'message': '飞书配置更新成功'})
         
     except Exception as e:
         db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/async_sync/tasks', methods=['GET'])
+def api_get_async_sync_tasks():
+    """获取所有异步同步任务状态"""
+    try:
+        async_manager = get_async_sync_manager()
+        if not async_manager:
+            return jsonify({'success': False, 'error': '异步同步服务未启用'}), 400
+        
+        tasks_status = async_manager.get_all_tasks_status()
+        return jsonify({'success': True, 'data': tasks_status})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/async_sync/tasks/<task_id>', methods=['GET'])
+def api_get_async_sync_task(task_id):
+    """获取指定异步同步任务状态"""
+    try:
+        async_manager = get_async_sync_manager()
+        if not async_manager:
+            return jsonify({'success': False, 'error': '异步同步服务未启用'}), 400
+        
+        task_status = async_manager.get_task_status(task_id)
+        if task_status:
+            return jsonify({'success': True, 'data': task_status})
+        else:
+            return jsonify({'success': False, 'error': f'任务 {task_id} 不存在'}), 404
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/async_sync/tasks/<task_id>/cancel', methods=['POST'])
+def api_cancel_async_sync_task(task_id):
+    """取消指定异步同步任务"""
+    try:
+        async_manager = get_async_sync_manager()
+        if not async_manager:
+            return jsonify({'success': False, 'error': '异步同步服务未启用'}), 400
+        
+        success = async_manager.cancel_task(task_id)
+        if success:
+            return jsonify({'success': True, 'message': f'任务 {task_id} 已取消'})
+        else:
+            return jsonify({'success': False, 'error': f'无法取消任务 {task_id}，可能已完成或不存在'}), 400
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# 定时任务管理API
+@app.route('/api/scheduler/tasks', methods=['GET'])
+def api_get_scheduled_tasks():
+    """获取所有定时任务"""
+    try:
+        if not task_scheduler:
+            return jsonify({'success': False, 'error': '定时任务调度器未初始化'}), 500
+        
+        tasks = task_scheduler.get_all_tasks()
+        return jsonify({'success': True, 'data': tasks})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/scheduler/tasks/<task_id>', methods=['GET'])
+def api_get_scheduled_task(task_id):
+    """获取指定定时任务详情"""
+    try:
+        if not task_scheduler:
+            return jsonify({'success': False, 'error': '定时任务调度器未初始化'}), 500
+        
+        task = task_scheduler.get_task(task_id)
+        if task:
+            return jsonify({'success': True, 'data': task})
+        else:
+            return jsonify({'success': False, 'error': f'任务 {task_id} 不存在'}), 404
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/scheduler/tasks', methods=['POST'])
+def api_create_scheduled_task():
+    """创建新的定时任务"""
+    try:
+        if not task_scheduler:
+            return jsonify({'success': False, 'error': '定时任务调度器未初始化'}), 500
+        
+        data = request.get_json()
+        
+        # 验证必填字段
+        required_fields = ['task_id', 'name', 'schedule_time', 'task_function']
+        missing_fields = [field for field in required_fields if not data.get(field)]
+        if missing_fields:
+            return jsonify({
+                'success': False, 
+                'error': f'缺少必填字段: {", ".join(missing_fields)}'
+            }), 400
+        
+        # 验证任务函数是否存在
+        task_function_name = data['task_function']
+        if not hasattr(PredefinedTasks, task_function_name):
+            return jsonify({
+                'success': False, 
+                'error': f'任务函数 {task_function_name} 不存在'
+            }), 400
+        
+        task_function = getattr(PredefinedTasks, task_function_name)
+        
+        # 添加任务
+        success = task_scheduler.add_task(
+            task_id=data['task_id'],
+            name=data['name'],
+            schedule_time=data['schedule_time'],
+            task_function=task_function,
+            description=data.get('description', ''),
+            max_retries=data.get('max_retries', 3),
+            timeout_minutes=data.get('timeout_minutes', 60),
+            enabled=data.get('enabled', True)
+        )
+        
+        if success:
+            return jsonify({'success': True, 'message': f'定时任务 {data["task_id"]} 创建成功'})
+        else:
+            return jsonify({'success': False, 'error': '创建定时任务失败'}), 500
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/scheduler/tasks/<task_id>/enable', methods=['POST'])
+def api_enable_scheduled_task(task_id):
+    """启用定时任务"""
+    try:
+        if not task_scheduler:
+            return jsonify({'success': False, 'error': '定时任务调度器未初始化'}), 500
+        
+        success = task_scheduler.enable_task(task_id)
+        if success:
+            return jsonify({'success': True, 'message': f'任务 {task_id} 已启用'})
+        else:
+            return jsonify({'success': False, 'error': f'任务 {task_id} 不存在'}), 404
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/scheduler/tasks/<task_id>/disable', methods=['POST'])
+def api_disable_scheduled_task(task_id):
+    """禁用定时任务"""
+    try:
+        if not task_scheduler:
+            return jsonify({'success': False, 'error': '定时任务调度器未初始化'}), 500
+        
+        success = task_scheduler.disable_task(task_id)
+        if success:
+            return jsonify({'success': True, 'message': f'任务 {task_id} 已禁用'})
+        else:
+            return jsonify({'success': False, 'error': f'任务 {task_id} 不存在'}), 404
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/scheduler/tasks/<task_id>/run', methods=['POST'])
+def api_run_scheduled_task(task_id):
+    """立即执行定时任务"""
+    try:
+        if not task_scheduler:
+            return jsonify({'success': False, 'error': '定时任务调度器未初始化'}), 500
+        
+        success = task_scheduler.run_task_now(task_id)
+        if success:
+            return jsonify({'success': True, 'message': f'任务 {task_id} 已开始执行'})
+        else:
+            return jsonify({'success': False, 'error': f'任务 {task_id} 不存在或无法执行'}), 404
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/scheduler/tasks/<task_id>', methods=['DELETE'])
+def api_delete_scheduled_task(task_id):
+    """删除定时任务"""
+    try:
+        if not task_scheduler:
+            return jsonify({'success': False, 'error': '定时任务调度器未初始化'}), 500
+        
+        success = task_scheduler.remove_task(task_id)
+        if success:
+            return jsonify({'success': True, 'message': f'任务 {task_id} 已删除'})
+        else:
+            return jsonify({'success': False, 'error': f'任务 {task_id} 不存在'}), 404
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/scheduler/status', methods=['GET'])
+def api_get_scheduler_status():
+    """获取调度器状态"""
+    try:
+        if not task_scheduler:
+            return jsonify({'success': False, 'error': '定时任务调度器未初始化'}), 500
+        
+        status = task_scheduler.get_status()
+        return jsonify({'success': True, 'data': status})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/scheduler/statistics', methods=['GET'])
+def api_get_scheduler_statistics():
+    """获取调度器统计信息"""
+    try:
+        if not task_scheduler:
+            return jsonify({'success': False, 'error': '定时任务调度器未初始化'}), 500
+        
+        stats = task_scheduler.get_statistics()
+        return jsonify({'success': True, 'data': stats})
+        
+    except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/data/validate_feishu/<int:task_id>', methods=['POST'])
@@ -2964,34 +3724,21 @@ def api_update_tweet_content_type():
 def api_check_adspower_installation():
     """检测AdsPower安装状态"""
     try:
-        app.logger.debug('Starting api_test_open_adspower')
-        data = request.form.to_dict()
+        app.logger.debug('Starting api_check_adspower_installation')
         
         # 从数据库获取配置信息
         configs = SystemConfig.query.all()
         config_dict = {cfg.key: cfg.value for cfg in configs}
         
-        # 获取API配置信息
-        api_host = data.get('api_host') or config_dict.get('adspower_api_host', 'localhost')
-        api_port = data.get('api_port') or config_dict.get('adspower_api_port', '50325')
-        api_status = config_dict.get('adspower_api_status', '')
-        api_key = config_dict.get('adspower_api_key', '')
+        # 获取API配置信息 - AdsPower API 地址现在由配置文件管理
+        # 注意：API状态检查已移除，现在直接从配置文件读取参数进行测试
         
-        # 如果API状态为关闭，直接返回失败
-        if api_status == '关闭':
-            return jsonify({
-                'success': False,
-                'message': 'AdsPower API接口状态已设置为关闭'
-            })
-        
-        # 构建API URL
-        api_url = f'http://{api_host}:{api_port}'
+        # 使用配置文件中的固定API地址
+        api_url = ADS_POWER_CONFIG.get('local_api_url', 'http://local.adspower.net:50325')
         test_url = f"{api_url}/api/v1/user/list"
         
-        # 准备请求头
+        # 准备请求头 - API Key 现在由配置文件管理
         headers = {}
-        if api_key:
-            headers['Authorization'] = f'Bearer {api_key}'
         
         try:
             response = requests.get(test_url, headers=headers, timeout=10)
@@ -3049,68 +3796,124 @@ def api_check_adspower_installation():
 
 @app.route('/api/test_adspower_connection', methods=['POST'])
 def api_test_adspower_connection():
-    """测试AdsPower连接"""
+    """测试AdsPower连接 - 直接从配置文件读取参数"""
     try:
-        data = request.get_json() or {}
+        # 直接从AdsPower配置文件导入配置
+        from config.adspower_config import get_config
+        adspower_config = get_config()
         
-        # 从数据库获取配置信息
-        configs = SystemConfig.query.all()
-        config_dict = {cfg.key: cfg.value for cfg in configs}
+        # 从配置文件获取所有必要参数
+        api_host = adspower_config['api_host']
+        api_port = adspower_config['api_port']
+        api_key = adspower_config['api_key']
+        user_ids = adspower_config['user_ids']
         
-        # 获取API配置信息
-        api_host = data.get('api_host') or config_dict.get('adspower_api_host', 'localhost')
-        api_port = data.get('api_port') or config_dict.get('adspower_api_port', '50325')
-        api_status = config_dict.get('adspower_api_status', '')
-        api_key = config_dict.get('adspower_api_key', '')
-        user_id = data.get('user_id') or config_dict.get('adspower_user_id', '')
+        app.logger.info(f"AdsPower Test - 从配置文件读取参数:")
+        app.logger.info(f"AdsPower Test - api_host: {api_host}")
+        app.logger.info(f"AdsPower Test - api_port: {api_port}")
+        app.logger.info(f"AdsPower Test - api_key: {api_key[:8]}...")
+        app.logger.info(f"AdsPower Test - user_ids: {user_ids}")
         
-        if not user_id:
-            return jsonify({'success': False, 'message': '请提供用户ID'})
+        if not user_ids:
+            app.logger.error("AdsPower Test - 配置文件中未找到用户ID")
+            return jsonify({'success': False, 'message': '配置文件中未找到用户ID，请检查 config/adspower_config.py'})
+            
+        # 使用第一个用户ID进行测试
+        user_id = user_ids[0]
+        app.logger.info(f"AdsPower Test - 使用用户ID进行测试: {user_id}")
         
-        # 如果API状态为关闭，直接返回失败
-        if api_status == '关闭':
-            return jsonify({
-                'success': False,
-                'message': 'AdsPower API接口状态已设置为关闭'
-            })
-        
-        # 测试AdsPower API连接
+        # AdsPower API 状态配置现在由配置文件管理
         
         # 构建API URL
         api_url = f'http://{api_host}:{api_port}'
-        test_url = f"{api_url}/api/v1/user/list"
+        
+        # 第一步：检查API接口状态
+        status_url = f"{api_url}/status"
+        
+        try:
+            status_response = requests.get(status_url, timeout=10)
+            
+            if status_response.status_code == 200:
+                status_result = status_response.json()
+                if status_result.get('code') != 0:
+                    return jsonify({
+                        'success': False,
+                        'message': f'AdsPower API状态检查失败: {status_result.get("msg", "未知错误")}'
+                    })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': f'AdsPower API状态检查失败，HTTP状态码: {status_response.status_code}'
+                })
+                
+        except requests.exceptions.Timeout:
+            return jsonify({
+                'success': False,
+                'message': 'AdsPower API状态检查超时，请检查AdsPower是否正在运行'
+            })
+        except requests.exceptions.ConnectionError:
+            return jsonify({
+                'success': False,
+                'message': f'无法连接到AdsPower API ({api_url})，请检查AdsPower是否正在运行'
+            })
+        
+        # 第二步：测试启动浏览器（使用官方文档的V2接口）
+        start_browser_url = f"{api_url}/api/v2/browser-profile/start"
+        
+        # 准备请求数据
+        browser_data = {
+            'profile_id': user_id,
+            'headless': '1',  # 使用headless模式进行测试
+            'proxy_detection': '0',  # 关闭检测页面
+            'last_opened_tabs': '0'  # 不打开上次的标签页
+        }
         
         # 准备请求头
-        headers = {}
+        headers = {'Content-Type': 'application/json'}
         if api_key:
             headers['Authorization'] = f'Bearer {api_key}'
         
         try:
-            response = requests.get(test_url, headers=headers, timeout=10)
+            # 发送启动浏览器请求
+            response = requests.post(start_browser_url, json=browser_data, headers=headers, timeout=15)
             
             if response.status_code == 200:
                 result = response.json()
                 if result.get('code') == 0:
-                    # 检查指定用户是否存在
-                    users = result.get('data', {}).get('list', [])
-                    user_exists = any(user.get('user_id') == user_id for user in users)
+                    # 启动成功，获取浏览器信息
+                    browser_info = result.get('data', {})
+                    ws_info = browser_info.get('ws', {})
                     
-                    if user_exists:
+                    # 立即关闭浏览器（测试完成后清理）
+                    close_url = f"{api_url}/api/v1/browser/stop"
+                    close_params = {'user_id': user_id}
+                    try:
+                        requests.get(close_url, params=close_params, timeout=5)
+                    except:
+                        pass  # 忽略关闭浏览器的错误
+                    
+                    return jsonify({
+                        'success': True, 
+                        'message': f'AdsPower连接成功！环境ID {user_id} 可以正常启动',
+                        'api_url': api_url,
+                        'browser_info': {
+                            'selenium_port': ws_info.get('selenium', ''),
+                            'puppeteer_ws': ws_info.get('puppeteer', ''),
+                            'debug_port': browser_info.get('debug_port', '')
+                        }
+                    })
+                else:
+                    error_msg = result.get('msg', '未知错误')
+                    if 'not found' in error_msg.lower() or '不存在' in error_msg:
                         return jsonify({
-                            'success': True, 
-                            'message': f'AdsPower连接成功，用户ID {user_id} 存在',
-                            'api_url': api_url
+                            'success': False, 
+                            'message': f'环境ID {user_id} 不存在，请检查环境ID是否正确'
                         })
                     else:
                         return jsonify({
                             'success': False, 
-                            'message': f'AdsPower连接成功，但用户ID {user_id} 不存在。可用用户: {", ".join([u.get("user_id", "未知") for u in users])}'
+                            'message': f'启动浏览器失败: {error_msg}'
                         })
-                else:
-                    return jsonify({
-                        'success': False, 
-                        'message': f'AdsPower API返回错误: {result.get("msg", "未知错误")}'
-                    })
             elif response.status_code == 401:
                 return jsonify({
                     'success': False,
@@ -3119,23 +3922,23 @@ def api_test_adspower_connection():
             else:
                 return jsonify({
                     'success': False,
-                    'message': f'HTTP错误: {response.status_code}'
+                    'message': f'启动浏览器请求失败，HTTP状态码: {response.status_code}'
                 })
                     
-        except requests.exceptions.Timeout as e:
+        except requests.exceptions.Timeout:
             return jsonify({
                 'success': False,
-                'message': f'连接超时: {str(e)}'
+                'message': '启动浏览器请求超时，请检查网络连接或AdsPower性能'
             })
-        except requests.exceptions.ConnectionError as e:
+        except requests.exceptions.ConnectionError:
             return jsonify({
                 'success': False,
-                'message': f'连接失败: {str(e)}'
+                'message': f'无法连接到AdsPower API ({api_url})'
             })
         except Exception as e:
             return jsonify({
                 'success': False,
-                'message': f'请求错误: {str(e)}'
+                'message': f'启动浏览器测试失败: {str(e)}'
             })
         
     except Exception as e:
@@ -3145,34 +3948,29 @@ def api_test_adspower_connection():
 def api_test_open_adspower():
     """测试打开 AdsPower 浏览器窗口"""
     try:
-        data = request.form.to_dict()
+        # 正确解析 JSON 数据
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.form.to_dict()
         
-        # 从数据库获取配置信息
-        configs = SystemConfig.query.all()
-        config_dict = {cfg.key: cfg.value for cfg in configs}
+        # AdsPower 配置现在由配置文件管理
+        from config.adspower_config import get_config as get_adspower_config
+        adspower_config = get_adspower_config()
         
-        # 获取API配置信息
-        api_host = data.get('api_host') or config_dict.get('adspower_api_host', 'localhost')
-        api_port = data.get('api_port') or config_dict.get('adspower_api_port', '50325')
-        api_status = config_dict.get('adspower_api_status', '')
-        api_key = config_dict.get('adspower_api_key', '')
-        user_id = data.get('user_id') or config_dict.get('adspower_user_id', '')
+        # 从配置文件获取配置信息
+        user_id = data.get('user_id') or (adspower_config.user_ids[0] if adspower_config.user_ids else '')
+        
+        # AdsPower API 状态配置现在由配置文件管理
         
         if not user_id:
             return jsonify({'success': False, 'message': '请提供用户ID'})
         
-        if api_status == '关闭':
-            return jsonify({
-                'success': False,
-                'message': 'AdsPower API接口状态已设置为关闭'
-            })
-        
         # 创建 AdsPowerLauncher 实例
         launcher_config = {
-            'local_api_url': f'http://{api_host}:{api_port}',
+            'local_api_url': adspower_config['local_api_url'],
             'user_id': user_id,
-            'api_status': api_status,
-            'api_key': api_key
+            'api_key': adspower_config['api_key']
         }
         launcher = AdsPowerLauncher(launcher_config)
         
@@ -3207,6 +4005,16 @@ def page_analyzer():
 def enhanced_scraping():
     """增强推文抓取页面"""
     return render_template('enhanced_scraping.html')
+
+@app.route('/scheduler')
+def scheduler():
+    """定时任务管理页面"""
+    return render_template('scheduler.html')
+
+@app.route('/tasks/status')
+def tasks_status():
+    """异步任务状态页面"""
+    return render_template('tasks_status.html')
 
 @app.route('/api/analyze-page-structure', methods=['POST'])
 def api_analyze_page_structure():
@@ -3647,8 +4455,8 @@ def api_start_enhanced_scraping():
                     db.session.add(task)
                     db.session.commit()
                     
-                    # 保存推文数据
-                    saved_count = _save_tweets_to_db(collected_tweets, task.id)
+                    # 保存推文数据（支持异步插入）
+                    saved_count = _save_tweets_to_db(collected_tweets, task.id, async_insert=True)
                     
                     enhanced_scraping_tasks[task_id].update({
                         'status': 'completed',
@@ -4250,11 +5058,7 @@ def api_restart_system():
         app.logger.error(f"重启系统失败: {e}")
         return jsonify({'success': False, 'error': f'重启失败: {str(e)}'}), 500
 
-# 确保在模块加载时初始化
-try:
-    init_db()
-except Exception as e:
-    print(f"⚠️ 初始化失败: {e}")
+# 模块级别初始化已移除，避免Flask debug模式下的重复初始化
 
 if __name__ == '__main__':
     # 记录应用启动时间
@@ -4264,8 +5068,35 @@ if __name__ == '__main__':
     # 初始化数据库
     init_db()
     
-    # 初始化任务执行器
-    task_executor = ScrapingTaskExecutor()
+    # 初始化异步同步服务
+    if FEISHU_CONFIG.get('async_enabled', False):
+        print("🚀 [ASYNC_SYNC] 初始化异步飞书同步服务...")
+        try:
+            init_async_sync_service(
+                max_workers_count=FEISHU_CONFIG.get('async_max_workers', 3),
+                max_queue_size=FEISHU_CONFIG.get('async_max_queue_size', 100),
+                max_retries=FEISHU_CONFIG.get('async_max_retries', 3)
+            )
+            print("✅ [ASYNC_SYNC] 异步飞书同步服务初始化完成")
+        except Exception as e:
+            print(f"❌ [ASYNC_SYNC] 异步飞书同步服务初始化失败: {e}")
+    else:
+        print("ℹ️ [ASYNC_SYNC] 异步飞书同步服务未启用")
     
-    # 启动Web应用
-    app.run(debug=True, host='0.0.0.0', port=8090)
+    try:
+        print("🚀 启动Flask Web应用...")
+        print(f"📍 访问地址: http://localhost:8090")
+        print(f"📍 访问地址: http://0.0.0.0:8090")
+        # 启动Web应用（禁用debug模式避免闪退）
+        app.run(debug=False, host='0.0.0.0', port=8090, threaded=True)
+    finally:
+        # 应用关闭时清理异步同步服务
+        if FEISHU_CONFIG.get('async_enabled', False):
+            print("🔄 [ASYNC_SYNC] 关闭异步飞书同步服务...")
+            try:
+                shutdown_async_sync_service()
+                print("✅ [ASYNC_SYNC] 异步飞书同步服务已关闭")
+            except Exception as e:
+                print(f"❌ [ASYNC_SYNC] 关闭异步飞书同步服务失败: {e}")
+'''
+# 文件结束 - 所有代码已被注释掉，请使用 web_app_optimized.py

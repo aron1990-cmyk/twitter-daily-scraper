@@ -1,0 +1,43 @@
+
+================================================================================
+🧪 增强版任务自动化测试报告
+================================================================================
+
+📊 测试概览:
+  总测试数: 15
+  通过: 15 ✅
+  失败: 0 ❌
+  错误: 0 💥
+  跳过: 0 ⏭️
+  成功率: 100.0%
+  总耗时: 103.50秒
+
+⏱️ 性能指标:
+  Task Creation Times:
+    平均: 0.000s, 最小: 0.000s, 最大: 0.000s
+    中位数: 0.000s, 标准差: 0.000s, 样本数: 16
+  Api Response Times:
+    平均: 0.012s, 最小: 0.005s, 最大: 0.017s
+    中位数: 0.012s, 标准差: 0.004s, 样本数: 16
+  Page Load Times:
+    平均: 2.152s, 最小: 2.026s, 最大: 3.785s
+    中位数: 2.034s, 标准差: 0.452s, 样本数: 15
+
+📋 详细测试结果:
+  ✅ test_01_create_single_task_via_ui (17.89s)
+  ✅ test_02_create_multiple_tasks_via_api (5.20s)
+  ✅ test_03_start_task_via_api (3.13s)
+  ✅ test_04_stop_task_via_api (8.16s)
+  ✅ test_05_restart_task_via_api (5.15s)
+  ✅ test_06_start_task_via_ui (13.39s)
+  ✅ test_07_delete_task_via_ui (13.24s)
+  ✅ test_08_task_lifecycle_mixed (5.15s)
+  ✅ test_09_concurrent_operations (11.74s)
+  ✅ test_10_error_handling (2.06s)
+  ✅ test_11_boundary_conditions (2.11s)
+  ✅ test_12_performance_benchmarks (5.73s)
+  ✅ test_13_concurrent_stress_test (2.06s)
+  ✅ test_14_data_consistency_validation (5.07s)
+  ✅ test_15_error_recovery_scenarios (2.10s)
+
+================================================================================

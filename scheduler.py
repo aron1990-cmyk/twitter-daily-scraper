@@ -460,6 +460,27 @@ class TaskScheduler:
         """
         return [self.get_task_status(task_id) for task_id in self.tasks.keys()]
     
+    def get_all_tasks(self) -> List[Dict[str, Any]]:
+        """
+        获取所有任务信息
+        
+        Returns:
+            所有任务信息列表
+        """
+        return [self.get_task_status(task_id) for task_id in self.tasks.keys()]
+    
+    def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """
+        获取指定任务信息
+        
+        Args:
+            task_id: 任务ID
+            
+        Returns:
+            任务信息字典，如果任务不存在则返回None
+        """
+        return self.get_task_status(task_id)
+    
     def run_task_now(self, task_id: str) -> bool:
         """
         立即执行任务

@@ -43,6 +43,13 @@ apscheduler>=3.10.0
 # System monitoring dependencies
 psutil>=5.9.0
 
+# P0优化：内存管理依赖
+cachetools>=5.3.0  # LRU缓存用于限制任务历史记录内存使用
+
+# P0+优化：Redis存储依赖
+redis>=5.0.0  # Redis用于任务队列持久化存储
+aioredis>=2.0.0  # 异步Redis客户端
+
 # Management console dependencies
 tabulate>=0.9.0
 

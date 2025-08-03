@@ -1,0 +1,114 @@
+# Twitter自动互动配置文件
+# 支持多账号、每日限额、行为随机化等功能
+
+# 每日互动限额配置
+daily_limit:
+  like: 30        # 每日点赞上限
+  retweet: 10     # 每日转发上限
+  comment: 5      # 每日评论上限
+  dm: 3           # 每日私信上限
+
+# 行为延迟配置（秒）
+delay_range:
+  min: 2          # 最小延迟
+  max: 6          # 最大延迟
+
+# 随机行为概率配置（0-1之间）
+random_behavior:
+  like_probability: 0.7     # 点赞概率
+  retweet_probability: 0.4  # 转发概率
+  comment_probability: 0.2  # 评论概率
+  dm_probability: 0.1       # 私信概率
+
+# 推文评分配置
+scoring:
+  # 正面关键词（提高评分）
+  keywords_positive:
+    - "AI"
+    - "机器学习"
+    - "人工智能"
+    - "技术"
+    - "创新"
+    - "开源"
+    - "Python"
+    - "编程"
+    - "数据科学"
+    - "区块链"
+    - "Web3"
+    - "科技"
+    - "算法"
+    - "深度学习"
+    - "自然语言处理"
+  
+  # 负面关键词（降低评分）
+  keywords_negative:
+    - "广告"
+    - "推广"
+    - "spam"
+    - "垃圾"
+    - "诈骗"
+    - "骗局"
+    - "传销"
+    - "赌博"
+  
+  # 热度阈值
+  min_likes: 10      # 最小点赞数
+  min_retweets: 5    # 最小转发数
+
+# 评论语料池
+comment_pool:
+  - "This is exactly what I needed! 👍"
+  - "Great point! Thanks for sharing 🙏"
+  - "Very insightful, learned something new today"
+  - "Couldn't agree more! 💯"
+  - "Thanks for the valuable information 📚"
+  - "Interesting perspective! 🤔"
+  - "This is really helpful, appreciate it! ✨"
+  - "Well said! 👏"
+  - "Love this insight! 💡"
+  - "Bookmarking this for later 📖"
+  - "Spot on! 🎯"
+  - "This resonates with me 💭"
+  - "Excellent thread! 🧵"
+  - "Mind-blowing! 🤯"
+  - "Pure gold! ⭐"
+  - "Absolutely brilliant! 🌟"
+  - "This made my day! 😊"
+  - "So true! 💪"
+  - "Fantastic work! 🔥"
+  - "Couldn't have said it better myself! 👌"
+
+# 私信模板
+dm_templates:
+  - "Hi! I really enjoyed your recent tweet about {topic}. Would love to connect!"
+  - "Hello! Your insights on {topic} are fascinating. Thanks for sharing!"
+  - "Hi there! I found your content very valuable. Keep up the great work!"
+  - "Hello! Your perspective on {topic} really resonated with me. Thanks!"
+  - "Hi! I'm interested in learning more about {topic}. Your content is amazing!"
+  - "Hello! Just wanted to say your tweets about {topic} are incredibly insightful!"
+
+# 安全配置
+safety:
+  # 每小时最大操作数
+  max_actions_per_hour: 15
+  
+  # 连续失败后暂停时间（分钟）
+  pause_after_failures: 30
+  
+  # 最大连续失败次数
+  max_consecutive_failures: 5
+  
+  # 是否启用随机暂停
+  enable_random_breaks: true
+  
+  # 随机暂停时间范围（分钟）
+  random_break_range:
+    min: 10
+    max: 30
+
+# 日志配置
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  max_file_size: "10MB"
+  backup_count: 5

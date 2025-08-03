@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简单测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Twitter抓取系统 - 简单测试页面</h1>
+        
+        <div class="status">
+            ✅ 页面加载成功！
+        </div>
+        
+        <div>
+            <h3>基本功能测试</h3>
+            <button class="btn" onclick="testAPI()">测试API连接</button>
+            <button class="btn" onclick="window.location.href='/'">返回主页</button>
+        </div>
+        
+        <div id="result" style="margin-top: 20px;"></div>
+    </div>
+    
+    <script>
+        function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '正在测试API...';
+            
+            fetch('/api/queue/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        resultDiv.innerHTML = '<div style="color: green;">✅ API测试成功！队列状态正常。</div>';
+                    } else {
+                        resultDiv.innerHTML = '<div style="color: red;">❌ API返回错误</div>';
+                    }
+                })
+                .catch(error => {
+                    resultDiv.innerHTML = '<div style="color: red;">❌ API请求失败: ' + error.message + '</div>';
+                });
+        }
+        
+        // 页面加载完成提示
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('简单测试页面加载完成');
+        });
+    </script>
+</body>
+</html>

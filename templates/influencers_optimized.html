@@ -1,0 +1,1010 @@
+{% extends "base_optimized.html" %}
+
+{% block title %}博主管理 - Twitter数据抓取系统{% endblock %}
+
+{% block extra_css %}
+<style>
+.influencer-card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.influencer-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.influencer-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.search-container {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.search-input {
+    border: 2px solid #e9ecef;
+    border-radius: 25px;
+    padding: 0.8rem 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.search-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.filter-btn {
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    margin: 0.2rem;
+    border: 2px solid #e9ecef;
+    background: white;
+    color: #495057;
+    transition: all 0.3s ease;
+}
+
+.filter-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
+    color: white;
+}
+
+.virtual-scroll-container {
+    height: 600px;
+    overflow-y: auto;
+}
+
+.skeleton-influencer {
+    height: 200px;
+    border-radius: 15px;
+    margin-bottom: 1rem;
+}
+
+.performance-indicator {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 10px;
+    padding: 0.5rem 1rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    z-index: 1000;
+    font-size: 0.8rem;
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .search-container {
+        padding: 1rem;
+    }
+    
+    .filter-btn {
+        display: block;
+        width: 100%;
+        margin: 0.2rem 0;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 性能指示器 -->
+    <div class="performance-indicator" id="performanceIndicator">
+        <div class="d-flex align-items-center">
+            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+            <span id="performanceText">加载中...</span>
+        </div>
+    </div>
+    
+    <!-- 警告容器 -->
+    <div id="alertContainer"></div>
+
+    <!-- 页面标题 -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="h3 mb-0">博主管理</h1>
+            <p class="text-muted">管理Twitter博主信息和抓取配置</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addInfluencerModal">
+                <i class="fas fa-plus"></i> 添加博主
+            </button>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="mb-2">
+                        <i class="fas fa-users fa-2x text-primary"></i>
+                    </div>
+                    <h3 class="text-primary" id="totalInfluencers">0</h3>
+                    <p class="text-muted mb-0">总博主数</p>
+                    <small class="text-muted">系统中的所有博主</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="mb-2">
+                        <i class="fas fa-check-circle fa-2x text-success"></i>
+                    </div>
+                    <h3 class="text-success" id="activeInfluencers">0</h3>
+                    <p class="text-muted mb-0">活跃博主</p>
+                    <small class="text-muted">启用状态的博主</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="mb-2">
+                        <i class="fas fa-clock fa-2x text-warning"></i>
+                    </div>
+                    <h3 class="text-warning" id="recentlyScraped">0</h3>
+                    <p class="text-muted mb-0">最近抓取</p>
+                    <small class="text-muted">24小时内抓取的博主</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="mb-2">
+                        <i class="fas fa-tags fa-2x text-info"></i>
+                    </div>
+                    <h3 class="text-info" id="totalCategories">0</h3>
+                    <p class="text-muted mb-0">分类数量</p>
+                    <small class="text-muted">博主分类总数</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 搜索和筛选 -->
+    <div class="search-container">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <input type="text" class="form-control search-input" id="searchInput" placeholder="搜索博主名称或用户名...">
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="d-flex flex-wrap">
+                    <button class="btn filter-btn active" data-filter="all">全部</button>
+                    <button class="btn filter-btn" data-filter="active">活跃</button>
+                    <button class="btn filter-btn" data-filter="inactive">非活跃</button>
+                    <button class="btn filter-btn" data-filter="搞钱">搞钱</button>
+                    <button class="btn filter-btn" data-filter="投放">投放</button>
+                    <button class="btn filter-btn" data-filter="副业干货">副业干货</button>
+                    <button class="btn filter-btn" data-filter="情绪类">情绪类</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 博主列表 -->
+    <div class="row" id="influencersContainer">
+        <!-- 骨架屏 -->
+        <div class="col-lg-4 col-md-6 mb-4 skeleton-container">
+            <div class="skeleton skeleton-influencer"></div>
+        </div>
+        <div class="col-lg-4 col-md-6 mb-4 skeleton-container">
+            <div class="skeleton skeleton-influencer"></div>
+        </div>
+        <div class="col-lg-4 col-md-6 mb-4 skeleton-container">
+            <div class="skeleton skeleton-influencer"></div>
+        </div>
+        <div class="col-lg-4 col-md-6 mb-4 skeleton-container">
+            <div class="skeleton skeleton-influencer"></div>
+        </div>
+        <div class="col-lg-4 col-md-6 mb-4 skeleton-container">
+            <div class="skeleton skeleton-influencer"></div>
+        </div>
+        <div class="col-lg-4 col-md-6 mb-4 skeleton-container">
+            <div class="skeleton skeleton-influencer"></div>
+        </div>
+    </div>
+    
+    <!-- 分页 -->
+    <div class="d-flex justify-content-center mt-4" id="paginationContainer" style="display: none;">
+        <!-- 分页内容将通过JavaScript动态生成 -->
+    </div>
+</div>
+
+<!-- 添加博主模态框 -->
+<div class="modal fade" id="addInfluencerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">添加博主</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addInfluencerForm">
+                    <div class="mb-3">
+                        <label for="influencerName" class="form-label">博主名称 *</label>
+                        <input type="text" class="form-control" id="influencerName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="influencerUsername" class="form-label">Twitter用户名 *</label>
+                        <input type="text" class="form-control" id="influencerUsername" placeholder="不包含@符号" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="influencerProfileUrl" class="form-label">主页URL *</label>
+                        <input type="url" class="form-control" id="influencerProfileUrl" placeholder="https://twitter.com/username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="influencerDescription" class="form-label">描述</label>
+                        <textarea class="form-control" id="influencerDescription" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="influencerCategory" class="form-label">分类</label>
+                        <select class="form-select" id="influencerCategory">
+                            <option value="">选择分类</option>
+                            <option value="搞钱">搞钱</option>
+                            <option value="投放">投放</option>
+                            <option value="副业干货">副业干货</option>
+                            <option value="情绪类">情绪类</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="influencerFollowers" class="form-label">粉丝数</label>
+                        <input type="number" class="form-control" id="influencerFollowers" min="0">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="addInfluencer()">添加</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑博主模态框 -->
+<div class="modal fade" id="editInfluencerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">编辑博主</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editInfluencerForm">
+                    <input type="hidden" id="editInfluencerId">
+                    <div class="mb-3">
+                        <label for="editInfluencerName" class="form-label">博主名称 *</label>
+                        <input type="text" class="form-control" id="editInfluencerName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editInfluencerUsername" class="form-label">Twitter用户名 *</label>
+                        <input type="text" class="form-control" id="editInfluencerUsername" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editInfluencerProfileUrl" class="form-label">主页URL *</label>
+                        <input type="url" class="form-control" id="editInfluencerProfileUrl" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editInfluencerDescription" class="form-label">描述</label>
+                        <textarea class="form-control" id="editInfluencerDescription" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editInfluencerCategory" class="form-label">分类</label>
+                        <select class="form-select" id="editInfluencerCategory">
+                            <option value="">选择分类</option>
+                            <option value="搞钱">搞钱</option>
+                            <option value="投放">投放</option>
+                            <option value="副业干货">副业干货</option>
+                            <option value="情绪类">情绪类</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editInfluencerFollowers" class="form-label">粉丝数</label>
+                        <input type="number" class="form-control" id="editInfluencerFollowers" min="0">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="updateInfluencer()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let currentFilter = 'all';
+let currentSearch = '';
+let totalPages = 1;
+let isLoading = false;
+let performanceStartTime = 0;
+
+// 防抖函数
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// 性能监控
+function showPerformanceIndicator(text) {
+    const indicator = document.getElementById('performanceIndicator');
+    const textElement = document.getElementById('performanceText');
+    textElement.textContent = text;
+    indicator.style.display = 'block';
+    performanceStartTime = performance.now();
+}
+
+function hidePerformanceIndicator() {
+    const indicator = document.getElementById('performanceIndicator');
+    const loadTime = Math.round(performance.now() - performanceStartTime);
+    const textElement = document.getElementById('performanceText');
+    textElement.textContent = `加载完成 (${loadTime}ms)`;
+    
+    setTimeout(() => {
+        indicator.style.display = 'none';
+    }, 2000);
+}
+
+// 显示/隐藏骨架屏
+function showSkeletons() {
+    document.querySelectorAll('.skeleton-container').forEach(el => {
+        el.style.display = 'block';
+    });
+}
+
+function hideSkeletons() {
+    document.querySelectorAll('.skeleton-container').forEach(el => {
+        el.style.display = 'none';
+    });
+}
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', function() {
+    loadInfluencers();
+    
+    // 搜索输入事件（防抖）
+    const debouncedSearch = debounce((searchTerm) => {
+        currentSearch = searchTerm;
+        loadInfluencers(1);
+    }, 500);
+    
+    document.getElementById('searchInput').addEventListener('input', function(e) {
+        debouncedSearch(e.target.value);
+    });
+    
+    // 筛选按钮事件
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentFilter = this.dataset.filter;
+            loadInfluencers(1);
+        });
+    });
+});
+
+// 渲染博主卡片
+function renderInfluencerCard(influencer) {
+    const avatar = influencer.name.charAt(0).toUpperCase();
+    const statusIcon = influencer.is_active ? 'fas fa-check-circle text-success' : 'fas fa-times-circle text-danger';
+    const statusText = influencer.is_active ? '活跃' : '非活跃';
+    const lastScraped = influencer.last_scraped ? new Date(influencer.last_scraped).toLocaleDateString('zh-CN') : '从未';
+    
+    return `
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card influencer-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="influencer-avatar me-3">
+                            ${avatar}
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="card-title mb-1">${influencer.name}</h6>
+                            <p class="text-muted mb-1">@${influencer.username}</p>
+                            <div class="d-flex align-items-center">
+                                <i class="${statusIcon} me-1"></i>
+                                <small>${statusText}</small>
+                            </div>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="${influencer.profile_url}" target="_blank">
+                                    <i class="fas fa-external-link-alt me-2"></i>访问主页
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="editInfluencer(${influencer.id})">
+                                    <i class="fas fa-edit me-2"></i>编辑
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="toggleInfluencerStatus(${influencer.id})">
+                                    <i class="fas fa-toggle-${influencer.is_active ? 'off' : 'on'} me-2"></i>
+                                    ${influencer.is_active ? '停用' : '启用'}
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteInfluencer(${influencer.id})">
+                                    <i class="fas fa-trash me-2"></i>删除
+                                </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    ${influencer.category ? `<span class="badge bg-primary mb-2">${influencer.category}</span>` : ''}
+                    
+                    ${influencer.description ? `<p class="card-text small text-muted mb-3">${influencer.description}</p>` : ''}
+                    
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="fw-bold">${(influencer.followers_count || 0).toLocaleString()}</div>
+                            <small class="text-muted">粉丝</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="fw-bold">${lastScraped}</div>
+                            <small class="text-muted">最后抓取</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// 渲染分页
+function renderPagination(page, totalPages) {
+    if (totalPages <= 1) {
+        document.getElementById('paginationContainer').style.display = 'none';
+        return;
+    }
+    
+    const container = document.getElementById('paginationContainer');
+    container.style.display = 'flex';
+    
+    let paginationHTML = '<nav><ul class="pagination">';
+    
+    // 上一页
+    paginationHTML += `
+        <li class="page-item ${page === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="loadInfluencers(${page - 1})">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+        </li>
+    `;
+    
+    // 页码
+    const startPage = Math.max(1, page - 2);
+    const endPage = Math.min(totalPages, page + 2);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        paginationHTML += `
+            <li class="page-item ${i === page ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="loadInfluencers(${i})">${i}</a>
+            </li>
+        `;
+    }
+    
+    // 下一页
+    paginationHTML += `
+        <li class="page-item ${page === totalPages ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="loadInfluencers(${page + 1})">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+        </li>
+    `;
+    
+    paginationHTML += '</ul></nav>';
+    container.innerHTML = paginationHTML;
+}
+
+// 加载博主数据
+async function loadInfluencers(page = 1) {
+    if (isLoading) return;
+    
+    isLoading = true;
+    currentPage = page;
+    
+    try {
+        showPerformanceIndicator('加载博主数据...');
+        showSkeletons();
+        
+        const params = new URLSearchParams({
+            page: page,
+            per_page: 12,
+            ...(currentFilter !== 'all' && currentFilter !== 'active' && currentFilter !== 'inactive' && { category: currentFilter }),
+            ...(currentFilter === 'active' && { is_active: 'true' }),
+            ...(currentFilter === 'inactive' && { is_active: 'false' }),
+            ...(currentSearch && { search: currentSearch })
+        });
+        
+        const response = await fetch(`/api/influencers?${params}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const container = document.getElementById('influencersContainer');
+            
+            if (data.data && data.data.influencers && data.data.influencers.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12">
+                        <div class="text-center py-5">
+                            <i class="fas fa-users fa-4x text-muted mb-3"></i>
+                            <h5 class="text-muted">暂无博主</h5>
+                            <p class="text-muted">还没有添加任何博主，点击上方按钮添加第一个博主吧！</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                const influencers = data.data ? data.data.influencers : data.influencers;
+                container.innerHTML = influencers.map(renderInfluencerCard).join('');
+                
+                if (data.data && data.data.pagination) {
+                    totalPages = data.data.pagination.pages;
+                    renderPagination(page, totalPages);
+                }
+            }
+        } else {
+            showAlert('加载博主数据失败: ' + (data.error || data.message), 'danger');
+        }
+    } catch (error) {
+        console.error('加载博主数据失败:', error);
+        showAlert('网络错误，请稍后重试', 'danger');
+    } finally {
+        isLoading = false;
+        hideSkeletons();
+        hidePerformanceIndicator();
+    }
+}
+
+// 添加博主
+async function addInfluencer() {
+    const form = document.getElementById('addInfluencerForm');
+    
+    const data = {
+        name: document.getElementById('influencerName').value,
+        username: document.getElementById('influencerUsername').value.replace('@', ''),
+        profile_url: document.getElementById('influencerProfileUrl').value,
+        category: document.getElementById('influencerCategory').value,
+        description: document.getElementById('influencerDescription').value,
+        followers_count: parseInt(document.getElementById('influencerFollowers').value) || 0
+    };
+    
+    try {
+        showPerformanceIndicator('添加博主...');
+        
+        const response = await fetch('/api/influencers', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showAlert('博主添加成功', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('addInfluencerModal')).hide();
+            form.reset();
+            loadInfluencers(currentPage);
+        } else {
+            showAlert('添加失败: ' + (result.error || result.message), 'danger');
+        }
+    } catch (error) {
+        console.error('添加博主失败:', error);
+        showAlert('网络错误，请稍后重试', 'danger');
+    } finally {
+        hidePerformanceIndicator();
+    }
+}
+
+// 编辑博主
+function editInfluencer(id) {
+    // 这里可以实现编辑功能
+    showAlert('编辑功能开发中...', 'info');
+}
+
+// 切换博主状态
+async function toggleInfluencerStatus(id) {
+    try {
+        showPerformanceIndicator('更新状态...');
+        
+        const response = await fetch(`/api/influencers/${id}/toggle`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showAlert('状态更新成功', 'success');
+            loadInfluencers(currentPage);
+        } else {
+            showAlert('更新失败: ' + (result.error || result.message), 'danger');
+        }
+    } catch (error) {
+        console.error('更新状态失败:', error);
+        showAlert('网络错误，请稍后重试', 'danger');
+    } finally {
+        hidePerformanceIndicator();
+    }
+}
+
+// 删除博主
+async function deleteInfluencer(id) {
+    if (!confirm('确定要删除这个博主吗？此操作不可撤销。')) {
+        return;
+    }
+    
+    try {
+        showPerformanceIndicator('删除博主...');
+        
+        const response = await fetch(`/api/influencers/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showAlert('博主删除成功', 'success');
+            loadInfluencers(currentPage);
+        } else {
+            showAlert('删除失败: ' + (result.error || result.message), 'danger');
+        }
+    } catch (error) {
+        console.error('删除博主失败:', error);
+        showAlert('网络错误，请稍后重试', 'danger');
+    } finally {
+        hidePerformanceIndicator();
+    }
+}
+
+// 渲染博主列表
+function renderInfluencers() {
+    const tbody = document.getElementById('influencersTableBody');
+    
+    if (filteredInfluencers.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center py-4">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">暂无博主数据</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = filteredInfluencers.map(influencer => `
+        <tr>
+            <td>
+                <input type="checkbox" class="influencer-checkbox" value="${influencer.id}">
+            </td>
+            <td>
+                <div class="d-flex align-items-center">
+                    <div>
+                        <strong>${influencer.name}</strong>
+                        ${influencer.description ? `<br><small class="text-muted">${influencer.description}</small>` : ''}
+                    </div>
+                </div>
+            </td>
+            <td>
+                <a href="${influencer.profile_url}" target="_blank" class="text-decoration-none">
+                    @${influencer.username}
+                    <i class="fas fa-external-link-alt ms-1 text-muted"></i>
+                </a>
+            </td>
+            <td>
+                ${influencer.category ? `<span class="badge bg-secondary">${influencer.category}</span>` : '<span class="text-muted">未分类</span>'}
+            </td>
+            <td>
+                ${influencer.followers_count ? influencer.followers_count.toLocaleString() : '未知'}
+            </td>
+            <td>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" ${influencer.is_active ? 'checked' : ''} 
+                           onchange="toggleInfluencerStatus(${influencer.id}, this.checked)">
+                    <label class="form-check-label">
+                        ${influencer.is_active ? '启用' : '禁用'}
+                    </label>
+                </div>
+            </td>
+            <td>
+                ${influencer.last_scraped ? new Date(influencer.last_scraped).toLocaleDateString() : '从未'}
+            </td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-primary" onclick="editInfluencer(${influencer.id})" title="编辑">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-danger" onclick="deleteInfluencer(${influencer.id})" title="删除">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// 更新统计数据
+function updateStats() {
+    const total = influencers.length;
+    const active = influencers.filter(i => i.is_active).length;
+    const recentlyScraped = influencers.filter(i => {
+        if (!i.last_scraped) return false;
+        const lastScraped = new Date(i.last_scraped);
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        return lastScraped > yesterday;
+    }).length;
+    const categories = [...new Set(influencers.map(i => i.category).filter(c => c))].length;
+    
+    document.getElementById('totalInfluencers').textContent = total;
+    document.getElementById('activeInfluencers').textContent = active;
+    document.getElementById('recentlyScraped').textContent = recentlyScraped;
+    document.getElementById('totalCategories').textContent = categories;
+}
+
+// 筛选博主
+function filterInfluencers() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const category = document.getElementById('categoryFilter').value;
+    const status = document.getElementById('statusFilter').value;
+    
+    filteredInfluencers = influencers.filter(influencer => {
+        const matchSearch = !search || 
+            influencer.name.toLowerCase().includes(search) ||
+            influencer.username.toLowerCase().includes(search);
+        const matchCategory = !category || influencer.category === category;
+        const matchStatus = !status || influencer.is_active.toString() === status;
+        
+        return matchSearch && matchCategory && matchStatus;
+    });
+    
+    renderInfluencers();
+}
+
+// 清除筛选
+function clearFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('categoryFilter').value = '';
+    document.getElementById('statusFilter').value = '';
+    filteredInfluencers = [...influencers];
+    renderInfluencers();
+}
+
+// 刷新博主数据
+function refreshInfluencers() {
+    loadInfluencers();
+    showAlert('博主数据已刷新', 'success');
+}
+
+// 全选/取消全选
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.influencer-checkbox');
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+}
+
+// 添加博主
+function addInfluencer() {
+    const form = document.getElementById('addInfluencerForm');
+    const formData = new FormData(form);
+    
+    const data = {
+        name: document.getElementById('influencerName').value,
+        username: document.getElementById('influencerUsername').value,
+        profile_url: document.getElementById('influencerProfileUrl').value,
+        description: document.getElementById('influencerDescription').value,
+        category: document.getElementById('influencerCategory').value,
+        followers_count: parseInt(document.getElementById('influencerFollowers').value) || 0
+    };
+    
+    fetch('/api/influencers', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert('博主添加成功', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('addInfluencerModal')).hide();
+            form.reset();
+            loadInfluencers();
+        } else {
+            showAlert('添加失败：' + result.message, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('添加博主失败:', error);
+        showAlert('添加失败：网络错误', 'danger');
+    });
+}
+
+// 编辑博主
+function editInfluencer(id) {
+    const influencer = influencers.find(i => i.id === id);
+    if (!influencer) return;
+    
+    document.getElementById('editInfluencerId').value = influencer.id;
+    document.getElementById('editInfluencerName').value = influencer.name;
+    document.getElementById('editInfluencerUsername').value = influencer.username;
+    document.getElementById('editInfluencerProfileUrl').value = influencer.profile_url;
+    document.getElementById('editInfluencerDescription').value = influencer.description || '';
+    document.getElementById('editInfluencerCategory').value = influencer.category || '';
+    document.getElementById('editInfluencerFollowers').value = influencer.followers_count || 0;
+    
+    new bootstrap.Modal(document.getElementById('editInfluencerModal')).show();
+}
+
+// 更新博主
+function updateInfluencer() {
+    const id = document.getElementById('editInfluencerId').value;
+    const data = {
+        name: document.getElementById('editInfluencerName').value,
+        username: document.getElementById('editInfluencerUsername').value,
+        profile_url: document.getElementById('editInfluencerProfileUrl').value,
+        description: document.getElementById('editInfluencerDescription').value,
+        category: document.getElementById('editInfluencerCategory').value,
+        followers_count: parseInt(document.getElementById('editInfluencerFollowers').value) || 0
+    };
+    
+    fetch(`/api/influencers/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert('博主更新成功', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('editInfluencerModal')).hide();
+            loadInfluencers();
+        } else {
+            showAlert('更新失败：' + result.message, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('更新博主失败:', error);
+        showAlert('更新失败：网络错误', 'danger');
+    });
+}
+
+// 切换博主状态
+function toggleInfluencerStatus(id, isActive) {
+    fetch(`/api/influencers/${id}/toggle-status`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ is_active: isActive })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            loadInfluencers();
+            showAlert(`博主已${isActive ? '启用' : '禁用'}`, 'success');
+        } else {
+            showAlert('状态更新失败：' + result.message, 'danger');
+            loadInfluencers(); // 重新加载以恢复状态
+        }
+    })
+    .catch(error => {
+        console.error('状态更新失败:', error);
+        showAlert('状态更新失败：网络错误', 'danger');
+        loadInfluencers(); // 重新加载以恢复状态
+    });
+}
+
+// 删除博主
+function deleteInfluencer(id) {
+    if (!confirm('确定要删除这个博主吗？此操作不可恢复。')) {
+        return;
+    }
+    
+    fetch(`/api/influencers/${id}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert('博主删除成功', 'success');
+            loadInfluencers();
+        } else {
+            showAlert('删除失败：' + result.message, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('删除博主失败:', error);
+        showAlert('删除失败：网络错误', 'danger');
+    });
+}
+
+// 批量抓取博主
+function batchScrapeInfluencers() {
+    const selectedIds = Array.from(document.querySelectorAll('.influencer-checkbox:checked'))
+        .map(cb => parseInt(cb.value));
+    
+    if (selectedIds.length === 0) {
+        showAlert('请选择要抓取的博主', 'warning');
+        return;
+    }
+    
+    if (!confirm(`确定要批量抓取选中的 ${selectedIds.length} 个博主吗？`)) {
+        return;
+    }
+    
+    fetch('/api/influencers/batch-scrape', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ influencer_ids: selectedIds })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert(`批量抓取任务已创建，任务ID: ${result.task_ids.join(', ')}`, 'success');
+        } else {
+            showAlert('批量抓取失败：' + result.message, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('批量抓取失败:', error);
+        showAlert('批量抓取失败：网络错误', 'danger');
+    });
+}
+
+// 显示提示消息
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.getElementById('alertContainer');
+    container.appendChild(alertDiv);
+    
+    // 3秒后自动消失
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 3000);
+}
+</script>
+{% endblock %}

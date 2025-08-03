@@ -9,7 +9,8 @@
 - **多账号支持**: 支持多个 Twitter 账号轮换使用
 - **智能过滤**: 根据点赞数、转发数等指标过滤高质量内容
 - **数据导出**: 支持 Excel 格式导出，便于数据分析
-- **云端同步**: 支持飞书多维表格同步
+- **云端同步**: 支持飞书多维表格同步，包含异步同步功能
+- **异步同步**: 支持异步飞书数据同步，提升大数据量同步性能
 - **任务队列**: 支持任务排队和并发控制
 - **实时监控**: 提供系统状态监控和任务进度跟踪
 
@@ -79,16 +80,40 @@ playwright install
 2. 创建多维表格并获取 Spreadsheet Token 和 Table ID
 3. 在 Web 界面的设置页面配置飞书参数
 
+#### 异步同步配置
+
+系统支持异步飞书同步功能，可以显著提升大数据量同步的性能：
+
+- **async_enabled**: 是否启用异步同步（默认：false）
+- **async_max_workers**: 最大工作线程数（默认：3）
+- **async_max_queue_size**: 最大队列大小（默认：100）
+- **async_max_retries**: 最大重试次数（默认：3）
+- **async_priority**: 任务优先级（默认：1）
+
+异步同步的优势：
+- 🚀 **性能提升**: 避免同步操作阻塞Web界面
+- 📊 **并发处理**: 支持多个同步任务并行执行
+- 🔄 **自动重试**: 内置重试机制，提高同步成功率
+- 📈 **状态监控**: 实时查看异步任务执行状态
+
 ## 🚀 部署运行
 
 ### 开发环境运行
 
 ```bash
-# 启动 Web 应用
-python web_app.py
+# 方式1: 使用简单启动脚本（推荐）
+python3 start.py
+
+# 方式2: 直接启动优化版本
+python3 web_app_optimized.py
+
+# 方式3: 使用功能完整的启动脚本
+python3 run.py
 ```
 
-应用将在 `http://localhost:5000` 启动。
+应用将在 `http://localhost:8090` 启动。
+
+**注意：** `web_app.py` 已被注释掉，请使用 `web_app_optimized.py`。
 
 ### 生产环境部署
 
@@ -133,9 +158,12 @@ server {
 ### 1. 首次启动
 
 1. 启动 AdsPower 客户端
-2. 运行 `python web_app.py`
-3. 访问 `http://localhost:5000`
-4. 进入设置页面配置 AdsPower 参数
+2. 选择以下任一方式启动应用：
+   - `python3 start.py`（推荐，最简单）
+   - `python3 web_app_optimized.py`（直接启动）
+   - `python3 run.py`（功能完整）
+3. 访问 `http://localhost:8090`
+4. 进入设置页面配置相关参数（AdsPower 配置现在通过配置文件管理）
 
 ### 2. 创建采集任务
 
@@ -161,6 +189,20 @@ server {
 1. **在线查看**: 点击任务的「查看数据」按钮
 2. **导出 Excel**: 在数据页面点击「导出 Excel」
 3. **飞书同步**: 配置飞书后可自动同步到多维表格
+
+#### 异步飞书同步
+
+当启用异步同步功能后，系统提供以下功能：
+
+1. **自动异步同步**: 新数据会自动提交到异步队列进行同步
+2. **手动异步同步**: 在数据页面点击「同步到飞书」时会使用异步模式
+3. **任务状态监控**: 在系统状态页面查看异步同步任务进度
+4. **任务管理**: 支持查看、取消异步同步任务
+
+**异步同步API接口**:
+- `GET /api/async_sync/tasks` - 获取所有异步任务状态
+- `GET /api/async_sync/tasks/<task_id>` - 获取指定任务状态
+- `POST /api/async_sync/tasks/<task_id>/cancel` - 取消指定任务
 
 ### 5. 系统监控
 
@@ -210,6 +252,19 @@ ADS_POWER_CONFIG = {
 }
 ```
 
+### 异步同步配置
+
+```python
+ASYNC_SYNC_CONFIG = {
+    'async_enabled': True,        # 启用异步同步
+    'async_max_workers': 3,       # 最大工作线程数
+    'async_max_queue_size': 100,  # 最大队列大小
+    'async_max_retries': 3,       # 最大重试次数
+    'async_priority': 1,          # 任务优先级
+    'async_timeout': 300,         # 任务超时时间（秒）
+}
+```
+
 ## 📁 项目结构
 
 ```
@@ -223,7 +278,9 @@ twitter-daily-scraper/
 ├── twitter_parser.py       # Twitter 解析器
 ├── refactored_task_manager.py # 任务管理器
 ├── cloud_sync.py          # 云端同步
+├── async_feishu_sync.py   # 异步飞书同步模块
 ├── excel_writer.py        # Excel 导出
+├── test_async_sync.py     # 异步同步功能测试脚本
 ├── templates/             # HTML 模板
 │   ├── index.html
 │   ├── tasks.html
@@ -264,6 +321,11 @@ twitter-daily-scraper/
    - 检查 App ID 和 App Secret 是否正确
    - 确认多维表格权限设置
    - 验证网络连接
+5. **异步同步问题**
+   - 检查异步同步服务是否正常启动
+   - 查看异步任务状态：`GET /api/async_sync/tasks`
+   - 检查工作线程数和队列大小配置
+   - 查看异步同步相关日志
 
 ### 日志查看
 
@@ -336,6 +398,15 @@ python -c "from web_app import cleanup_old_data; cleanup_old_data(30)"
 - 数据采集速度
 
 ## 🔄 更新日志
+### v2.1.0 (2025-01-25)
+- 🚀 **新增异步飞书同步功能**
+  - 支持异步数据同步，提升大数据量同步性能
+  - 新增异步任务管理和状态监控
+  - 提供异步同步配置选项
+  - 添加异步同步API接口
+- 📊 增强系统状态监控，包含异步任务信息
+- 🧪 添加异步同步功能测试脚本
+- 📖 完善文档，添加异步同步使用说明
 
 ### v2.0.0 (2025-01-25)
 - 重构项目目录结构

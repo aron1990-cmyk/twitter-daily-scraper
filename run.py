@@ -4,6 +4,7 @@
 快速启动脚本 - Twitter 日报采集系统
 
 这个脚本提供了一个简化的命令行界面，让用户可以快速运行采集任务。
+现在默认启动优化版本的 Web 应用。
 """
 
 import sys
@@ -15,6 +16,9 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
+# 导入优化版本的 Web 应用
+import subprocess
+import signal
 from main import main
 from config import (
     ADS_POWER_CONFIG, TWITTER_TARGETS, FILTER_CONFIG, 
@@ -77,6 +81,33 @@ def run_with_options(args):
             import traceback
             traceback.print_exc()
 
+def start_web_app():
+    """启动优化版本的 Web 应用"""
+    try:
+        print("🚀 启动优化版本的 Web 应用...")
+        print("📍 访问地址: http://localhost:8090")
+        print("📍 按 Ctrl+C 停止服务")
+        
+        # 启动优化版本的 Web 应用
+        process = subprocess.Popen(
+            [sys.executable, 'web_app_optimized.py'],
+            cwd=project_root
+        )
+        
+        # 等待进程结束或接收中断信号
+        try:
+            process.wait()
+        except KeyboardInterrupt:
+            print("\n🛑 正在停止 Web 应用...")
+            process.terminate()
+            process.wait()
+            print("✅ Web 应用已停止")
+            
+    except Exception as e:
+        print(f"❌ 启动 Web 应用失败: {e}")
+        return False
+    return True
+
 def main_cli():
     """命令行界面主函数"""
     parser = argparse.ArgumentParser(
@@ -84,7 +115,8 @@ def main_cli():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用示例:
-  python3 run.py                    # 运行完整采集任务
+  python3 run.py                    # 启动优化版本的 Web 应用
+  python3 run.py --cli              # 运行命令行采集任务
   python3 run.py --check-config     # 查看当前配置
   python3 run.py --check-adspower   # 检查 AdsPower 连接
   python3 run.py --force            # 强制运行（忽略连接检查）
@@ -94,6 +126,12 @@ def main_cli():
 输出目录: data/
 日志目录: logs/
         """
+    )
+    
+    parser.add_argument(
+        '--cli', 
+        action='store_true',
+        help='运行命令行采集任务（而非 Web 应用）'
     )
     
     parser.add_argument(
@@ -121,7 +159,12 @@ def main_cli():
     )
     
     args = parser.parse_args()
-    run_with_options(args)
+    
+    # 如果没有指定 --cli 参数，默认启动 Web 应用
+    if not args.cli and not args.check_config and not args.check_adspower:
+        start_web_app()
+    else:
+        run_with_options(args)
 
 if __name__ == "__main__":
     main_cli()

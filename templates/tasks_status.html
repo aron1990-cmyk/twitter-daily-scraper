@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>异步任务状态 - Twitter 爬虫管理系统</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Table CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/bootstrap-table@1.21.4/dist/bootstrap-table.min.css">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        .status-badge {
+            font-size: 0.875rem;
+            padding: 0.375rem 0.75rem;
+        }
+        .status-pending { background-color: #6c757d; }
+        .status-running { background-color: #ffc107; color: #000; }
+        .status-completed { background-color: #198754; }
+        .status-failed { background-color: #dc3545; }
+        .status-cancelled { background-color: #6f42c1; }
+        .status-retrying { background-color: #fd7e14; }
+        
+        .priority-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .priority-urgent { background-color: #dc3545; }
+        .priority-high { background-color: #fd7e14; }
+        .priority-normal { background-color: #0d6efd; }
+        .priority-low { background-color: #6c757d; }
+        
+        .task-type-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        
+        .error-cell {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        
+        .stats-card {
+            border-left: 4px solid #007bff;
+        }
+        
+        .auto-refresh-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+        }
+        
+        .table-container {
+            margin-top: 20px;
+        }
+        
+        .filter-section {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- 页面标题 -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2><i class="fas fa-tasks"></i> 异步任务状态监控</h2>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary" onclick="refreshData()">
+                            <i class="fas fa-sync-alt"></i> 手动刷新
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="toggleAutoRefresh()" id="autoRefreshBtn">
+                            <i class="fas fa-pause"></i> 暂停自动刷新
+                        </button>
+                        <a href="/" class="btn btn-secondary">
+                            <i class="fas fa-home"></i> 返回首页
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 统计信息卡片 -->
+        <div class="row mt-3" id="statsCards">
+            <!-- 统计卡片将通过JavaScript动态生成 -->
+        </div>
+        
+        <!-- 筛选区域 -->
+        <div class="filter-section">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="statusFilter" class="form-label">状态筛选</label>
+                    <select class="form-select" id="statusFilter" onchange="applyFilters()">
+                        <option value="">全部状态</option>
+                        <option value="pending">等待执行</option>
+                        <option value="running">正在执行</option>
+                        <option value="completed">已完成</option>
+                        <option value="failed">执行失败</option>
+                        <option value="cancelled">已取消</option>
+                        <option value="retrying">重试中</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="typeFilter" class="form-label">类型筛选</label>
+                    <select class="form-select" id="typeFilter" onchange="applyFilters()">
+                        <option value="">全部类型</option>
+                        <option value="excel_write">Excel导出</option>
+                        <option value="sqlite_insert">数据库插入</option>
+                        <option value="feishu_sync">飞书同步</option>
+                        <option value="file_operation">文件操作</option>
+                        <option value="data_processing">数据处理</option>
+                        <option value="custom">自定义任务</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="limitFilter" class="form-label">显示数量</label>
+                    <select class="form-select" id="limitFilter" onchange="applyFilters()">
+                        <option value="50">50条</option>
+                        <option value="100" selected>100条</option>
+                        <option value="200">200条</option>
+                        <option value="500">500条</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="searchInput" class="form-label">搜索任务ID</label>
+                    <input type="text" class="form-control" id="searchInput" placeholder="输入任务ID搜索..." onkeyup="searchTasks()">
+                </div>
+            </div>
+        </div>
+        
+        <!-- 任务列表表格 -->
+        <div class="table-container">
+            <table id="tasksTable" 
+                   data-toggle="table"
+                   data-search="true"
+                   data-show-refresh="true"
+                   data-show-columns="true"
+                   data-sort-name="created_at"
+                   data-sort-order="desc"
+                   data-pagination="true"
+                   data-page-size="20"
+                   data-page-list="[10, 20, 50, 100]"
+                   data-show-pagination-switch="true"
+                   data-card-view="false"
+                   data-mobile-responsive="true"
+                   data-check-on-init="true"
+                   class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th data-field="task_id" data-sortable="true" data-width="200">任务ID</th>
+                        <th data-field="task_type" data-sortable="true" data-formatter="taskTypeFormatter" data-width="120">类型</th>
+                        <th data-field="status" data-sortable="true" data-formatter="statusFormatter" data-width="100">状态</th>
+                        <th data-field="priority" data-sortable="true" data-formatter="priorityFormatter" data-width="80">优先级</th>
+                        <th data-field="created_at" data-sortable="true" data-formatter="dateFormatter" data-width="150">创建时间</th>
+                        <th data-field="started_at" data-sortable="true" data-formatter="dateFormatter" data-width="150">开始时间</th>
+                        <th data-field="completed_at" data-sortable="true" data-formatter="dateFormatter" data-width="150">完成时间</th>
+                        <th data-field="duration" data-sortable="true" data-width="100">耗时</th>
+                        <th data-field="progress" data-sortable="true" data-formatter="progressFormatter" data-width="100">进度</th>
+                        <th data-field="retry_count" data-sortable="true" data-width="80">重试次数</th>
+                        <th data-field="error" data-formatter="errorFormatter" data-width="200">错误信息</th>
+                        <th data-field="actions" data-formatter="actionsFormatter" data-width="100">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="tasksTableBody">
+                    <!-- 数据将通过JavaScript动态加载 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- 自动刷新指示器 -->
+    <div class="auto-refresh-indicator">
+        <div class="alert alert-info alert-dismissible fade show" id="refreshIndicator" style="display: none;">
+            <i class="fas fa-sync-alt fa-spin"></i> 正在刷新数据...
+        </div>
+    </div>
+    
+    <!-- 任务详情模态框 -->
+    <div class="modal fade" id="taskDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">任务详情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="taskDetailContent">
+                    <!-- 详情内容将通过JavaScript动态加载 -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 错误信息模态框 -->
+    <div class="modal fade" id="errorModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">错误详情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <pre id="errorContent" class="bg-light p-3 rounded"></pre>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript库 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://unpkg.com/bootstrap-table@1.21.4/dist/bootstrap-table.min.js"></script>
+    <script src="https://unpkg.com/bootstrap-table@1.21.4/dist/locale/bootstrap-table-zh-CN.min.js"></script>
+    
+    <script>
+        let autoRefreshInterval;
+        let isAutoRefreshEnabled = true;
+        
+        // 页面加载完成后初始化
+        $(document).ready(function() {
+            loadTasksData();
+            startAutoRefresh();
+            // P0优化：记录轮询优化日志
+            console.log('[P0优化] 任务状态页面轮询间隔已优化为60秒，并启用页面可见性检测');
+        });
+        
+        // 加载任务数据
+        function loadTasksData() {
+            showRefreshIndicator();
+            
+            const statusFilter = $('#statusFilter').val();
+            const typeFilter = $('#typeFilter').val();
+            const limitFilter = $('#limitFilter').val();
+            
+            let url = '/api/tasks/status?limit=' + limitFilter;
+            if (statusFilter) url += '&status=' + statusFilter;
+            if (typeFilter) url += '&task_type=' + typeFilter;
+            
+            $.ajax({
+                url: url,
+                method: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        updateStatsCards(response.data.statistics);
+                        $('#tasksTable').bootstrapTable('load', response.data.tasks);
+                    } else {
+                        showError('加载数据失败: ' + response.error);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showError('请求失败: ' + error);
+                },
+                complete: function() {
+                    hideRefreshIndicator();
+                }
+            });
+        }
+        
+        // 更新统计卡片
+        function updateStatsCards(stats) {
+            const cardsHtml = `
+                <div class="col-md-2">
+                    <div class="card stats-card h-100">
+                        <div class="card-body text-center">
+                            <h5 class="card-title text-primary">${stats.total_submitted || 0}</h5>
+                            <p class="card-text">总提交任务</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card stats-card h-100">
+                        <div class="card-body text-center">
+                            <h5 class="card-title text-warning">${stats.active_tasks || 0}</h5>
+                            <p class="card-text">活跃任务</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card stats-card h-100">
+                        <div class="card-body text-center">
+                            <h5 class="card-title text-success">${stats.total_completed || 0}</h5>
+                            <p class="card-text">已完成</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card stats-card h-100">
+                        <div class="card-body text-center">
+                            <h5 class="card-title text-danger">${stats.total_failed || 0}</h5>
+                            <p class="card-text">失败任务</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card stats-card h-100">
+                        <div class="card-body text-center">
+                            <h5 class="card-title text-info">${stats.total_retries || 0}</h5>
+                            <p class="card-text">重试次数</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card stats-card h-100">
+                        <div class="card-body text-center">
+                            <h5 class="card-title text-secondary">${stats.peak_concurrent_tasks || 0}</h5>
+                            <p class="card-text">峰值并发</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            $('#statsCards').html(cardsHtml);
+        }
+        
+        // 状态格式化器
+        function statusFormatter(value, row, index) {
+            const statusMap = {
+                'pending': { class: 'status-pending', text: '等待执行', icon: 'clock' },
+                'running': { class: 'status-running', text: '正在执行', icon: 'spinner fa-spin' },
+                'completed': { class: 'status-completed', text: '已完成', icon: 'check' },
+                'failed': { class: 'status-failed', text: '执行失败', icon: 'times' },
+                'cancelled': { class: 'status-cancelled', text: '已取消', icon: 'ban' },
+                'retrying': { class: 'status-retrying', text: '重试中', icon: 'redo' }
+            };
+            
+            const status = statusMap[value] || { class: 'status-pending', text: value, icon: 'question' };
+            return `<span class="badge status-badge ${status.class}">
+                        <i class="fas fa-${status.icon}"></i> ${status.text}
+                    </span>`;
+        }
+        
+        // 优先级格式化器
+        function priorityFormatter(value, row, index) {
+            const priorityMap = {
+                0: { class: 'priority-urgent', text: '紧急' },
+                1: { class: 'priority-high', text: '高' },
+                2: { class: 'priority-normal', text: '普通' },
+                3: { class: 'priority-low', text: '低' }
+            };
+            
+            const priority = priorityMap[value] || { class: 'priority-normal', text: '普通' };
+            return `<span class="badge priority-badge ${priority.class}">${priority.text}</span>`;
+        }
+        
+        // 任务类型格式化器
+        function taskTypeFormatter(value, row, index) {
+            const typeMap = {
+                'excel_write': 'Excel导出',
+                'sqlite_insert': '数据库插入',
+                'feishu_sync': '飞书同步',
+                'file_operation': '文件操作',
+                'data_processing': '数据处理',
+                'custom': '自定义任务'
+            };
+            
+            const typeName = typeMap[value] || value;
+            return `<span class="badge task-type-badge">${typeName}</span>`;
+        }
+        
+        // 日期格式化器
+        function dateFormatter(value, row, index) {
+            if (!value) return '-';
+            const date = new Date(value);
+            return date.toLocaleString('zh-CN');
+        }
+        
+        // 进度格式化器
+        function progressFormatter(value, row, index) {
+            if (value === null || value === undefined) return '-';
+            const progress = Math.round(value);
+            return `<div class="progress" style="height: 20px;">
+                        <div class="progress-bar" role="progressbar" style="width: ${progress}%" 
+                             aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
+                            ${progress}%
+                        </div>
+                    </div>`;
+        }
+        
+        // 错误信息格式化器
+        function errorFormatter(value, row, index) {
+            if (!value) return '-';
+            const shortError = value.length > 50 ? value.substring(0, 50) + '...' : value;
+            return `<span class="error-cell" onclick="showErrorDetail('${escapeHtml(value)}')" title="点击查看完整错误信息">
+                        ${escapeHtml(shortError)}
+                    </span>`;
+        }
+        
+        // 操作按钮格式化器
+        function actionsFormatter(value, row, index) {
+            return `<button class="btn btn-sm btn-outline-primary" onclick="showTaskDetail('${row.task_id}')">
+                        <i class="fas fa-eye"></i> 详情
+                    </button>`;
+        }
+        
+        // 显示任务详情
+        function showTaskDetail(taskId) {
+            $.ajax({
+                url: `/api/tasks/status/${taskId}`,
+                method: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        const task = response.data;
+                        const detailHtml = `
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>基本信息</h6>
+                                    <table class="table table-sm">
+                                        <tr><td><strong>任务ID:</strong></td><td>${task.task_id}</td></tr>
+                                        <tr><td><strong>类型:</strong></td><td>${taskTypeFormatter(task.task_type)}</td></tr>
+                                        <tr><td><strong>状态:</strong></td><td>${statusFormatter(task.status)}</td></tr>
+                                        <tr><td><strong>优先级:</strong></td><td>${priorityFormatter(task.priority)}</td></tr>
+                                        <tr><td><strong>进度:</strong></td><td>${task.progress || 0}%</td></tr>
+                                        <tr><td><strong>重试次数:</strong></td><td>${task.retry_count || 0}</td></tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>时间信息</h6>
+                                    <table class="table table-sm">
+                                        <tr><td><strong>创建时间:</strong></td><td>${dateFormatter(task.created_at)}</td></tr>
+                                        <tr><td><strong>开始时间:</strong></td><td>${dateFormatter(task.started_at)}</td></tr>
+                                        <tr><td><strong>完成时间:</strong></td><td>${dateFormatter(task.completed_at)}</td></tr>
+                                        <tr><td><strong>耗时:</strong></td><td>${task.duration || '-'}</td></tr>
+                                    </table>
+                                </div>
+                            </div>
+                            ${task.error ? `
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <h6>错误信息</h6>
+                                        <pre class="bg-light p-3 rounded">${escapeHtml(task.error)}</pre>
+                                    </div>
+                                </div>
+                            ` : ''}
+                            ${task.metadata ? `
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <h6>元数据</h6>
+                                        <pre class="bg-light p-3 rounded">${JSON.stringify(task.metadata, null, 2)}</pre>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        `;
+                        
+                        $('#taskDetailContent').html(detailHtml);
+                        $('#taskDetailModal').modal('show');
+                    } else {
+                        showError('获取任务详情失败: ' + response.error);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showError('请求失败: ' + error);
+                }
+            });
+        }
+        
+        // 显示错误详情
+        function showErrorDetail(errorMessage) {
+            $('#errorContent').text(errorMessage);
+            $('#errorModal').modal('show');
+        }
+        
+        // 应用筛选
+        function applyFilters() {
+            loadTasksData();
+        }
+        
+        // 搜索任务
+        function searchTasks() {
+            const searchValue = $('#searchInput').val();
+            $('#tasksTable').bootstrapTable('filterBy', {
+                task_id: searchValue
+            });
+        }
+        
+        // 手动刷新
+        function refreshData() {
+            loadTasksData();
+        }
+        
+        // P0优化：自动刷新功能，降低轮询频率并增加页面可见性检测
+        const REFRESH_INTERVAL = 90000; // P0+优化：从60秒改为90秒
+        
+        // 开始自动刷新
+        function startAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            // P0优化：只在页面可见时启动轮询
+            if (!document.hidden) {
+                autoRefreshInterval = setInterval(function() {
+                    if (isAutoRefreshEnabled) {
+                        loadTasksData();
+                    }
+                }, REFRESH_INTERVAL);
+            }
+        }
+        
+        // 切换自动刷新
+        function toggleAutoRefresh() {
+            isAutoRefreshEnabled = !isAutoRefreshEnabled;
+            const btn = $('#autoRefreshBtn');
+            if (isAutoRefreshEnabled) {
+                btn.html('<i class="fas fa-pause"></i> 暂停自动刷新');
+                btn.removeClass('btn-outline-success').addClass('btn-outline-secondary');
+                startAutoRefresh();
+            } else {
+                btn.html('<i class="fas fa-play"></i> 启动自动刷新');
+                btn.removeClass('btn-outline-secondary').addClass('btn-outline-success');
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+            }
+        }
+        
+        // P0优化：页面可见性检测，隐藏时暂停轮询
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // 页面隐藏时暂停轮询
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+            } else {
+                // 页面显示时恢复轮询
+                if (isAutoRefreshEnabled && !autoRefreshInterval) {
+                    startAutoRefresh();
+                }
+            }
+        });
+        
+        // 显示刷新指示器
+        function showRefreshIndicator() {
+            $('#refreshIndicator').show();
+        }
+        
+        // 隐藏刷新指示器
+        function hideRefreshIndicator() {
+            $('#refreshIndicator').hide();
+        }
+        
+        // 显示错误信息
+        function showError(message) {
+            alert('错误: ' + message);
+        }
+        
+        // HTML转义
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+    </script>
+</body>
+</html>

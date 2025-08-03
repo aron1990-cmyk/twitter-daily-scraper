@@ -271,7 +271,7 @@
 
 <!-- 创建任务模态框 -->
 <div class="modal fade" id="createTaskModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
@@ -280,8 +280,11 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('create_task') }}" method="POST">
+            <form id="createTaskForm">
                 <div class="modal-body">
+
+                    
+                    <!-- 基本信息 -->
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -289,7 +292,7 @@
                                 <input type="text" class="form-control" id="modal_task_name" name="task_name" required>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6" id="max_tweets_container">
                             <div class="mb-3">
                                 <label for="modal_max_tweets" class="form-label">最大抓取数量</label>
                                 <input type="number" class="form-control" id="modal_max_tweets" name="max_tweets" 
@@ -304,6 +307,7 @@
                                   placeholder="可选：描述此任务的目的和用途"></textarea>
                     </div>
                     
+                    <!-- 任务配置 -->
                     <div class="mb-3">
                         <label for="modal_keywords" class="form-label">关键词</label>
                         <input type="text" class="form-control" id="modal_keywords" name="keywords" 
@@ -315,7 +319,7 @@
                         <label for="modal_target_accounts" class="form-label">目标账号（可选）</label>
                         <input type="text" class="form-control" id="modal_target_accounts" name="target_accounts" 
                                placeholder="输入Twitter用户名，用逗号分隔，例如：elonmusk,openai">
-                        <div class="form-text">留空则搜索全网，指定账号则只搜索这些账号的推文</div>
+                        <div class="form-text">留空则搜索全网，指定账号则只搜索这些账号的推文。<br><strong>系统将根据账号数量自动判断任务类型：</strong><br>• 1个账号：单博主任务<br>• 2个及以上账号：多博主并行任务</div>
                     </div>
                     
                     <div class="row">
@@ -346,7 +350,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                    <button type="submit" class="btn btn-primary">
+                    <button type="button" class="btn btn-primary" onclick="submitCreateTask()">
                         <i class="fas fa-save me-2"></i>
                         创建任务
                     </button>
@@ -383,9 +387,47 @@ function startTask(taskId) {
         console.log('User confirmed, sending POST request to:', `/api/tasks/${taskId}/start`);
         $.post(`/api/tasks/${taskId}/start`)
             .done(function(response) {
-                console.log('POST request successful:', response);
-                showAlert('任务已启动！AdsPower浏览器将自动打开并开始执行抓取任务。', 'success');
-                setTimeout(function() { location.reload(); }, 1000);
+                console.log('任务启动响应:', response);
+                
+                if (response.success) {
+                    var message = '任务已启动！';
+                    
+                    // 处理多博主任务的响应
+                    if (response.task_type === 'multi_blogger') {
+                        message = response.message;
+                        
+                        // 显示详细的启动结果
+                        var detailsHtml = '';
+                        if (response.started_tasks && response.started_tasks.length > 0) {
+                            detailsHtml += '<br><strong>立即启动的子任务:</strong> ' + response.started_tasks.join(', ');
+                        }
+                        if (response.queued_tasks && response.queued_tasks.length > 0) {
+                            detailsHtml += '<br><strong>加入队列的子任务:</strong> ' + response.queued_tasks.join(', ');
+                        }
+                        if (response.failed_tasks && response.failed_tasks.length > 0) {
+                            detailsHtml += '<br><strong>启动失败的子任务:</strong> ';
+                            response.failed_tasks.forEach(function(task, index) {
+                                if (index > 0) detailsHtml += ', ';
+                                detailsHtml += task.id + '(' + task.error + ')';
+                            });
+                        }
+                        
+                        message += detailsHtml;
+                    } else {
+                        message = 'AdsPower浏览器将自动打开并开始执行抓取任务。';
+                        
+                        // 处理单任务的队列情况
+                        if (response.queued) {
+                            message = '任务已加入队列等待执行。' + (response.message || '');
+                        }
+                    }
+                    
+                    showAlert(message, 'success');
+                } else {
+                    showAlert('启动失败: ' + (response.error || '未知错误'), 'danger');
+                }
+                
+                setTimeout(function() { location.reload(); }, 2000);
             })
             .fail(function(xhr) {
                 console.log('POST request failed:', xhr);
@@ -517,19 +559,115 @@ setInterval(function() {
     }
 }, 10000); // 每10秒刷新一次
 
-// 表单提交处理
-$('#createTaskModal form').on('submit', function(e) {
+// 提交创建任务表单
+function submitCreateTask() {
+    var taskName = $('#modal_task_name').val().trim();
     var keywords = $('#modal_keywords').val().trim();
     var targetAccounts = $('#modal_target_accounts').val().trim();
+    var maxTweets = parseInt($('#modal_max_tweets').val()) || 50;
+    var minLikes = parseInt($('#modal_min_likes').val()) || 0;
+    var minRetweets = parseInt($('#modal_min_retweets').val()) || 0;
+    var minComments = parseInt($('#modal_min_comments').val()) || 0;
+    var startImmediately = $('#modal_start_immediately').is(':checked');
     
-    if (!keywords && !targetAccounts) {
-        e.preventDefault();
-        showAlert('请至少填写关键词或目标账号中的一个', 'warning');
-        return false;
+    // 验证必填字段
+    if (!taskName) {
+        showAlert('请填写任务名称', 'warning');
+        return;
     }
     
-    var submitBtn = $(this).find('button[type="submit"]');
-    showLoading(submitBtn[0]);
+    if (!keywords && !targetAccounts) {
+        showAlert('请至少填写关键词或目标账号中的一个', 'warning');
+        return;
+    }
+    
+    // 处理目标账号
+    var targetAccountsList = [];
+    if (targetAccounts) {
+        targetAccountsList = targetAccounts.split(',').map(function(account) {
+            return account.trim();
+        }).filter(function(account) {
+            return account.length > 0;
+        });
+    }
+    
+    // 处理关键词
+    var keywordsList = [];
+    if (keywords) {
+        keywordsList = keywords.split(',').map(function(keyword) {
+            return keyword.trim();
+        }).filter(function(keyword) {
+            return keyword.length > 0;
+        });
+    }
+    
+    var taskData = {
+        name: taskName,
+        target_keywords: keywordsList,
+        target_accounts: targetAccountsList,
+        max_tweets: maxTweets,
+        min_likes: minLikes,
+        min_retweets: minRetweets,
+        min_comments: minComments
+    };
+    
+    console.log('创建任务数据:', taskData);
+    
+    // 显示加载状态
+    var submitBtn = $('#createTaskModal .btn-primary');
+    var originalText = submitBtn.text();
+    submitBtn.prop('disabled', true).text('创建中...');
+    
+    // 发送创建任务请求
+    $.ajax({
+        url: '/api/tasks',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(taskData),
+        success: function(response) {
+            console.log('任务创建响应:', response);
+            
+            if (response.success) {
+                var message = '任务创建成功！';
+                
+                if (response.task_type === 'multi_blogger') {
+                    message += ' ' + response.message;
+                }
+                
+                showAlert(message, 'success');
+                $('#createTaskModal').modal('hide');
+                
+                // 如果选择立即启动
+                if (startImmediately) {
+                    setTimeout(function() {
+                        startTask(response.task_id);
+                    }, 1000);
+                } else {
+                    setTimeout(function() { location.reload(); }, 1000);
+                }
+            } else {
+                showAlert('创建任务失败: ' + response.error, 'danger');
+            }
+        },
+        error: function(xhr) {
+            console.log('创建任务失败:', xhr);
+            var errorMessage = '创建任务失败';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMessage += ': ' + xhr.responseJSON.error;
+            }
+            showAlert(errorMessage, 'danger');
+        },
+        complete: function() {
+            // 恢复按钮状态
+            submitBtn.prop('disabled', false).text(originalText);
+        }
+    });
+}
+
+// 表单提交处理（保留原有逻辑作为备用）
+$('#createTaskModal form').on('submit', function(e) {
+    e.preventDefault(); // 阻止默认提交
+    submitCreateTask(); // 使用新的提交函数
 });
 
 // 更新队列状态
